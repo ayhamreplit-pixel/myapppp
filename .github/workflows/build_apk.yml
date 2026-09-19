@@ -30,6 +30,16 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Prepare Debug Keystore
+        run: |
+          if [ -f debug.keystore.base64 ]; then
+            base64 -d debug.keystore.base64 > debug.keystore
+          fi
+          if [ ! -f debug.keystore ]; then
+            keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
+          ls -lh debug.keystore
+
       - name: Build Debug APK
         run: ./gradlew assembleDebug --no-daemon
 
@@ -49,7 +59,7 @@ jobs:
           name: "📱 TOD Broadcast APK (Build #${{ github.run_number }})"
           body: |
             ### تم بناء التطبيق بنجاح!
-            اضغط على **app-debug.apk** في الأسفل لتنزيل التطبيق مباشرة وتثبيته على هاتفك.
+            اضغط على **app-debug.apk** لتنزيل التطبيق وتثبيته.
           files: app/build/outputs/apk/debug/app-debug.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
