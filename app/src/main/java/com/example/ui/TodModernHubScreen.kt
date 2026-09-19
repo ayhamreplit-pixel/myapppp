@@ -100,21 +100,37 @@ import com.example.ui.theme.DarkBg
 import com.example.ui.theme.DarkSurface
 import com.example.ui.theme.DarkSurfaceBorder
 import com.example.ui.theme.DarkSurfaceElevated
+import com.example.ui.theme.DarkSurfaceHigh
+import com.example.ui.theme.DarkBorderHighlight
 import com.example.ui.theme.DarkTextPrimary
 import com.example.ui.theme.DarkTextSecondary
+import com.example.ui.theme.DarkTextTertiary
 import com.example.ui.theme.TodGold
 import com.example.ui.theme.TodLiveRed
+import com.example.ui.theme.TodAmberYellow
+import com.example.ui.theme.CyberNeonBlue
+import com.example.ui.theme.CyberElectricIndigo
+import com.example.ui.theme.PremiumGoldGradStart
+import com.example.ui.theme.PremiumGoldGradEnd
 import kotlinx.coroutines.launch
+
+import androidx.compose.material.icons.filled.ViewAgenda
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.SignalCellularAlt
+import com.example.ui.theme.TodCyan
 
 enum class HubTab {
   XTREAM,
-  CUSTOM_URL
+  CUSTOM_URL,
+  DUAL_STREAM
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TodModernHubScreen(
   onPlayStream: (BroadcastStream, List<BroadcastStream>) -> Unit,
+  onPlayDualStream: (BroadcastStream, BroadcastStream) -> Unit = { _, _ -> },
   modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
@@ -151,6 +167,12 @@ fun TodModernHubScreen(
   var directReferer by remember { mutableStateOf("") }
   var directOrigin by remember { mutableStateOf("") }
   var showAdvancedDirect by remember { mutableStateOf(false) }
+
+  // Dual Stream state (playing 2 channels/links simultaneously)
+  var dualTitle1 by remember { mutableStateOf("القناة الأولى") }
+  var dualUrl1 by remember { mutableStateOf("") }
+  var dualTitle2 by remember { mutableStateOf("القناة الثانية") }
+  var dualUrl2 by remember { mutableStateOf("") }
 
   val reloadChannels: (String?) -> Unit = { catId ->
     scope.launch {
@@ -217,13 +239,28 @@ fun TodModernHubScreen(
         .navigationBarsPadding()
         .imePadding()
     ) {
-      // 1. TOP BRANDING BAR
+      // 1. TOP BRANDING BAR with ultra-modern glassmorphic styling & cyber glow
       Box(
         modifier = Modifier
           .fillMaxWidth()
-          .background(DarkSurface)
-          .border(1.dp, DarkSurfaceBorder)
-          .padding(horizontal = 18.dp, vertical = 14.dp)
+          .background(
+            Brush.verticalGradient(
+              listOf(Color(0xFF131B2C), Color(0xFF090D15))
+            )
+          )
+          .border(
+            width = 1.dp,
+            brush = Brush.horizontalGradient(
+              listOf(
+                Color(0x1000E5FF),
+                TodAmberYellow.copy(alpha = 0.45f),
+                CyberNeonBlue.copy(alpha = 0.35f),
+                Color(0x1000E5FF)
+              )
+            ),
+            shape = RoundedCornerShape(0.dp)
+          )
+          .padding(horizontal = 18.dp, vertical = 12.dp)
       ) {
         Row(
           modifier = Modifier.fillMaxWidth(),
@@ -234,26 +271,47 @@ fun TodModernHubScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
           ) {
-            TodWatermarkBadge(size = 38.dp)
+            Box(
+              modifier = Modifier
+                .size(42.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(
+                  Brush.linearGradient(
+                    listOf(Color(0xFF1E293B), Color(0xFF0F172A))
+                  )
+                )
+                .border(
+                  1.dp,
+                  Brush.linearGradient(listOf(TodGold, CyberNeonBlue)),
+                  RoundedCornerShape(12.dp)
+                ),
+              contentAlignment = Alignment.Center
+            ) {
+              TodWatermarkBadge(size = 32.dp)
+            }
 
             Column {
               Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                   text = "TOD PLAYER",
                   color = Color.White,
-                  fontSize = 17.sp,
-                  fontWeight = FontWeight.Bold,
-                  letterSpacing = 0.5.sp
+                  fontSize = 18.sp,
+                  fontWeight = FontWeight.Black,
+                  letterSpacing = 0.8.sp
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Box(
                   modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(TodGold)
-                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(
+                      Brush.horizontalGradient(
+                        listOf(PremiumGoldGradStart, PremiumGoldGradEnd)
+                      )
+                    )
+                    .padding(horizontal = 7.dp, vertical = 2.dp)
                 ) {
                   Text(
-                    text = "PRO",
+                    text = "PRO ULTRA",
                     color = Color.Black,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Black
@@ -261,51 +319,62 @@ fun TodModernHubScreen(
                 }
               }
               Text(
-                text = "مشغل IPTV وسيرفرات Xtream الفائقة",
+                text = "مشغل IPTV المباشر وسيرفرات البث الفائق",
                 color = DarkTextSecondary,
-                fontSize = 11.sp
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium
               )
             }
           }
 
-          // Status Beacon
+          // Modern Status Beacon Pill
           Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
               .clip(RoundedCornerShape(20.dp))
-              .background(if (xtreamAccount != null) Color(0x2210B981) else Color(0x22FF2A55))
-              .border(1.dp, if (xtreamAccount != null) Color(0x5510B981) else Color(0x55FF2A55), RoundedCornerShape(20.dp))
-              .padding(horizontal = 10.dp, vertical = 5.dp)
+              .background(
+                if (xtreamAccount != null) Color(0x2210B981) else Color(0x22FF2A55)
+              )
+              .border(
+                1.dp,
+                if (xtreamAccount != null) Color(0x6610B981) else Color(0x66FF2A55),
+                RoundedCornerShape(20.dp)
+              )
+              .padding(horizontal = 11.dp, vertical = 6.dp)
           ) {
             Box(
               modifier = Modifier
                 .size(8.dp)
                 .clip(CircleShape)
-                .background(if (xtreamAccount != null) Color(0xFF10B981) else TodLiveRed.copy(alpha = liveDotAlpha))
+                .background(
+                  if (xtreamAccount != null) Color(0xFF10B981)
+                  else TodLiveRed.copy(alpha = liveDotAlpha)
+                )
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
-              text = if (xtreamAccount != null) "متصل بالسيرفر" else "جاهز للبث",
-              color = Color.White,
+              text = if (xtreamAccount != null) "سيرفر متصل" else "بث جاهز",
+              color = if (xtreamAccount != null) Color(0xFF34D399) else Color(0xFFFF8080),
               fontSize = 11.sp,
-              fontWeight = FontWeight.SemiBold
+              fontWeight = FontWeight.Bold
             )
           }
         }
       }
 
-      // 2. TWO CLEAN TABS (Xtream Codes vs Direct Stream)
+      // 2. THREE MODERN PILL TABS WITH GRADIENTS
       Row(
         modifier = Modifier
           .fillMaxWidth()
           .padding(horizontal = 16.dp, vertical = 10.dp)
-          .clip(RoundedCornerShape(14.dp))
+          .clip(RoundedCornerShape(16.dp))
           .background(DarkSurfaceElevated)
+          .border(1.dp, DarkSurfaceBorder, RoundedCornerShape(16.dp))
           .padding(4.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp)
       ) {
         TabItem(
-          title = "سيرفر Xtream Codes",
+          title = "سيرفر Xtream",
           icon = Icons.Default.Dns,
           isSelected = selectedTab == HubTab.XTREAM,
           modifier = Modifier.weight(1f)
@@ -314,12 +383,21 @@ fun TodModernHubScreen(
         }
 
         TabItem(
-          title = "رابط مباشر / M3U",
+          title = "رابط مخصص",
           icon = Icons.Default.Link,
           isSelected = selectedTab == HubTab.CUSTOM_URL,
           modifier = Modifier.weight(1f)
         ) {
           selectedTab = HubTab.CUSTOM_URL
+        }
+
+        TabItem(
+          title = "بث مزدوج",
+          icon = Icons.Default.ViewAgenda,
+          isSelected = selectedTab == HubTab.DUAL_STREAM,
+          modifier = Modifier.weight(1f)
+        ) {
+          selectedTab = HubTab.DUAL_STREAM
         }
       }
 
@@ -490,6 +568,56 @@ fun TodModernHubScreen(
             }
           )
         }
+
+        HubTab.DUAL_STREAM -> {
+          DualStreamSetupContent(
+            title1 = dualTitle1,
+            onTitle1Change = { dualTitle1 = it },
+            url1 = dualUrl1,
+            onUrl1Change = { dualUrl1 = it },
+            title2 = dualTitle2,
+            onTitle2Change = { dualTitle2 = it },
+            url2 = dualUrl2,
+            onUrl2Change = { dualUrl2 = it },
+            availableChannels = xtreamChannels,
+            onSelectChannel1 = { ch ->
+              dualTitle1 = ch.name
+              dualUrl1 = ch.playUrl
+            },
+            onSelectChannel2 = { ch ->
+              dualTitle2 = ch.name
+              dualUrl2 = ch.playUrl
+            },
+            onPlayDual = {
+              focusManager.clearFocus()
+              val u1 = dualUrl1.trim()
+              val u2 = dualUrl2.trim()
+              if (u1.isNotBlank() && u2.isNotBlank()) {
+                val stream1 = BroadcastStream(
+                  id = "dual_1_${System.currentTimeMillis()}",
+                  title = dualTitle1.ifBlank { "القناة 1" },
+                  subtitle = "Dual Stream 1",
+                  category = "Dual View",
+                  tournamentOrLeague = "مباشر",
+                  streamUrl = u1,
+                  format = if (u1.contains(".m3u8", ignoreCase = true)) StreamFormat.HLS else StreamFormat.AUTO,
+                  isLive = true
+                )
+                val stream2 = BroadcastStream(
+                  id = "dual_2_${System.currentTimeMillis()}",
+                  title = dualTitle2.ifBlank { "القناة 2" },
+                  subtitle = "Dual Stream 2",
+                  category = "Dual View",
+                  tournamentOrLeague = "مباشر",
+                  streamUrl = u2,
+                  format = if (u2.contains(".m3u8", ignoreCase = true)) StreamFormat.HLS else StreamFormat.AUTO,
+                  isLive = true
+                )
+                onPlayDualStream(stream1, stream2)
+              }
+            }
+          )
+        }
       }
     }
   }
@@ -505,8 +633,27 @@ private fun TabItem(
 ) {
   Box(
     modifier = modifier
-      .clip(RoundedCornerShape(10.dp))
-      .background(if (isSelected) TodGold else Color.Transparent)
+      .clip(RoundedCornerShape(12.dp))
+      .background(
+        if (isSelected) {
+          Brush.horizontalGradient(
+            listOf(PremiumGoldGradStart, PremiumGoldGradEnd)
+          )
+        } else {
+          Brush.linearGradient(
+            listOf(Color.Transparent, Color.Transparent)
+          )
+        }
+      )
+      .then(
+        if (isSelected) {
+          Modifier.border(
+            1.dp,
+            Color(0x66FFFFFF),
+            RoundedCornerShape(12.dp)
+          )
+        } else Modifier
+      )
       .clickable(onClick = onClick)
       .padding(vertical = 10.dp, horizontal = 12.dp),
     contentAlignment = Alignment.Center
@@ -525,7 +672,7 @@ private fun TabItem(
         text = title,
         color = if (isSelected) Color.Black else DarkTextSecondary,
         fontSize = 13.sp,
-        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+        fontWeight = if (isSelected) FontWeight.Black else FontWeight.Medium
       )
     }
   }
@@ -573,30 +720,55 @@ private fun XtreamContent(
         Column(
           modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(DarkSurface)
-            .border(1.dp, DarkSurfaceBorder, RoundedCornerShape(16.dp))
-            .padding(18.dp),
-          verticalArrangement = Arrangement.spacedBy(12.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+              Brush.verticalGradient(
+                listOf(DarkSurfaceElevated, DarkSurface)
+              )
+            )
+            .border(
+              1.dp,
+              Brush.linearGradient(
+                listOf(TodGold.copy(alpha = 0.5f), CyberNeonBlue.copy(alpha = 0.3f), Color(0x22FFFFFF))
+              ),
+              RoundedCornerShape(20.dp)
+            )
+            .padding(20.dp),
+          verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
           Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
           ) {
-            Icon(Icons.Default.Dns, contentDescription = null, tint = TodGold, modifier = Modifier.size(20.dp))
-            Text(
-              text = "تسجيل الدخول لسيرفر Xtream IPTV",
-              color = Color.White,
-              fontSize = 15.sp,
-              fontWeight = FontWeight.Bold
-            )
+            Box(
+              modifier = Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color(0x22F5A623)),
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(Icons.Default.Dns, contentDescription = null, tint = TodGold, modifier = Modifier.size(22.dp))
+            }
+            Column {
+              Text(
+                text = "تسجيل الدخول لسيرفر Xtream IPTV",
+                color = Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+              )
+              Text(
+                text = "فحص تلقائي وتحميل فائق السرعة",
+                color = DarkTextSecondary,
+                fontSize = 11.sp
+              )
+            }
           }
 
           Text(
-            text = "أدخل بيانات اشتراك IPTV الخاص بك وسيتم فحص السيرفر وجلب جميع باقات القنوات الرياضية والترفيهية فوراً وبدون أي تعليق.",
+            text = "أدخل بيانات اشتراكك ليتم جلب كافة باقات القنوات ومطابقتها فوراً بدون أي تعليق أو بطء.",
             color = DarkTextSecondary,
             fontSize = 12.sp,
-            lineHeight = 17.sp
+            lineHeight = 18.sp
           )
 
           OutlinedTextField(
@@ -606,6 +778,7 @@ private fun XtreamContent(
             placeholder = { Text("http://example.com:8080") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
               focusedBorderColor = TodGold,
               unfocusedBorderColor = DarkSurfaceBorder,
@@ -622,6 +795,7 @@ private fun XtreamContent(
             label = { Text("اسم المستخدم (Username)") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
               focusedBorderColor = TodGold,
               unfocusedBorderColor = DarkSurfaceBorder,
@@ -639,6 +813,7 @@ private fun XtreamContent(
             singleLine = true,
             visualTransformation = if (isPassVisible) VisualTransformation.None else PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
               focusedBorderColor = TodGold,
               unfocusedBorderColor = DarkSurfaceBorder,
@@ -662,15 +837,16 @@ private fun XtreamContent(
           error?.let { err ->
             Row(
               verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.spacedBy(6.dp),
+              horizontalArrangement = Arrangement.spacedBy(8.dp),
               modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color(0x33FF2A55))
-                .padding(10.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color(0x22FF2A55))
+                .border(1.dp, Color(0x55FF2A55), RoundedCornerShape(10.dp))
+                .padding(12.dp)
             ) {
-              Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFFF5252), modifier = Modifier.size(16.dp))
-              Text(text = err, color = Color(0xFFFF5252), fontSize = 12.sp)
+              Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFFF5252), modifier = Modifier.size(18.dp))
+              Text(text = err, color = Color(0xFFFF6B6B), fontSize = 12.sp, fontWeight = FontWeight.Medium)
             }
           }
 
@@ -679,22 +855,24 @@ private fun XtreamContent(
             enabled = !isLoading && server.isNotBlank() && user.isNotBlank() && pass.isNotBlank(),
             modifier = Modifier
               .fillMaxWidth()
-              .height(48.dp),
+              .height(52.dp),
             colors = ButtonDefaults.buttonColors(
               containerColor = TodGold,
-              contentColor = Color.Black
+              contentColor = Color.Black,
+              disabledContainerColor = DarkSurfaceHigh,
+              disabledContentColor = DarkTextTertiary
             ),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(14.dp)
           ) {
             if (isLoading) {
-              CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
+              CircularProgressIndicator(color = Color.Black, modifier = Modifier.size(22.dp), strokeWidth = 2.5.dp)
             } else {
               Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
               ) {
-                Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
-                Text("اتصال وتحميل القنوات المباشرة", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
+                Text("اتصال وتحميل القنوات المباشرة", fontWeight = FontWeight.Black, fontSize = 14.sp)
               }
             }
           }
@@ -721,11 +899,21 @@ private fun XtreamContent(
         Column(
           modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(DarkSurfaceElevated)
-            .border(1.dp, Color(0x33F5A623), RoundedCornerShape(16.dp))
-            .padding(14.dp),
-          verticalArrangement = Arrangement.spacedBy(10.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+              Brush.verticalGradient(
+                listOf(DarkSurfaceElevated, DarkSurface)
+              )
+            )
+            .border(
+              1.dp,
+              Brush.linearGradient(
+                listOf(TodGold.copy(alpha = 0.4f), CyberNeonBlue.copy(alpha = 0.25f))
+              ),
+              RoundedCornerShape(18.dp)
+            )
+            .padding(16.dp),
+          verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
           Row(
             modifier = Modifier.fillMaxWidth(),
@@ -734,7 +922,7 @@ private fun XtreamContent(
           ) {
             Row(
               verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.spacedBy(8.dp)
+              horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
               Box(
                 modifier = Modifier
@@ -742,21 +930,40 @@ private fun XtreamContent(
                   .clip(CircleShape)
                   .background(Color(0xFF10B981))
               )
-              Text(
-                text = "المستخدم: ${account.username}",
-                color = Color.White,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold
-              )
+              Column {
+                Text(
+                  text = "المستخدم: ${account.username}",
+                  color = Color.White,
+                  fontSize = 15.sp,
+                  fontWeight = FontWeight.Black
+                )
+                Text(
+                  text = "السيرفر: نشط ومتصل بجودة فائقة",
+                  color = Color(0xFF34D399),
+                  fontSize = 11.sp
+                )
+              }
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-              IconButton(onClick = onRefresh, modifier = Modifier.size(30.dp)) {
+              IconButton(
+                onClick = onRefresh,
+                modifier = Modifier
+                  .size(34.dp)
+                  .clip(CircleShape)
+                  .background(DarkSurfaceHigh)
+              ) {
                 Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = TodGold, modifier = Modifier.size(18.dp))
               }
-              Spacer(modifier = Modifier.width(6.dp))
-              IconButton(onClick = onDisconnect, modifier = Modifier.size(30.dp)) {
-                Icon(Icons.Default.Clear, contentDescription = "Disconnect", tint = DarkTextSecondary, modifier = Modifier.size(18.dp))
+              Spacer(modifier = Modifier.width(8.dp))
+              IconButton(
+                onClick = onDisconnect,
+                modifier = Modifier
+                  .size(34.dp)
+                  .clip(CircleShape)
+                  .background(Color(0x22FF2A55))
+              ) {
+                Icon(Icons.Default.Clear, contentDescription = "Disconnect", tint = Color(0xFFFF5252), modifier = Modifier.size(18.dp))
               }
             }
           }
@@ -770,8 +977,8 @@ private fun XtreamContent(
             OutlinedTextField(
               value = searchQuery,
               onValueChange = onSearchQueryChange,
-              placeholder = { Text("بحث عن اسم القناة...", fontSize = 13.sp) },
-              leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = DarkTextSecondary, modifier = Modifier.size(18.dp)) },
+              placeholder = { Text("بحث عن اسم القناة بالاسم أو الرقم...", fontSize = 13.sp) },
+              leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TodGold, modifier = Modifier.size(20.dp)) },
               singleLine = true,
               modifier = Modifier.weight(1f),
               colors = OutlinedTextFieldDefaults.colors(
@@ -780,23 +987,23 @@ private fun XtreamContent(
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White
               ),
-              shape = RoundedCornerShape(10.dp)
+              shape = RoundedCornerShape(12.dp)
             )
 
             // Grid / List Toggle
             IconButton(
               onClick = onToggleGridView,
               modifier = Modifier
-                .size(44.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(DarkSurface)
-                .border(1.dp, DarkSurfaceBorder, RoundedCornerShape(10.dp))
+                .size(48.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(DarkSurfaceHigh)
+                .border(1.dp, DarkSurfaceBorder, RoundedCornerShape(12.dp))
             ) {
               Icon(
                 imageVector = if (isGridView) Icons.Default.ViewList else Icons.Default.GridView,
                 contentDescription = "Toggle Grid/List",
                 tint = TodGold,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(22.dp)
               )
             }
           }
@@ -806,42 +1013,47 @@ private fun XtreamContent(
       // 2. RECENTLY PLAYED HORIZONTAL STRIP
       if (recentChannels.isNotEmpty() && searchQuery.isBlank() && !showOnlyFavorites) {
         item {
-          Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+          Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
               verticalAlignment = Alignment.CenterVertically,
               horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-              Icon(Icons.Default.History, contentDescription = null, tint = TodGold, modifier = Modifier.size(16.dp))
-              Text("شوهد مؤخراً (تابع المشاهدة)", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+              Icon(Icons.Default.History, contentDescription = null, tint = TodGold, modifier = Modifier.size(17.dp))
+              Text("شوهد مؤخراً (متابعة المشاهدة السريعة)", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             }
 
             LazyRow(
               horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-              items(recentChannels.take(8)) { rChan ->
+              items(recentChannels.take(10)) { rChan ->
                 Row(
                   modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(DarkSurface)
-                    .border(1.dp, DarkSurfaceBorder, RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                      Brush.horizontalGradient(
+                        listOf(DarkSurfaceElevated, DarkSurface)
+                      )
+                    )
+                    .border(1.dp, DarkSurfaceBorder, RoundedCornerShape(12.dp))
                     .clickable { onPlayChannel(rChan, channels) }
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                    .padding(horizontal = 12.dp, vertical = 7.dp),
                   verticalAlignment = Alignment.CenterVertically,
                   horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                   Box(
                     modifier = Modifier
-                      .size(26.dp)
-                      .clip(RoundedCornerShape(4.dp))
-                      .background(DarkSurfaceElevated),
+                      .size(28.dp)
+                      .clip(RoundedCornerShape(6.dp))
+                      .background(DarkSurfaceHigh),
                     contentAlignment = Alignment.Center
                   ) {
-                    Icon(Icons.Default.LiveTv, contentDescription = null, tint = TodGold, modifier = Modifier.size(14.dp))
+                    Icon(Icons.Default.PlayArrow, contentDescription = null, tint = TodGold, modifier = Modifier.size(16.dp))
                   }
                   Text(
                     text = rChan.name,
                     color = Color.White,
                     fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                   )
@@ -856,18 +1068,32 @@ private fun XtreamContent(
       item {
         LazyRow(
           horizontalArrangement = Arrangement.spacedBy(8.dp),
-          contentPadding = PaddingValues(vertical = 2.dp)
+          contentPadding = PaddingValues(vertical = 4.dp)
         ) {
           // Favorites filter chip
           item {
             val favCount = favoriteIds.size
             Box(
               modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(if (showOnlyFavorites) Color(0xFFFF2A55) else DarkSurface)
-                .border(1.dp, if (showOnlyFavorites) Color(0xFFFF2A55) else DarkSurfaceBorder, RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(12.dp))
+                .background(
+                  if (showOnlyFavorites) {
+                    Brush.horizontalGradient(
+                      listOf(Color(0xFFFF2A55), Color(0xFFFF5376))
+                    )
+                  } else {
+                    Brush.linearGradient(
+                      listOf(DarkSurfaceElevated, DarkSurface)
+                    )
+                  }
+                )
+                .border(
+                  1.dp,
+                  if (showOnlyFavorites) Color(0xFFFF708F) else DarkSurfaceBorder,
+                  RoundedCornerShape(12.dp)
+                )
                 .clickable(onClick = onToggleShowOnlyFavorites)
-                .padding(horizontal = 12.dp, vertical = 6.dp)
+                .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
               Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -877,7 +1103,7 @@ private fun XtreamContent(
                   imageVector = if (showOnlyFavorites) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                   contentDescription = null,
                   tint = if (showOnlyFavorites) Color.White else Color(0xFFFF2A55),
-                  modifier = Modifier.size(14.dp)
+                  modifier = Modifier.size(15.dp)
                 )
                 Text(
                   text = "المفضلة ($favCount)",
@@ -894,20 +1120,34 @@ private fun XtreamContent(
             val isSelected = !showOnlyFavorites && (selectedCategory == cat.categoryId)
             Box(
               modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(if (isSelected) TodGold else DarkSurface)
-                .border(1.dp, if (isSelected) TodGold else DarkSurfaceBorder, RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(12.dp))
+                .background(
+                  if (isSelected) {
+                    Brush.horizontalGradient(
+                      listOf(PremiumGoldGradStart, PremiumGoldGradEnd)
+                    )
+                  } else {
+                    Brush.linearGradient(
+                      listOf(DarkSurfaceElevated, DarkSurface)
+                    )
+                  }
+                )
+                .border(
+                  1.dp,
+                  if (isSelected) Color(0x66FFFFFF) else DarkSurfaceBorder,
+                  RoundedCornerShape(12.dp)
+                )
                 .clickable {
                   if (showOnlyFavorites) onToggleShowOnlyFavorites()
                   onSelectCategory(cat.categoryId)
                 }
-                .padding(horizontal = 14.dp, vertical = 6.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
               Text(
                 text = cat.categoryName,
                 color = if (isSelected) Color.Black else Color.White,
                 fontSize = 12.sp,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                fontWeight = if (isSelected) FontWeight.Black else FontWeight.Normal
               )
             }
           }
@@ -987,17 +1227,25 @@ private fun ChannelListItem(
   Row(
     modifier = Modifier
       .fillMaxWidth()
-      .clip(RoundedCornerShape(12.dp))
-      .background(DarkSurface)
-      .border(1.dp, DarkSurfaceBorder, RoundedCornerShape(12.dp))
+      .clip(RoundedCornerShape(14.dp))
+      .background(
+        Brush.horizontalGradient(
+          listOf(DarkSurfaceElevated, DarkSurface)
+        )
+      )
+      .border(
+        1.dp,
+        if (isFavorite) TodGold.copy(alpha = 0.4f) else DarkSurfaceBorder,
+        RoundedCornerShape(14.dp)
+      )
       .clickable(onClick = onClick)
-      .padding(10.dp),
+      .padding(horizontal = 14.dp, vertical = 10.dp),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.SpaceBetween
   ) {
     Row(
       verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(10.dp),
+      horizontalArrangement = Arrangement.spacedBy(12.dp),
       modifier = Modifier.weight(1f)
     ) {
       if (!channel.iconUrl.isNullOrBlank()) {
@@ -1006,19 +1254,25 @@ private fun ChannelListItem(
           contentDescription = channel.name,
           contentScale = ContentScale.Fit,
           modifier = Modifier
-            .size(36.dp)
-            .clip(RoundedCornerShape(6.dp))
-            .background(DarkSurfaceElevated)
+            .size(42.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(DarkSurfaceHigh)
+            .border(1.dp, Color(0x22FFFFFF), RoundedCornerShape(10.dp))
         )
       } else {
         Box(
           modifier = Modifier
-            .size(36.dp)
-            .clip(RoundedCornerShape(6.dp))
-            .background(DarkSurfaceElevated),
+            .size(42.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(
+              Brush.linearGradient(
+                listOf(Color(0xFF1E293B), Color(0xFF0F172A))
+              )
+            )
+            .border(1.dp, Color(0x33F5A623), RoundedCornerShape(10.dp)),
           contentAlignment = Alignment.Center
         ) {
-          Icon(Icons.Default.LiveTv, contentDescription = null, tint = TodGold, modifier = Modifier.size(18.dp))
+          Icon(Icons.Default.LiveTv, contentDescription = null, tint = TodGold, modifier = Modifier.size(20.dp))
         }
       }
 
@@ -1026,36 +1280,62 @@ private fun ChannelListItem(
         Text(
           text = channel.name,
           color = Color.White,
-          fontSize = 13.sp,
-          fontWeight = FontWeight.SemiBold,
+          fontSize = 14.sp,
+          fontWeight = FontWeight.Bold,
           maxLines = 1,
           overflow = TextOverflow.Ellipsis
         )
-        Text(
-          text = "بث مباشر HD",
-          color = DarkTextSecondary,
-          fontSize = 11.sp
-        )
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+          Box(
+            modifier = Modifier
+              .clip(RoundedCornerShape(4.dp))
+              .background(Color(0x2210B981))
+              .padding(horizontal = 5.dp, vertical = 1.dp)
+          ) {
+            Text(
+              text = "LIVE HD",
+              color = Color(0xFF34D399),
+              fontSize = 9.sp,
+              fontWeight = FontWeight.Black
+            )
+          }
+          Text(
+            text = "فائق السرعة",
+            color = DarkTextSecondary,
+            fontSize = 11.sp
+          )
+        }
       }
     }
 
-    Row(verticalAlignment = Alignment.CenterVertically) {
-      IconButton(onClick = onToggleFavorite, modifier = Modifier.size(36.dp)) {
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+      IconButton(onClick = onToggleFavorite, modifier = Modifier.size(38.dp)) {
         Icon(
           imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
           contentDescription = "Favorite",
           tint = if (isFavorite) Color(0xFFFF2A55) else DarkTextSecondary,
-          modifier = Modifier.size(18.dp)
+          modifier = Modifier.size(20.dp)
         )
       }
 
       Box(
         modifier = Modifier
           .clip(CircleShape)
-          .background(TodGold)
-          .padding(6.dp)
+          .background(
+            Brush.linearGradient(
+              listOf(PremiumGoldGradStart, PremiumGoldGradEnd)
+            )
+          )
+          .padding(7.dp),
+        contentAlignment = Alignment.Center
       ) {
-        Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = Color.Black, modifier = Modifier.size(16.dp))
+        Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = Color.Black, modifier = Modifier.size(17.dp))
       }
     }
   }
@@ -1071,12 +1351,20 @@ private fun ChannelGridCard(
   Column(
     modifier = Modifier
       .fillMaxWidth()
-      .clip(RoundedCornerShape(12.dp))
-      .background(DarkSurface)
-      .border(1.dp, DarkSurfaceBorder, RoundedCornerShape(12.dp))
+      .clip(RoundedCornerShape(14.dp))
+      .background(
+        Brush.verticalGradient(
+          listOf(DarkSurfaceElevated, DarkSurface)
+        )
+      )
+      .border(
+        1.dp,
+        if (isFavorite) TodGold.copy(alpha = 0.5f) else DarkSurfaceBorder,
+        RoundedCornerShape(14.dp)
+      )
       .clickable(onClick = onClick)
-      .padding(10.dp),
-    verticalArrangement = Arrangement.spacedBy(8.dp)
+      .padding(12.dp),
+    verticalArrangement = Arrangement.spacedBy(10.dp)
   ) {
     Row(
       modifier = Modifier.fillMaxWidth(),
@@ -1089,40 +1377,65 @@ private fun ChannelGridCard(
           contentDescription = channel.name,
           contentScale = ContentScale.Fit,
           modifier = Modifier
-            .size(34.dp)
-            .clip(RoundedCornerShape(6.dp))
-            .background(DarkSurfaceElevated)
+            .size(38.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(DarkSurfaceHigh)
+            .border(1.dp, Color(0x22FFFFFF), RoundedCornerShape(8.dp))
         )
       } else {
         Box(
           modifier = Modifier
-            .size(34.dp)
-            .clip(RoundedCornerShape(6.dp))
-            .background(DarkSurfaceElevated),
+            .size(38.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(
+              Brush.linearGradient(listOf(Color(0xFF1E293B), Color(0xFF0F172A)))
+            )
+            .border(1.dp, Color(0x33F5A623), RoundedCornerShape(8.dp)),
           contentAlignment = Alignment.Center
         ) {
           Icon(Icons.Default.LiveTv, contentDescription = null, tint = TodGold, modifier = Modifier.size(18.dp))
         }
       }
 
-      IconButton(onClick = onToggleFavorite, modifier = Modifier.size(30.dp)) {
-        Icon(
-          imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-          contentDescription = "Favorite",
-          tint = if (isFavorite) Color(0xFFFF2A55) else DarkTextSecondary,
-          modifier = Modifier.size(16.dp)
-        )
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onToggleFavorite, modifier = Modifier.size(30.dp)) {
+          Icon(
+            imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+            contentDescription = "Favorite",
+            tint = if (isFavorite) Color(0xFFFF2A55) else DarkTextSecondary,
+            modifier = Modifier.size(17.dp)
+          )
+        }
+        Box(
+          modifier = Modifier
+            .size(24.dp)
+            .clip(CircleShape)
+            .background(
+              Brush.linearGradient(listOf(PremiumGoldGradStart, PremiumGoldGradEnd))
+            ),
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = Color.Black, modifier = Modifier.size(14.dp))
+        }
       }
     }
 
-    Text(
-      text = channel.name,
-      color = Color.White,
-      fontSize = 12.sp,
-      fontWeight = FontWeight.SemiBold,
-      maxLines = 1,
-      overflow = TextOverflow.Ellipsis
-    )
+    Column {
+      Text(
+        text = channel.name,
+        color = Color.White,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
+      )
+      Text(
+        text = "بث مباشر HD",
+        color = Color(0xFF34D399),
+        fontSize = 10.sp,
+        fontWeight = FontWeight.SemiBold
+      )
+    }
   }
 }
 
@@ -1166,23 +1479,48 @@ private fun DirectUrlContent(
       Column(
         modifier = Modifier
           .fillMaxWidth()
-          .clip(RoundedCornerShape(16.dp))
-          .background(DarkSurface)
-          .border(1.dp, DarkSurfaceBorder, RoundedCornerShape(16.dp))
-          .padding(18.dp),
+          .clip(RoundedCornerShape(20.dp))
+          .background(
+            Brush.verticalGradient(
+              listOf(DarkSurfaceElevated, DarkSurface)
+            )
+          )
+          .border(
+            1.dp,
+            Brush.linearGradient(
+              listOf(TodGold.copy(alpha = 0.4f), CyberElectricIndigo.copy(alpha = 0.3f), Color(0x22FFFFFF))
+            ),
+            RoundedCornerShape(20.dp)
+          )
+          .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
       ) {
         Row(
           verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
+          horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-          Icon(Icons.Default.Link, contentDescription = null, tint = TodGold, modifier = Modifier.size(20.dp))
-          Text(
-            text = "تشغيل رابط بث مباشر (M3U8 / DASH / TS)",
-            color = Color.White,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold
-          )
+          Box(
+            modifier = Modifier
+              .size(38.dp)
+              .clip(RoundedCornerShape(10.dp))
+              .background(Color(0x22F5A623)),
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(Icons.Default.Link, contentDescription = null, tint = TodGold, modifier = Modifier.size(22.dp))
+          }
+          Column {
+            Text(
+              text = "تشغيل رابط بث مباشر (M3U8 / DASH / TS)",
+              color = Color.White,
+              fontSize = 15.sp,
+              fontWeight = FontWeight.Bold
+            )
+            Text(
+              text = "دعم كامل للـ HLS والـ Tokens وتجاوز الحمايات",
+              color = DarkTextSecondary,
+              fontSize = 11.sp
+            )
+          }
         }
 
         OutlinedTextField(
@@ -1191,6 +1529,7 @@ private fun DirectUrlContent(
           label = { Text("اسم البث / القناة") },
           singleLine = true,
           modifier = Modifier.fillMaxWidth(),
+          shape = RoundedCornerShape(12.dp),
           colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = TodGold,
             unfocusedBorderColor = DarkSurfaceBorder,
@@ -1222,6 +1561,7 @@ private fun DirectUrlContent(
             singleLine = false,
             maxLines = 3,
             modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
               focusedBorderColor = TodGold,
               unfocusedBorderColor = DarkSurfaceBorder,
@@ -1243,23 +1583,24 @@ private fun DirectUrlContent(
         Row(
           modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(10.dp))
+            .background(DarkSurfaceHigh)
             .clickable(onClick = onToggleAdvanced)
-            .padding(vertical = 6.dp),
+            .padding(horizontal = 12.dp, vertical = 10.dp),
           horizontalArrangement = Arrangement.SpaceBetween,
           verticalAlignment = Alignment.CenterVertically
         ) {
           Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
           ) {
-            Icon(Icons.Default.Tune, contentDescription = null, tint = DarkTextSecondary, modifier = Modifier.size(16.dp))
-            Text("هيدرات متقدمة (Referer / User-Agent لتجاوز الحماية)", color = DarkTextSecondary, fontSize = 12.sp)
+            Icon(Icons.Default.Tune, contentDescription = null, tint = TodGold, modifier = Modifier.size(18.dp))
+            Text("هيدرات متقدمة (Referer / User-Agent لتجاوز الحماية)", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
           }
           Icon(
             imageVector = if (showAdvanced) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
             contentDescription = null,
-            tint = DarkTextSecondary
+            tint = TodGold
           )
         }
 
@@ -1271,6 +1612,7 @@ private fun DirectUrlContent(
               label = { Text("User-Agent (اختياري)") },
               singleLine = true,
               modifier = Modifier.fillMaxWidth(),
+              shape = RoundedCornerShape(12.dp),
               colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = TodGold,
                 unfocusedBorderColor = DarkSurfaceBorder,
@@ -1285,6 +1627,7 @@ private fun DirectUrlContent(
               label = { Text("Referer (اختياري)") },
               singleLine = true,
               modifier = Modifier.fillMaxWidth(),
+              shape = RoundedCornerShape(12.dp),
               colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = TodGold,
                 unfocusedBorderColor = DarkSurfaceBorder,
@@ -1299,6 +1642,7 @@ private fun DirectUrlContent(
               label = { Text("Origin (اختياري)") },
               singleLine = true,
               modifier = Modifier.fillMaxWidth(),
+              shape = RoundedCornerShape(12.dp),
               colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = TodGold,
                 unfocusedBorderColor = DarkSurfaceBorder,
@@ -1314,19 +1658,21 @@ private fun DirectUrlContent(
           enabled = isValidUrl,
           modifier = Modifier
             .fillMaxWidth()
-            .height(48.dp),
+            .height(52.dp),
           colors = ButtonDefaults.buttonColors(
             containerColor = TodGold,
-            contentColor = Color.Black
+            contentColor = Color.Black,
+            disabledContainerColor = DarkSurfaceHigh,
+            disabledContentColor = DarkTextTertiary
           ),
-          shape = RoundedCornerShape(12.dp)
+          shape = RoundedCornerShape(14.dp)
         ) {
           Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
           ) {
-            Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp))
-            Text("تشغيل في المشغل الأفقي الفوري", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(22.dp))
+            Text("تشغيل في المشغل الأفقي الفوري", fontWeight = FontWeight.Black, fontSize = 14.sp)
           }
         }
       }
@@ -1337,10 +1683,10 @@ private fun DirectUrlContent(
       item {
         Row(
           verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(6.dp)
+          horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-          Icon(Icons.Default.History, contentDescription = null, tint = TodGold, modifier = Modifier.size(16.dp))
-          Text("سجل الروابط السابقة المحفوظة", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+          Icon(Icons.Default.History, contentDescription = null, tint = TodGold, modifier = Modifier.size(18.dp))
+          Text("سجل الروابط السابقة المحفوظة", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
       }
 
@@ -1348,11 +1694,15 @@ private fun DirectUrlContent(
         Row(
           modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(DarkSurface)
-            .border(1.dp, DarkSurfaceBorder, RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(14.dp))
+            .background(
+              Brush.horizontalGradient(
+                listOf(DarkSurfaceElevated, DarkSurface)
+              )
+            )
+            .border(1.dp, DarkSurfaceBorder, RoundedCornerShape(14.dp))
             .clickable { onSelectHistoryItem(hTitle, hUrl) }
-            .padding(12.dp),
+            .padding(14.dp),
           verticalAlignment = Alignment.CenterVertically,
           horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -1360,7 +1710,7 @@ private fun DirectUrlContent(
             Text(
               text = hTitle,
               color = Color.White,
-              fontSize = 13.sp,
+              fontSize = 14.sp,
               fontWeight = FontWeight.Bold,
               maxLines = 1,
               overflow = TextOverflow.Ellipsis
@@ -1374,14 +1724,288 @@ private fun DirectUrlContent(
             )
           }
 
-          Row(verticalAlignment = Alignment.CenterVertically) {
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+          ) {
+            Box(
+              modifier = Modifier
+                .clip(CircleShape)
+                .background(Color(0x22F5A623))
+                .padding(6.dp)
+            ) {
+              Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = TodGold, modifier = Modifier.size(16.dp))
+            }
             IconButton(
               onClick = { onDeleteHistoryItem(hUrl) },
-              modifier = Modifier.size(32.dp)
+              modifier = Modifier.size(34.dp)
             ) {
-              Icon(Icons.Default.Delete, contentDescription = "Delete", tint = DarkTextSecondary, modifier = Modifier.size(16.dp))
+              Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color(0xFFFF5252), modifier = Modifier.size(17.dp))
             }
           }
+        }
+      }
+    }
+  }
+}
+
+@Composable
+private fun DualStreamSetupContent(
+  title1: String,
+  onTitle1Change: (String) -> Unit,
+  url1: String,
+  onUrl1Change: (String) -> Unit,
+  title2: String,
+  onTitle2Change: (String) -> Unit,
+  url2: String,
+  onUrl2Change: (String) -> Unit,
+  availableChannels: List<XtreamChannel>,
+  onSelectChannel1: (XtreamChannel) -> Unit,
+  onSelectChannel2: (XtreamChannel) -> Unit,
+  onPlayDual: () -> Unit
+) {
+  LazyColumn(
+    modifier = Modifier.fillMaxSize(),
+    contentPadding = PaddingValues(16.dp),
+    verticalArrangement = Arrangement.spacedBy(14.dp)
+  ) {
+    item {
+      Column(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(20.dp))
+          .background(
+            Brush.verticalGradient(
+              listOf(DarkSurfaceElevated, DarkSurface)
+            )
+          )
+          .border(
+            1.dp,
+            Brush.linearGradient(
+              listOf(TodCyan.copy(alpha = 0.5f), CyberNeonBlue.copy(alpha = 0.3f), Color(0x22FFFFFF))
+            ),
+            RoundedCornerShape(20.dp)
+          )
+          .padding(18.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+      ) {
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+          Box(
+            modifier = Modifier
+              .clip(RoundedCornerShape(8.dp))
+              .background(Brush.linearGradient(listOf(TodCyan, CyberNeonBlue)))
+              .padding(horizontal = 9.dp, vertical = 4.dp)
+          ) {
+            Text("DUAL ULTRA", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Black)
+          }
+          Text(
+            text = "تشغيل مباراتين أو قناتين في وقت واحد",
+            color = Color.White,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold
+          )
+        }
+
+        Text(
+          text = "تابع مباراتين جنباً إلى جنب بسلاسة مطلقة وبدون أي تأخير، مع التحكم في صوت كل شاشة بشكل مستقل فوراً.",
+          color = DarkTextSecondary,
+          fontSize = 12.sp,
+          lineHeight = 18.sp
+        )
+      }
+    }
+
+    // Stream 1 Configuration Card
+    item {
+      Column(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(18.dp))
+          .background(
+            Brush.verticalGradient(
+              listOf(DarkSurfaceElevated, DarkSurface)
+            )
+          )
+          .border(1.dp, TodAmberYellow.copy(alpha = 0.6f), RoundedCornerShape(18.dp))
+          .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+      ) {
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+          Box(
+            modifier = Modifier
+              .size(26.dp)
+              .clip(CircleShape)
+              .background(TodAmberYellow),
+            contentAlignment = Alignment.Center
+          ) {
+            Text("1", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Black)
+          }
+          Text("القناة الأولى (الشاشة اليسرى)", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        }
+
+        OutlinedTextField(
+          value = title1,
+          onValueChange = onTitle1Change,
+          label = { Text("اسم القناة 1") },
+          singleLine = true,
+          modifier = Modifier.fillMaxWidth(),
+          shape = RoundedCornerShape(12.dp),
+          colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = TodAmberYellow,
+            unfocusedBorderColor = DarkSurfaceBorder,
+            focusedTextColor = Color.White,
+            unfocusedTextColor = Color.White
+          )
+        )
+
+        OutlinedTextField(
+          value = url1,
+          onValueChange = onUrl1Change,
+          label = { Text("رابط البث 1 (HLS / m3u8)") },
+          singleLine = true,
+          modifier = Modifier.fillMaxWidth(),
+          shape = RoundedCornerShape(12.dp),
+          colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = TodAmberYellow,
+            unfocusedBorderColor = DarkSurfaceBorder,
+            focusedTextColor = Color.White,
+            unfocusedTextColor = Color.White
+          )
+        )
+
+        if (availableChannels.isNotEmpty()) {
+          Text("أو اختر مباشرة من قنوات السيرفر:", color = DarkTextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+          LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(availableChannels.take(15)) { ch ->
+              Box(
+                modifier = Modifier
+                  .clip(RoundedCornerShape(10.dp))
+                  .background(DarkSurfaceHigh)
+                  .border(1.dp, DarkSurfaceBorder, RoundedCornerShape(10.dp))
+                  .clickable { onSelectChannel1(ch) }
+                  .padding(horizontal = 10.dp, vertical = 6.dp)
+              ) {
+                Text(ch.name, color = Color.White, fontSize = 11.sp, maxLines = 1)
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Stream 2 Configuration Card
+    item {
+      Column(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(18.dp))
+          .background(
+            Brush.verticalGradient(
+              listOf(DarkSurfaceElevated, DarkSurface)
+            )
+          )
+          .border(1.dp, TodCyan.copy(alpha = 0.6f), RoundedCornerShape(18.dp))
+          .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+      ) {
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+          Box(
+            modifier = Modifier
+              .size(26.dp)
+              .clip(CircleShape)
+              .background(TodCyan),
+            contentAlignment = Alignment.Center
+          ) {
+            Text("2", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Black)
+          }
+          Text("القناة الثانية (الشاشة اليمنى)", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        }
+
+        OutlinedTextField(
+          value = title2,
+          onValueChange = onTitle2Change,
+          label = { Text("اسم القناة 2") },
+          singleLine = true,
+          modifier = Modifier.fillMaxWidth(),
+          shape = RoundedCornerShape(12.dp),
+          colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = TodCyan,
+            unfocusedBorderColor = DarkSurfaceBorder,
+            focusedTextColor = Color.White,
+            unfocusedTextColor = Color.White
+          )
+        )
+
+        OutlinedTextField(
+          value = url2,
+          onValueChange = onUrl2Change,
+          label = { Text("رابط البث 2 (HLS / m3u8)") },
+          singleLine = true,
+          modifier = Modifier.fillMaxWidth(),
+          shape = RoundedCornerShape(12.dp),
+          colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = TodCyan,
+            unfocusedBorderColor = DarkSurfaceBorder,
+            focusedTextColor = Color.White,
+            unfocusedTextColor = Color.White
+          )
+        )
+
+        if (availableChannels.isNotEmpty()) {
+          Text("أو اختر مباشرة من قنوات السيرفر:", color = DarkTextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+          LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(availableChannels.take(15)) { ch ->
+              Box(
+                modifier = Modifier
+                  .clip(RoundedCornerShape(10.dp))
+                  .background(DarkSurfaceHigh)
+                  .border(1.dp, DarkSurfaceBorder, RoundedCornerShape(10.dp))
+                  .clickable { onSelectChannel2(ch) }
+                  .padding(horizontal = 10.dp, vertical = 6.dp)
+              ) {
+                Text(ch.name, color = Color.White, fontSize = 11.sp, maxLines = 1)
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Launch Dual Stream Button
+    item {
+      Button(
+        onClick = onPlayDual,
+        enabled = url1.isNotBlank() && url2.isNotBlank(),
+        modifier = Modifier
+          .fillMaxWidth()
+          .height(54.dp),
+        shape = RoundedCornerShape(14.dp),
+        colors = ButtonDefaults.buttonColors(
+          containerColor = TodAmberYellow,
+          contentColor = Color.Black,
+          disabledContainerColor = DarkSurfaceElevated,
+          disabledContentColor = DarkTextSecondary
+        )
+      ) {
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+          Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(22.dp))
+          Text(
+            text = "تشغيل البث الثنائي الآن",
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Black
+          )
         }
       }
     }

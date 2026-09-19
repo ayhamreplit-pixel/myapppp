@@ -235,6 +235,14 @@ class TodExoPlayerManager(
     }
   }
 
+  fun pause() {
+    exoPlayer.pause()
+  }
+
+  fun stop() {
+    exoPlayer.stop()
+  }
+
   fun seekTo(positionMs: Long) {
     exoPlayer.seekTo(positionMs.coerceIn(0, exoPlayer.duration.coerceAtLeast(0)))
   }

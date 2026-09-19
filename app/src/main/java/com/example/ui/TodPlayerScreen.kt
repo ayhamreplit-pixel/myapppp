@@ -29,7 +29,8 @@ import com.example.player.TodExoPlayerManager
 
 enum class ScreenDestination {
   START_INPUT,
-  PLAYER
+  PLAYER,
+  DUAL_PLAYER
 }
 
 @Composable
@@ -45,6 +46,10 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
   var activeChannelList by remember { mutableStateOf<List<BroadcastStream>>(emptyList()) }
   var screenDestination by remember { mutableStateOf(ScreenDestination.START_INPUT) }
   var isFullscreen by remember { mutableStateOf(false) }
+
+  // Dual player streams
+  var dualStream1 by remember { mutableStateOf(BroadcastCatalog.placeholderStream) }
+  var dualStream2 by remember { mutableStateOf(BroadcastCatalog.placeholderStream) }
 
   // TOD Audio & Quality modal state (Screenshots 10 & 11)
   var showTodAudioQualityModal by remember { mutableStateOf(false) }
@@ -136,7 +141,31 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
         TodModernHubScreen(
           onPlayStream = { stream, channels ->
             launchPlayerInLandscape(stream, channels)
+          },
+          onPlayDualStream = { s1, s2 ->
+            dualStream1 = s1
+            dualStream2 = s2
+            playerManager.stop()
+            screenDestination = ScreenDestination.DUAL_PLAYER
+            activity?.let { act ->
+              act.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+              WindowCompat.getInsetsController(act.window, act.window.decorView).apply {
+                hide(WindowInsetsCompat.Type.systemBars())
+                systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+              }
+            }
           }
+        )
+      }
+
+      ScreenDestination.DUAL_PLAYER -> {
+        TodDualPlayerView(
+          stream1 = dualStream1,
+          stream2 = dualStream2,
+          onClose = { exitPlayerToHome() },
+          onChangeChannel1 = { exitPlayerToHome() },
+          onChangeChannel2 = { exitPlayerToHome() },
+          modifier = Modifier.fillMaxSize()
         )
       }
 

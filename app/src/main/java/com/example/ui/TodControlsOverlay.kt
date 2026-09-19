@@ -39,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -52,6 +53,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import com.example.model.BroadcastStream
 import com.example.model.MatchMoment
 import com.example.model.TodPlayerState
@@ -152,96 +158,99 @@ fun TodControlsOverlay(
       ) {
         // ==========================================
         // 1. TOP BAR (Screenshots 2, 4, 7, 9, 12, 13)
+        // Strictly LTR: Left has tools (Subtitles, Settings, Grid, Lock); Right has Title & Back Arrow (→)
         // ==========================================
-        Row(
-          modifier = Modifier
-            .fillMaxWidth()
-            .align(Alignment.TopCenter)
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          // Left side icons: Subtitles, Settings Cog with Play inside, 4-Grid
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
           Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(18.dp)
+            modifier = Modifier
+              .fillMaxWidth()
+              .align(Alignment.TopCenter)
+              .padding(horizontal = 20.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
           ) {
-            // 1. Subtitles icon (Screenshot 7)
-            Box(
-              modifier = Modifier
-                .size(36.dp)
-                .clickable { onOpenSubtitles() },
-              contentAlignment = Alignment.Center
+            // Left side icons: Subtitles, Settings Cog with Play inside, 4-Grid, Lock
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(18.dp)
             ) {
-              TodSubtitles(
-                size = 24.dp,
-                tint = if (playerState.selectedSubtitleTrack != null) TodAmberYellow else Color.White
-              )
-            }
+              // 1. Subtitles icon (Screenshot 7)
+              Box(
+                modifier = Modifier
+                  .size(36.dp)
+                  .clickable { onOpenSubtitles() },
+                contentAlignment = Alignment.Center
+              ) {
+                TodSubtitles(
+                  size = 24.dp,
+                  tint = if (playerState.selectedSubtitleTrack != null) TodAmberYellow else Color.White
+                )
+              }
 
-            // 2. Settings Cog with Play Triangle inside (Screenshot 2 & 7) -> opens Audio/Quality modal
-            Box(
-              modifier = Modifier
-                .size(36.dp)
-                .clickable { onOpenQuality() },
-              contentAlignment = Alignment.Center
-            ) {
-              TodSettingsCogWithPlay(size = 26.dp, tint = Color.White)
-            }
+              // 2. Settings Cog with Play Triangle inside (Screenshot 2 & 7) -> opens Audio/Quality modal
+              Box(
+                modifier = Modifier
+                  .size(36.dp)
+                  .clickable { onOpenQuality() },
+                contentAlignment = Alignment.Center
+              ) {
+                TodSettingsCogWithPlay(size = 26.dp, tint = Color.White)
+              }
 
-            // 3. 4 Rounded Squares Grid icon (Screenshot 2 & 12) -> opens channels / stream hub
-            Box(
-              modifier = Modifier
-                .size(36.dp)
-                .clickable { onOpenGrid() },
-              contentAlignment = Alignment.Center
-            ) {
-              TodGridFour(size = 24.dp, tint = Color.White)
-            }
+              // 3. 4 Rounded Squares Grid icon (Screenshot 2 & 12) -> opens channels / stream hub
+              Box(
+                modifier = Modifier
+                  .size(36.dp)
+                  .clickable { onOpenGrid() },
+                contentAlignment = Alignment.Center
+              ) {
+                TodGridFour(size = 24.dp, tint = Color.White)
+              }
 
-            // 4. Quick Touch Lock (locks gestures for safe viewing)
-            Box(
-              modifier = Modifier
-                .size(36.dp)
-                .clickable { onToggleLock() },
-              contentAlignment = Alignment.Center
-            ) {
-              Icon(
-                imageVector = Icons.Default.LockOpen,
-                contentDescription = "Lock Controls",
-                tint = Color.White,
-                modifier = Modifier.size(20.dp)
-              )
-            }
-          }
-
-          // Right side: Match / Content Title + Subtitle + Back Arrow (→) (Screenshot 4, 9, 12, 13)
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.clickable { onNavigateBack() }
-          ) {
-            Column(horizontalAlignment = Alignment.End) {
-              Text(
-                text = stream.title.ifEmpty { "Premier League" },
-                color = Color.White,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-              )
-              if (stream.subtitle.isNotEmpty() || stream.tournamentOrLeague.isNotEmpty()) {
-                Text(
-                  text = if (stream.subtitle.isNotEmpty()) stream.subtitle else stream.tournamentOrLeague,
-                  color = Color(0xFFB0B0B0),
-                  fontSize = 11.sp,
-                  maxLines = 1
+              // 4. Quick Touch Lock (locks gestures for safe viewing)
+              Box(
+                modifier = Modifier
+                  .size(36.dp)
+                  .clickable { onToggleLock() },
+                contentAlignment = Alignment.Center
+              ) {
+                Icon(
+                  imageVector = Icons.Default.LockOpen,
+                  contentDescription = "Lock Controls",
+                  tint = Color.White,
+                  modifier = Modifier.size(20.dp)
                 )
               }
             }
 
-            // Thin white back arrow → (Screenshot 4)
-            TodArrowBackRtl(size = 24.dp, tint = Color.White)
+            // Right side: Match / Content Title + Subtitle + Back Arrow (→) (Screenshot 4, 9, 12, 13)
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(10.dp),
+              modifier = Modifier.clickable { onNavigateBack() }
+            ) {
+              Column(horizontalAlignment = Alignment.End) {
+                Text(
+                  text = stream.title.ifEmpty { "Premier League" },
+                  color = Color.White,
+                  fontSize = 15.sp,
+                  fontWeight = FontWeight.Bold,
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis
+                )
+                if (stream.subtitle.isNotEmpty() || stream.tournamentOrLeague.isNotEmpty()) {
+                  Text(
+                    text = if (stream.subtitle.isNotEmpty()) stream.subtitle else stream.tournamentOrLeague,
+                    color = Color(0xFFB0B0B0),
+                    fontSize = 11.sp,
+                    maxLines = 1
+                  )
+                }
+              }
+
+              // Thin white back arrow → (Screenshot 4)
+              TodArrowBackRtl(size = 24.dp, tint = Color.White)
+            }
           }
         }
 
@@ -400,79 +409,145 @@ fun TodControlsOverlay(
             .align(Alignment.BottomCenter)
             .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
+          // Ultra-smooth, elegant custom TOD Seekbar
+          val currentProgress = if (playerState.durationMs > 0) {
+            (playerState.currentPositionMs.toFloat() / playerState.durationMs.toFloat()).coerceIn(0f, 1f)
+          } else 0f
 
-          // Sleek Solid Amber Yellow Seekbar (Screenshot 6, 9, 12, 13)
-          Slider(
-            value = if (playerState.durationMs > 0) {
-              (playerState.currentPositionMs.toFloat() / playerState.durationMs.toFloat()).coerceIn(0f, 1f)
-            } else 0f,
-            onValueChange = { frac ->
-              val target = (frac * playerState.durationMs).toLong()
-              onSeekTo(target)
-            },
-            colors = SliderDefaults.colors(
-              thumbColor = TodAmberYellow,
-              activeTrackColor = TodAmberYellow,
-              inactiveTrackColor = Color(0x66444444)
-            ),
+          var isSeeking by remember { mutableStateOf(false) }
+          var seekProgress by remember { mutableFloatStateOf(0f) }
+          val displayProgress = if (isSeeking) seekProgress else currentProgress
+
+          Box(
             modifier = Modifier
               .fillMaxWidth()
-              .height(18.dp)
-          )
-
-          Spacer(modifier = Modifier.height(4.dp))
-
-          // Bottom Info Row: Elapsed Time on Left, Live indicator & Fullscreen on Right
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+              .height(30.dp)
+              .pointerInput(playerState.durationMs) {
+                detectTapGestures { offset ->
+                  val w = size.width.toFloat()
+                  if (w > 0 && playerState.durationMs > 0) {
+                    val frac = (offset.x / w).coerceIn(0f, 1f)
+                    onSeekTo((frac * playerState.durationMs).toLong())
+                  }
+                }
+              }
+              .pointerInput(playerState.durationMs) {
+                detectHorizontalDragGestures(
+                  onDragStart = { offset ->
+                    val w = size.width.toFloat()
+                    if (w > 0) {
+                      isSeeking = true
+                      seekProgress = (offset.x / w).coerceIn(0f, 1f)
+                    }
+                  },
+                  onDragEnd = {
+                    if (isSeeking && playerState.durationMs > 0) {
+                      onSeekTo((seekProgress * playerState.durationMs).toLong())
+                    }
+                    isSeeking = false
+                  },
+                  onDragCancel = {
+                    isSeeking = false
+                  },
+                  onHorizontalDrag = { _, dragAmount ->
+                    val w = size.width.toFloat()
+                    if (w > 0) {
+                      seekProgress = (seekProgress + dragAmount / w).coerceIn(0f, 1f)
+                    }
+                  }
+                )
+              },
+            contentAlignment = Alignment.CenterStart
           ) {
-            // Left: Elapsed Time (Screenshot 6 & 9: e.g. "04:37" or "55:44")
-            Text(
-              text = formatTime(playerState.currentPositionMs),
-              color = Color.White,
-              fontSize = 14.sp,
-              fontWeight = FontWeight.SemiBold
+            // Background track: subtle translucent bar
+            Box(
+              modifier = Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(Color(0x55555555))
             )
 
-            // Right: "مباشر 🔴" Live badge + Fullscreen toggle icon (Screenshot 6, 12, 13)
-            Row(
-              verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-              // Live Badge: Red circle with "مباشر" Arabic text
-              Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                  .clickable { onSyncToLive() }
-                  .padding(4.dp)
-              ) {
-                // Outer red ring with filled center
-                Box(
-                  modifier = Modifier
-                    .size(10.dp)
-                    .clip(CircleShape)
-                    .border(1.5.dp, Color(0xFFE50914), CircleShape)
-                    .background(Color(0xFFE50914).copy(alpha = liveDotAlpha))
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                  text = "مباشر",
-                  color = Color.White,
-                  fontSize = 13.sp,
-                  fontWeight = FontWeight.Bold
-                )
-              }
+            // Active track: Solid TOD Amber Yellow bar
+            Box(
+              modifier = Modifier
+                .fillMaxWidth(displayProgress)
+                .height(4.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(TodAmberYellow)
+            )
 
-              // Fullscreen Icon (Screenshot 6, 12, 13: 4 outward corner arrows)
+            // Smooth circular glow thumb
+            Box(
+              modifier = Modifier
+                .fillMaxWidth(displayProgress)
+            ) {
               Box(
                 modifier = Modifier
-                  .size(36.dp)
-                  .clickable { onToggleFullscreen() },
-                contentAlignment = Alignment.Center
+                  .align(Alignment.CenterEnd)
+                  .size(13.dp)
+                  .clip(CircleShape)
+                  .background(TodAmberYellow)
+                  .border(2.dp, Color.White, CircleShape)
+              )
+            }
+          }
+
+          Spacer(modifier = Modifier.height(2.dp))
+
+          // Bottom Info Row: Strictly LTR - Left is Elapsed Time, Right is "مباشر 🔴" Live badge + Fullscreen
+          CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              // Left: Elapsed Time (Screenshot 6 & 9: e.g. "04:37" or "55:44")
+              Text(
+                text = formatTime(if (isSeeking && playerState.durationMs > 0) (seekProgress * playerState.durationMs).toLong() else playerState.currentPositionMs),
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold
+              )
+
+              // Right: "مباشر 🔴" Live badge + Fullscreen toggle icon (Screenshot 6, 12, 13)
+              Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
               ) {
-                TodFullscreenArrows(size = 20.dp, tint = Color.White)
+                // Live Badge: Red circle with "مباشر" Arabic text
+                Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  modifier = Modifier
+                    .clickable { onSyncToLive() }
+                    .padding(4.dp)
+                ) {
+                  // Outer red ring with filled center
+                  Box(
+                    modifier = Modifier
+                      .size(10.dp)
+                      .clip(CircleShape)
+                      .border(1.5.dp, Color(0xFFE50914), CircleShape)
+                      .background(Color(0xFFE50914).copy(alpha = liveDotAlpha))
+                  )
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Text(
+                    text = "مباشر",
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                  )
+                }
+
+                // Fullscreen Icon (Screenshot 6, 12, 13: 4 outward corner arrows)
+                Box(
+                  modifier = Modifier
+                    .size(36.dp)
+                    .clickable { onToggleFullscreen() },
+                  contentAlignment = Alignment.Center
+                ) {
+                  TodFullscreenArrows(size = 20.dp, tint = Color.White)
+                }
               }
             }
           }
