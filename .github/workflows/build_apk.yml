@@ -25,7 +25,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '9.3.1'
+          cache-read-only: false
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -38,10 +38,9 @@ jobs:
           if [ ! -f debug.keystore ]; then
             keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           fi
-          ls -lh debug.keystore
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug --no-daemon
+      - name: Fast Build Debug APK
+        run: ./gradlew assembleDebug --parallel --build-cache -x test -x lint -x testDebugUnitTest -x lintVitalRelease
 
       - name: Upload APK to Artifacts
         uses: actions/upload-artifact@v4
@@ -59,7 +58,7 @@ jobs:
           name: "📱 TOD Broadcast APK (Build #${{ github.run_number }})"
           body: |
             ### تم بناء التطبيق بنجاح!
-            اضغط على **app-debug.apk** لتنزيل التطبيق وتثبيته.
+            اضغط على **app-debug.apk** في الأسفل لتنزيل التطبيق مباشرة وتثبيته على هاتفك.
           files: app/build/outputs/apk/debug/app-debug.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

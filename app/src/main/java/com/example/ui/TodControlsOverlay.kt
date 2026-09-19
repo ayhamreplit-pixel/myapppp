@@ -28,7 +28,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
@@ -86,6 +88,8 @@ fun TodControlsOverlay(
   onSelectMoment: (MatchMoment) -> Unit,
   brightnessLevel: Float = 0.65f,
   onBrightnessChange: (Float) -> Unit = {},
+  volumeLevel: Float = 0.5f,
+  onVolumeChange: (Float) -> Unit = {},
   modifier: Modifier = Modifier
 ) {
   val infiniteTransition = rememberInfiniteTransition(label = "todLiveBeacon")
@@ -194,6 +198,21 @@ fun TodControlsOverlay(
             ) {
               TodGridFour(size = 24.dp, tint = Color.White)
             }
+
+            // 4. Quick Touch Lock (locks gestures for safe viewing)
+            Box(
+              modifier = Modifier
+                .size(36.dp)
+                .clickable { onToggleLock() },
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(
+                imageVector = Icons.Default.LockOpen,
+                contentDescription = "Lock Controls",
+                tint = Color.White,
+                modifier = Modifier.size(20.dp)
+              )
+            }
           }
 
           // Right side: Match / Content Title + Subtitle + Back Arrow (→) (Screenshot 4, 9, 12, 13)
@@ -276,13 +295,61 @@ fun TodControlsOverlay(
             }
           }
 
-          // Forward placeholder or spacer
-          Spacer(modifier = Modifier.size(54.dp))
+          // Forward 10 Seconds: Circular arrow with "10" inside
+          Box(
+            modifier = Modifier
+              .size(54.dp)
+              .clickable { onSeekForward() },
+            contentAlignment = Alignment.Center
+          ) {
+            TodForward10(size = 46.dp, tint = Color.White)
+          }
         }
 
         // ==========================================
-        // 3. RIGHT SIDE VERTICAL SLIDER & WATERMARK (Screenshot 5 & 9)
+        // 3. LEFT & RIGHT VERTICAL SLIDERS & WATERMARK (Screenshot 5 & 9)
         // ==========================================
+        // Left side vertical volume slider
+        Column(
+          modifier = Modifier
+            .align(Alignment.CenterStart)
+            .padding(start = 16.dp),
+          horizontalAlignment = Alignment.CenterHorizontally,
+          verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+          Box(
+            modifier = Modifier
+              .width(5.dp)
+              .height(90.dp)
+              .clip(RoundedCornerShape(3.dp))
+              .background(Color(0x66555555))
+              .pointerInput(Unit) {
+                detectVerticalDragGestures { _, dragAmount ->
+                  val delta = -dragAmount / 90f
+                  val newLevel = (volumeLevel + delta).coerceIn(0.0f, 1.0f)
+                  onVolumeChange(newLevel)
+                }
+              }
+          ) {
+            Box(
+              modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .fillMaxHeight(volumeLevel)
+                .clip(RoundedCornerShape(3.dp))
+                .background(Color(0xFFCCCCCC))
+            )
+          }
+
+          Icon(
+            imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+            contentDescription = "Volume",
+            tint = Color.White,
+            modifier = Modifier.size(20.dp)
+          )
+        }
+
+        // Right side vertical brightness slider capsule (Screenshot 5)
         Column(
           modifier = Modifier
             .align(Alignment.CenterEnd)
@@ -290,7 +357,6 @@ fun TodControlsOverlay(
           horizontalAlignment = Alignment.CenterHorizontally,
           verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-          // Vertical Brightness slider capsule (Screenshot 5)
           Box(
             modifier = Modifier
               .width(5.dp)
@@ -334,32 +400,6 @@ fun TodControlsOverlay(
             .align(Alignment.BottomCenter)
             .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-          // Match moment tags (if any)
-          if (stream.moments.isNotEmpty() && playerState.durationMs > 0) {
-            Row(
-              modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 6.dp),
-              horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-              stream.moments.take(4).forEach { moment ->
-                Box(
-                  modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(Color(0x991A1A1A))
-                    .clickable { onSelectMoment(moment) }
-                    .padding(horizontal = 8.dp, vertical = 3.dp)
-                ) {
-                  Text(
-                    text = "${moment.minuteText} ${moment.description.take(14)}...",
-                    color = TodAmberYellow,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium
-                  )
-                }
-              }
-            }
-          }
 
           // Sleek Solid Amber Yellow Seekbar (Screenshot 6, 9, 12, 13)
           Slider(

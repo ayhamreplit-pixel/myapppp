@@ -6,49 +6,20 @@ import android.content.pm.ActivityInfo
 import android.os.Build
 import android.util.Rational
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -58,8 +29,7 @@ import com.example.player.TodExoPlayerManager
 
 enum class ScreenDestination {
   START_INPUT,
-  PLAYER,
-  CATALOG
+  PLAYER
 }
 
 @Composable
@@ -71,13 +41,8 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
   val playerManager = remember { TodExoPlayerManager(context, coroutineScope) }
   val playerState by playerManager.playerState.collectAsState()
 
-  val streamsList = remember {
-    mutableStateListOf<BroadcastStream>().apply {
-      addAll(BroadcastCatalog.defaultStreams)
-    }
-  }
-
-  var currentStream by remember { mutableStateOf(streamsList.first()) }
+  var currentStream by remember { mutableStateOf(BroadcastCatalog.placeholderStream) }
+  var activeChannelList by remember { mutableStateOf<List<BroadcastStream>>(emptyList()) }
   var screenDestination by remember { mutableStateOf(ScreenDestination.START_INPUT) }
   var isFullscreen by remember { mutableStateOf(false) }
 
@@ -85,27 +50,39 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
   var showTodAudioQualityModal by remember { mutableStateOf(false) }
   var initialModalTab by remember { mutableStateOf(TodSettingsTab.QUALITY) }
 
+  // In-Player quick channel drawer
+  var showInPlayerChannelDrawer by remember { mutableStateOf(false) }
+
   // Other secondary sheets
   var showSubtitleSheet by remember { mutableStateOf(false) }
   var showSettingsSheet by remember { mutableStateOf(false) }
-  var showCustomStreamDialog by remember { mutableStateOf(false) }
 
-  // Back handler navigation
-  BackHandler(enabled = isFullscreen || screenDestination != ScreenDestination.START_INPUT) {
-    if (isFullscreen) {
-      isFullscreen = false
-      activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-      activity?.window?.let { window ->
-        WindowCompat.getInsetsController(window, window.decorView).show(WindowInsetsCompat.Type.systemBars())
-      }
-    } else if (screenDestination == ScreenDestination.CATALOG) {
-      screenDestination = ScreenDestination.START_INPUT
-    } else if (screenDestination == ScreenDestination.PLAYER) {
-      screenDestination = ScreenDestination.START_INPUT
+  val exitPlayerToHome: () -> Unit = {
+    showInPlayerChannelDrawer = false
+    isFullscreen = false
+    activity?.let { act ->
+      act.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+      WindowCompat.getInsetsController(act.window, act.window.decorView).show(WindowInsetsCompat.Type.systemBars())
     }
+    screenDestination = ScreenDestination.START_INPUT
   }
 
-  // Handle Fullscreen orientation changes & system bars
+  val launchPlayerInLandscape: (BroadcastStream, List<BroadcastStream>) -> Unit = { stream, channels ->
+    currentStream = stream
+    activeChannelList = channels
+    isFullscreen = true
+    activity?.let { act ->
+      WindowCompat.getInsetsController(act.window, act.window.decorView).apply {
+        hide(WindowInsetsCompat.Type.ime())
+        hide(WindowInsetsCompat.Type.systemBars())
+        systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+      }
+      act.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+    }
+    playerManager.playStream(stream)
+    screenDestination = ScreenDestination.PLAYER
+  }
+
   val toggleFullscreen: () -> Unit = {
     val target = !isFullscreen
     isFullscreen = target
@@ -117,9 +94,18 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
           systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
       } else {
-        act.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        act.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         WindowCompat.getInsetsController(act.window, act.window.decorView).show(WindowInsetsCompat.Type.systemBars())
       }
+    }
+  }
+
+  // Back handler navigation: close drawer if open, otherwise exit player to home
+  BackHandler(enabled = screenDestination == ScreenDestination.PLAYER) {
+    if (showInPlayerChannelDrawer) {
+      showInPlayerChannelDrawer = false
+    } else {
+      exitPlayerToHome()
     }
   }
 
@@ -146,79 +132,16 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
   ) {
     when (screenDestination) {
       ScreenDestination.START_INPUT -> {
-        // 1. Media3 Simple Start & Input Screen (Screenshot 1)
-        TodStartInputScreen(
-          onPlayStream = { stream ->
-            if (!streamsList.any { it.streamUrl == stream.streamUrl }) {
-              streamsList.add(0, stream)
-            }
-            currentStream = stream
-            playerManager.playStream(stream)
-            screenDestination = ScreenDestination.PLAYER
-          },
-          onOpenPresetCatalog = {
-            screenDestination = ScreenDestination.CATALOG
+        // 1. Redesigned Hub with Xtream Codes & Direct Streams (No Presets)
+        TodModernHubScreen(
+          onPlayStream = { stream, channels ->
+            launchPlayerInLandscape(stream, channels)
           }
         )
       }
 
-      ScreenDestination.CATALOG -> {
-        // 2. Channels & Broadcast Catalog Hub
-        Column(
-          modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .navigationBarsPadding()
-        ) {
-          // Top bar with back to start input
-          Box(
-            modifier = Modifier
-              .fillMaxWidth()
-              .background(Color(0xFF0F141E))
-              .padding(horizontal = 8.dp, vertical = 8.dp)
-          ) {
-            Row(
-              verticalAlignment = Alignment.CenterVertically,
-              modifier = Modifier.fillMaxWidth()
-            ) {
-              IconButton(onClick = { screenDestination = ScreenDestination.START_INPUT }) {
-                Icon(
-                  imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                  contentDescription = "Back to Input",
-                  tint = Color.White
-                )
-              }
-              Spacer(modifier = Modifier.width(6.dp))
-              Text(
-                text = "قنوات ومباريات TOD",
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-              )
-            }
-          }
-
-          BroadcastHubView(
-            currentStream = currentStream,
-            allStreams = streamsList,
-            onSelectStream = { stream ->
-              currentStream = stream
-              playerManager.playStream(stream)
-              screenDestination = ScreenDestination.PLAYER
-            },
-            onOpenCustomStreamDialog = { screenDestination = ScreenDestination.START_INPUT },
-            onSeekToMoment = { moment ->
-              playerManager.seekTo(moment.timeSeconds * 1000)
-            },
-            modifier = Modifier
-              .fillMaxWidth()
-              .weight(1f)
-          )
-        }
-      }
-
       ScreenDestination.PLAYER -> {
-        // 2. TOD Video Player Screen: Dedicated clean player with no bottom channels/match cards
+        // 2. TOD Video Player Screen: Starts directly in Landscape Fullscreen
         TodPlayerView(
           playerManager = playerManager,
           playerState = playerState,
@@ -236,20 +159,29 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
           },
           onOpenSubtitles = { showSubtitleSheet = true },
           onOpenSettings = { showSettingsSheet = true },
-          onOpenCustomStream = { screenDestination = ScreenDestination.START_INPUT },
+          onOpenCustomStream = { exitPlayerToHome() },
           onSelectMoment = { moment ->
             playerManager.seekTo(moment.timeSeconds * 1000)
           },
-          onNavigateBack = {
-            if (isFullscreen) toggleFullscreen()
-            screenDestination = ScreenDestination.START_INPUT
-          },
+          onNavigateBack = { exitPlayerToHome() },
           onOpenGrid = {
-            // Return to input to load any other dynamic stream
-            if (isFullscreen) toggleFullscreen()
-            screenDestination = ScreenDestination.START_INPUT
+            // Open in-player channel drawer for instant channel switching!
+            showInPlayerChannelDrawer = true
           },
           modifier = Modifier.fillMaxSize()
+        )
+
+        // In-Player Channel Drawer (Slides in over the landscape player)
+        TodInPlayerChannelDrawer(
+          visible = showInPlayerChannelDrawer,
+          channels = activeChannelList,
+          currentStreamId = currentStream.id,
+          onSelectChannel = { newStream ->
+            currentStream = newStream
+            playerManager.playStream(newStream)
+          },
+          onClose = { showInPlayerChannelDrawer = false },
+          onExitToHub = { exitPlayerToHome() }
         )
       }
     }
@@ -292,19 +224,6 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
         onAspectChange = { mode -> playerManager.setAspectRatioMode(mode) },
         onAudioBoostChange = { boost -> playerManager.setAudioBoostPercent(boost) },
         onDismiss = { showSettingsSheet = false }
-      )
-    }
-
-    // 4. Custom Stream Dialog (if triggered)
-    if (showCustomStreamDialog) {
-      CustomStreamDialog(
-        onPlayStream = { customStream ->
-          streamsList.add(0, customStream)
-          currentStream = customStream
-          playerManager.playStream(customStream)
-          screenDestination = ScreenDestination.PLAYER
-        },
-        onDismiss = { showCustomStreamDialog = false }
       )
     }
   }

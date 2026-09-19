@@ -4,6 +4,8 @@ import androidx.compose.ui.graphics.Color
 
 val TodCyan = Color(0xFF00E5FF)
 val TodCyanGlow = Color(0xFF38EFFF)
+val TodGold = Color(0xFFF5A623)
+val TodGoldGlow = Color(0xFFFFB800)
 val TodViolet = Color(0xFF8B5CF6)
 val TodPink = Color(0xFFEC4899)
 val TodLiveRed = Color(0xFFFF2A55)

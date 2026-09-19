@@ -61,10 +61,10 @@ class TodExoPlayerManager(
   val exoPlayer: ExoPlayer by lazy {
     val loadControl = DefaultLoadControl.Builder()
       .setBufferDurationsMs(
-        /* minBufferMs = */ 15_000,
-        /* maxBufferMs = */ 50_000,
-        /* bufferForPlaybackMs = */ 1_500,
-        /* bufferForPlaybackAfterRebufferMs = */ 3_000
+        /* minBufferMs = */ 5_000,
+        /* maxBufferMs = */ 25_000,
+        /* bufferForPlaybackMs = */ 400,
+        /* bufferForPlaybackAfterRebufferMs = */ 800
       )
       .setPrioritizeTimeOverSizeThresholds(true)
       .build()
@@ -88,6 +88,37 @@ class TodExoPlayerManager(
 
   fun playStream(stream: BroadcastStream) {
     currentStream = stream
+    val rawUrl = stream.streamUrl.trim()
+
+    if (rawUrl.isBlank()) {
+      _playerState.update {
+        it.copy(
+          isBuffering = false,
+          isPlaying = false,
+          errorMessage = "الرجاء إدخال أو اختيار رابط بث صالح"
+        )
+      }
+      return
+    }
+
+    val hasValidScheme = rawUrl.startsWith("http://", ignoreCase = true) ||
+        rawUrl.startsWith("https://", ignoreCase = true) ||
+        rawUrl.startsWith("rtsp://", ignoreCase = true) ||
+        rawUrl.startsWith("rtmp://", ignoreCase = true) ||
+        rawUrl.startsWith("content://", ignoreCase = true) ||
+        rawUrl.startsWith("file://", ignoreCase = true)
+
+    if (!hasValidScheme) {
+      _playerState.update {
+        it.copy(
+          isBuffering = false,
+          isPlaying = false,
+          errorMessage = "رابط البث غير صالح أو غير مكتمل:\n$rawUrl\nيرجى التأكد من أن الرابط يبدأ بـ http:// أو https://"
+        )
+      }
+      return
+    }
+
     _playerState.update {
       it.copy(
         isBuffering = true,
@@ -103,7 +134,13 @@ class TodExoPlayerManager(
       exoPlayer.play()
     } catch (e: Exception) {
       Log.e("TodExoPlayerManager", "Error preparing stream", e)
-      _playerState.update { it.copy(errorMessage = "Error loading stream: ${e.localizedMessage}") }
+      _playerState.update {
+        it.copy(
+          isBuffering = false,
+          isPlaying = false,
+          errorMessage = "تعذر تشغيل الرابط: ${e.localizedMessage}"
+        )
+      }
     }
   }
 
@@ -368,15 +405,20 @@ class TodExoPlayerManager(
     override fun onPlayerError(error: PlaybackException) {
       Log.e("TodExoPlayerManager", "Player error: ${error.errorCodeName}", error)
       val friendlyMessage = when {
+        error.errorCode == PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND ->
+          "تعذر العثور على مصدر البث أو الرابط غير صالح (ملف غير موجود)."
         error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ->
-          "Stream access denied or expired (HTTP Error). Please choose another channel or check the stream URL."
-        error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ->
-          "Network connection failed. Please check your internet connection."
+          "انتهت صلاحية البث أو تم رفض الوصول من السيرفر (HTTP Error)."
+        error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
+        error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ->
+          "فشل الاتصال بالشبكة أو انتهت مهلة السيرفر. يرجى التحقق من اتصال الإنترنت."
         error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED ||
-        error.errorCode == PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED ->
-          "Unsupported or corrupted stream format."
+        error.errorCode == PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED ||
+        error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED ->
+          "صيغة البث غير مدعومة أو تالفة."
         else ->
-          error.message ?: "Playback encountered an error (${error.errorCodeName})"
+          error.message?.takeIf { !it.contains("ENOENT") && !it.contains("htt:") }
+            ?: "تعذر تشغيل هذا البث (${error.errorCodeName})"
       }
       _playerState.update {
         it.copy(

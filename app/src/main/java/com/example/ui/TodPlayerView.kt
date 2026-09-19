@@ -28,10 +28,10 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -325,7 +325,7 @@ fun TodPlayerView(
           .padding(horizontal = 14.dp, vertical = 18.dp)
       ) {
         Icon(
-          Icons.Default.VolumeUp,
+          Icons.AutoMirrored.Filled.VolumeUp,
           contentDescription = "Volume",
           tint = TodCyan,
           modifier = Modifier.size(28.dp)
@@ -403,6 +403,13 @@ fun TodPlayerView(
           lp.screenBrightness = newB
           act.window.attributes = lp
         }
+      },
+      volumeLevel = volumePercent,
+      onVolumeChange = { newV ->
+        volumePercent = newV
+        val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        val targetVol = (newV * maxVol).toInt().coerceIn(0, maxVol)
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, targetVol, 0)
       }
     )
 

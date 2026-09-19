@@ -17,10 +17,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -208,7 +208,7 @@ fun AudioTrackSheet(
                   contentAlignment = Alignment.Center
                 ) {
                   Icon(
-                    imageVector = Icons.Default.VolumeUp,
+                    imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                     contentDescription = null,
                     tint = if (isSelected) TodCyan else DarkTextSecondary,
                     modifier = Modifier.size(18.dp)
@@ -448,7 +448,7 @@ fun PlaybackSettingsSheet(
         verticalAlignment = Alignment.CenterVertically
       ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-          Icon(Icons.Default.VolumeUp, contentDescription = null, tint = TodCyan, modifier = Modifier.size(20.dp))
+          Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null, tint = TodCyan, modifier = Modifier.size(20.dp))
           Spacer(modifier = Modifier.width(8.dp))
           Text("Audio Boost (Loudness Enhancer)", color = DarkTextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
         }

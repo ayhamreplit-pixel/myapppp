@@ -248,6 +248,62 @@ fun TodReplay10(
 }
 
 /**
+ * Custom TOD Icon: Forward 10 Seconds (Clockwise circular arrow with "10" inside).
+ */
+@Composable
+fun TodForward10(
+  modifier: Modifier = Modifier,
+  tint: Color = Color.White,
+  size: Dp = 44.dp
+) {
+  Box(modifier = modifier.size(size), contentAlignment = Alignment.Center) {
+    Canvas(modifier = Modifier.size(size)) {
+      val center = Offset(size.toPx() / 2f, size.toPx() / 2f)
+      val radius = size.toPx() * 0.42f
+      val strokeWidth = size.toPx() * 0.075f
+
+      // Draw clockwise circular arc (sweeping ~280 degrees)
+      val path = Path().apply {
+        arcTo(
+          rect = androidx.compose.ui.geometry.Rect(
+            center.x - radius,
+            center.y - radius,
+            center.x + radius,
+            center.y + radius
+          ),
+          startAngleDegrees = -120f,
+          sweepAngleDegrees = 280f,
+          forceMoveTo = false
+        )
+      }
+      drawPath(
+        path = path,
+        color = tint,
+        style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+      )
+
+      // Draw Arrow Head at the top-right (-120+280 = 160 deg -> pointing clockwise)
+      val arrowAngle = 160f * (PI / 180f).toFloat()
+      val arrowTip = Offset(center.x + radius * cos(arrowAngle), center.y + radius * sin(arrowAngle))
+      val arrowPath = Path().apply {
+        moveTo(arrowTip.x, arrowTip.y - size.toPx() * 0.08f)
+        lineTo(arrowTip.x + size.toPx() * 0.16f, arrowTip.y + size.toPx() * 0.02f)
+        lineTo(arrowTip.x - size.toPx() * 0.02f, arrowTip.y + size.toPx() * 0.12f)
+        close()
+      }
+      drawPath(path = arrowPath, color = tint, style = Fill)
+    }
+
+    Text(
+      text = "10",
+      color = tint,
+      fontSize = (size.value * 0.38f).sp,
+      fontWeight = FontWeight.Bold
+    )
+  }
+}
+
+/**
  * Custom TOD Icon: Pause Bars (Two tall rounded vertical pill bars).
  * Exactly as seen in TOD player screenshots.
  */
