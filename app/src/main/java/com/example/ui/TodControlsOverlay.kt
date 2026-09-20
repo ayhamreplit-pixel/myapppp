@@ -121,8 +121,6 @@ fun TodControlsOverlay(
   onVolumeChange: (Float) -> Unit = {},
   modifier: Modifier = Modifier
 ) {
-  var showSleepTimerDialog by remember { mutableStateOf(false) }
-
   val infiniteTransition = rememberInfiniteTransition(label = "todLiveBeacon")
   val liveDotAlpha by infiniteTransition.animateFloat(
     initialValue = 0.35f,
@@ -261,41 +259,7 @@ fun TodControlsOverlay(
                 }
               }
 
-              // 5. Sleep Timer button with countdown indicator
-              val remainingSec = playerState.sleepTimerRemainingSec
-              val isSleepActive = playerState.sleepTimerMinutes != null && remainingSec > 0
-              Box(
-                modifier = Modifier
-                  .clip(RoundedCornerShape(6.dp))
-                  .background(if (isSleepActive) TodAmberYellow.copy(alpha = 0.2f) else Color.Transparent)
-                  .clickable { showSleepTimerDialog = true }
-                  .padding(4.dp),
-                contentAlignment = Alignment.Center
-              ) {
-                Row(
-                  verticalAlignment = Alignment.CenterVertically,
-                  horizontalArrangement = Arrangement.spacedBy(3.dp)
-                ) {
-                  Icon(
-                    imageVector = Icons.Default.Timer,
-                    contentDescription = "Sleep Timer",
-                    tint = if (isSleepActive) TodAmberYellow else Color.White,
-                    modifier = Modifier.size(20.dp)
-                  )
-                  if (isSleepActive) {
-                    val mins = remainingSec / 60
-                    val secs = remainingSec % 60
-                    Text(
-                      text = String.format("%d:%02d", mins, secs),
-                      color = TodAmberYellow,
-                      fontSize = 11.sp,
-                      fontWeight = FontWeight.Bold
-                    )
-                  }
-                }
-              }
-
-              // 6. Picture-in-Picture Button
+              // 5. Picture-in-Picture Button
               Box(
                 modifier = Modifier
                   .size(36.dp)
@@ -310,37 +274,20 @@ fun TodControlsOverlay(
                 )
               }
 
-              // 7. Instant Reload / Re-sync Stream Button
+              // 6. Instant Reload / Re-sync Stream Button (TOD Style)
               Box(
                 modifier = Modifier
                   .size(36.dp)
                   .clickable { onReloadStream() },
                 contentAlignment = Alignment.Center
               ) {
-                Icon(
-                  imageVector = Icons.Default.Refresh,
-                  contentDescription = "Reload Stream",
-                  tint = Color.White,
-                  modifier = Modifier.size(20.dp)
+                TodReloadIcon(
+                  size = 22.dp,
+                  tint = Color.White
                 )
               }
 
-              // 8. Instant Snapshot Camera Button
-              Box(
-                modifier = Modifier
-                  .size(36.dp)
-                  .clickable { onTakeSnapshot() },
-                contentAlignment = Alignment.Center
-              ) {
-                Icon(
-                  imageVector = Icons.Default.CameraAlt,
-                  contentDescription = "Take Snapshot",
-                  tint = Color.White,
-                  modifier = Modifier.size(20.dp)
-                )
-              }
-
-              // 9. Quick Touch Lock (locks gestures for safe viewing)
+              // 7. Quick Touch Lock (locks gestures for safe viewing)
               Box(
                 modifier = Modifier
                   .size(36.dp)
@@ -767,101 +714,6 @@ fun TodControlsOverlay(
           }
         }
       }
-    }
-
-    // ==========================================
-    // 5. SLEEP TIMER MODAL DIALOG
-    // ==========================================
-    if (showSleepTimerDialog) {
-      AlertDialog(
-        onDismissRequest = { showSleepTimerDialog = false },
-        containerColor = Color(0xFF141926),
-        title = {
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-          ) {
-            Icon(Icons.Default.Timer, contentDescription = null, tint = TodAmberYellow)
-            Text(
-              text = "مؤقت إيقاف التشغيل التلقائي",
-              color = Color.White,
-              fontSize = 17.sp,
-              fontWeight = FontWeight.Bold
-            )
-          }
-        },
-        text = {
-          Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-              text = "حدد المدة المراد إيقاف المشغل بعدها تلقائياً:",
-              color = Color(0xFFB0B0B0),
-              fontSize = 13.sp
-            )
-
-            val options = listOf(
-              15 to "15 دقيقة",
-              30 to "30 دقيقة",
-              45 to "45 دقيقة",
-              60 to "ساعة واحدة",
-              90 to "ساعة ونصف",
-              120 to "ساعتان"
-            )
-
-            options.forEach { (mins, label) ->
-              val isSelected = playerState.sleepTimerMinutes == mins
-              Box(
-                modifier = Modifier
-                  .fillMaxWidth()
-                  .clip(RoundedCornerShape(8.dp))
-                  .background(if (isSelected) TodAmberYellow.copy(alpha = 0.2f) else Color(0x3320283C))
-                  .border(
-                    1.dp,
-                    if (isSelected) TodAmberYellow else Color.White.copy(alpha = 0.1f),
-                    RoundedCornerShape(8.dp)
-                  )
-                  .clickable {
-                    onSetSleepTimer(mins)
-                    showSleepTimerDialog = false
-                  }
-                  .padding(horizontal = 14.dp, vertical = 12.dp)
-              ) {
-                Row(
-                  modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.SpaceBetween,
-                  verticalAlignment = Alignment.CenterVertically
-                ) {
-                  Text(text = label, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                  if (isSelected) {
-                    Text(text = "مفعل ✓", color = TodAmberYellow, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                  }
-                }
-              }
-            }
-
-            if (playerState.sleepTimerMinutes != null) {
-              Box(
-                modifier = Modifier
-                  .fillMaxWidth()
-                  .clip(RoundedCornerShape(8.dp))
-                  .background(Color(0x33FF4D4D))
-                  .clickable {
-                    onCancelSleepTimer()
-                    showSleepTimerDialog = false
-                  }
-                  .padding(vertical = 12.dp),
-                contentAlignment = Alignment.Center
-              ) {
-                Text(text = "إلغاء المؤقت", color = Color(0xFFFF5252), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-              }
-            }
-          }
-        },
-        confirmButton = {
-          TextButton(onClick = { showSleepTimerDialog = false }) {
-            Text("إغلاق", color = TodAmberYellow, fontWeight = FontWeight.Bold)
-          }
-        }
-      )
     }
   }
 }

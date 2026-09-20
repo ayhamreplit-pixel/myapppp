@@ -32,7 +32,7 @@ data class BroadcastStream(
   val subtitle: String,
   val category: String,
   val streamUrl: String,
-  val format: StreamFormat,
+  val format: StreamFormat = StreamFormat.HLS,
   val isLive: Boolean = false,
   val channelNumber: String? = null,
   val thumbnailColor: Long = 0xFF10141E,

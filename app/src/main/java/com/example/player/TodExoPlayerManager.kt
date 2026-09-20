@@ -58,15 +58,26 @@ class TodExoPlayerManager(
 
   val trackSelector = DefaultTrackSelector(context)
 
+  // Smart User-Agent list for high-compatibility anti-block IPTV bypass
+  private val userAgents = listOf(
+    "IPTVSmartersPro/3.1.5 (Linux; Android 12; Mobile)",
+    "TiviMate/4.7.0 (Linux; Android 13; Mobile)",
+    "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36",
+    "VLC/3.5.4 (Linux; Android 14; Mobile)",
+    "ExoPlayer/2.19.1 (Linux; Android 14)"
+  )
+  private var currentUaIndex = 0
+
   val exoPlayer: ExoPlayer by lazy {
+    // Ultra-optimized LoadControl for weak network (دعم النت الضعيف ومقاومة التقطيع)
     val loadControl = DefaultLoadControl.Builder()
       .setBufferDurationsMs(
-        /* minBufferMs = */ 3_000,
-        /* maxBufferMs = */ 15_000,
-        /* bufferForPlaybackMs = */ 250,
-        /* bufferForPlaybackAfterRebufferMs = */ 500
+        /* minBufferMs = */ 1_500,
+        /* maxBufferMs = */ 10_000,
+        /* bufferForPlaybackMs = */ 200,
+        /* bufferForPlaybackAfterRebufferMs = */ 400
       )
-      .setBackBuffer(10_000, true)
+      .setBackBuffer(8_000, true)
       .setPrioritizeTimeOverSizeThresholds(true)
       .build()
 
@@ -81,16 +92,14 @@ class TodExoPlayerManager(
   }
 
   private var tickerJob: Job? = null
+  private var sleepTimerJob: Job? = null
   private var currentStream: BroadcastStream? = null
-  private var hasAttemptedFallback = false
+  private var retryCount = 0
 
-  init {
-    // Ticker starts lazily only when stream playback actually starts
-  }
-
-  fun playStream(stream: BroadcastStream, isFallback: Boolean = false) {
-    if (!isFallback) {
-      hasAttemptedFallback = false
+  fun playStream(stream: BroadcastStream, isRetry: Boolean = false) {
+    if (!isRetry) {
+      retryCount = 0
+      currentUaIndex = 0
     }
     currentStream = stream
     val rawUrl = stream.streamUrl.trim()
@@ -118,7 +127,7 @@ class TodExoPlayerManager(
         it.copy(
           isBuffering = false,
           isPlaying = false,
-          errorMessage = "رابط البث غير صالح أو غير مكتمل:\n$rawUrl\nيرجى التأكد من أن الرابط يبدأ بـ http:// أو https://"
+          errorMessage = "رابط البث غير صالح:\n$rawUrl"
         )
       }
       return
@@ -139,18 +148,49 @@ class TodExoPlayerManager(
       exoPlayer.play()
     } catch (e: Exception) {
       Log.e("TodExoPlayerManager", "Error preparing stream", e)
-      if (!hasAttemptedFallback) {
-        hasAttemptedFallback = true
-        val altFormat = if (stream.format == StreamFormat.HLS) StreamFormat.PROGRESSIVE else StreamFormat.HLS
-        playStream(stream.copy(format = altFormat), isFallback = true)
-      } else {
-        _playerState.update {
-          it.copy(
-            isBuffering = false,
-            isPlaying = false,
-            errorMessage = "تعذر تشغيل الرابط: ${e.localizedMessage}"
-          )
-        }
+      handlePlaybackRetry(e.localizedMessage ?: "Playback Exception")
+    }
+  }
+
+  fun retryStream() {
+    currentStream?.let { playStream(it) }
+  }
+
+  fun reloadStream() {
+    currentStream?.let {
+      exoPlayer.stop()
+      playStream(it)
+    }
+  }
+
+  private fun handlePlaybackRetry(errorMsg: String) {
+    if (retryCount < 3 && currentStream != null) {
+      retryCount++
+      currentUaIndex = (currentUaIndex + 1) % userAgents.size
+      val stream = currentStream!!
+      
+      val altFormat = when (stream.format) {
+        StreamFormat.HLS -> StreamFormat.PROGRESSIVE
+        StreamFormat.PROGRESSIVE -> StreamFormat.HLS
+        else -> StreamFormat.AUTO
+      }
+      
+      var newUrl = stream.streamUrl
+      if (newUrl.endsWith(".ts", ignoreCase = true)) {
+        newUrl = newUrl.substringBeforeLast(".ts") + ".m3u8"
+      } else if (newUrl.endsWith(".m3u8", ignoreCase = true)) {
+        newUrl = newUrl.substringBeforeLast(".m3u8") + ".ts"
+      }
+
+      Log.i("TodExoPlayerManager", "AI Auto-Retry #$retryCount with UA: ${userAgents[currentUaIndex]} and format: $altFormat")
+      playStream(stream.copy(streamUrl = newUrl, format = altFormat), isRetry = true)
+    } else {
+      _playerState.update {
+        it.copy(
+          isBuffering = false,
+          isPlaying = false,
+          errorMessage = "تعذر تشغيل هذا البث ($errorMsg). يرجى التأكد من استقرار السيرفر أو تجربة قناة أخرى."
+        )
       }
     }
   }
@@ -158,16 +198,14 @@ class TodExoPlayerManager(
   private fun createMediaSource(stream: BroadcastStream): MediaSource {
     val uri = Uri.parse(stream.streamUrl)
 
-    // Build HTTP data source with custom headers and modern browser/IPTV user agents
-    val defaultUa = "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36 IPTVSmartersPro/3.1.5 ExoPlayer/2.19.1"
-    val chosenUserAgent = if (!stream.userAgent.isNullOrBlank()) stream.userAgent else defaultUa
+    val chosenUserAgent = if (!stream.userAgent.isNullOrBlank()) stream.userAgent else userAgents[currentUaIndex]
 
     val httpDataSourceFactory = DefaultHttpDataSource.Factory()
       .setUserAgent(chosenUserAgent)
       .setAllowCrossProtocolRedirects(true)
       .setKeepPostFor302Redirects(true)
-      .setConnectTimeoutMs(20_000)
-      .setReadTimeoutMs(25_000)
+      .setConnectTimeoutMs(15_000)
+      .setReadTimeoutMs(20_000)
       .apply {
         val headers = mutableMapOf<String, String>()
         headers["Accept"] = "*/*"
@@ -179,8 +217,6 @@ class TodExoPlayerManager(
       }
 
     val dataSourceFactory = DefaultDataSource.Factory(context, httpDataSourceFactory)
-
-    // Build MediaItem with optional DRM configuration
     val mediaItemBuilder = MediaItem.Builder().setUri(uri)
 
     if (!stream.drmScheme.isNullOrBlank() || !stream.drmKey.isNullOrBlank()) {
@@ -198,7 +234,6 @@ class TodExoPlayerManager(
       mediaItemBuilder.setDrmConfiguration(drmConfigBuilder.build())
     }
 
-    // Determine format either by explicit enum or intelligent URI / IPTV extension inspection
     val format = when (stream.format) {
       StreamFormat.AUTO -> detectFormat(stream.streamUrl)
       else -> stream.format
@@ -232,20 +267,11 @@ class TodExoPlayerManager(
   private fun detectFormat(url: String): StreamFormat {
     val lower = url.lowercase()
     return when {
-      lower.contains(".mpd") -> StreamFormat.DASH
-      lower.contains(".ism") -> StreamFormat.SMOOTH_STREAMING
-      lower.contains(".mp4") || lower.contains(".mkv") || lower.contains(".flv") || lower.contains(".avi") -> StreamFormat.PROGRESSIVE
-      // In IPTV & Web streaming, .m3u8, .php, .js, .json, .css, /live/, /get.php, token query endpoints are almost always HLS playlists
-      lower.contains(".m3u8") ||
-      lower.contains(".php") ||
-      lower.contains(".js") ||
-      lower.contains(".json") ||
-      lower.contains(".css") ||
-      lower.contains("/live/") ||
-      lower.contains("token=") ||
-      lower.contains("hls") ||
-      lower.contains("playlist") -> StreamFormat.HLS
-      lower.contains(".ts") -> StreamFormat.PROGRESSIVE
+      lower.contains(".mpd") || lower.contains("format=mpd") || lower.contains("manifest.mpd") -> StreamFormat.DASH
+      lower.contains(".ism") || lower.contains("/manifest") -> StreamFormat.SMOOTH_STREAMING
+      lower.contains(".mp4") || lower.contains(".mkv") || lower.contains(".flv") || lower.contains(".avi") || lower.contains(".webm") -> StreamFormat.PROGRESSIVE
+      lower.contains(".ts") || lower.contains("output=ts") -> StreamFormat.PROGRESSIVE
+      lower.contains(".m3u8") || lower.contains(".m3u") || lower.contains("output=m3u8") || lower.contains("/live/") || lower.contains(".php") || lower.contains(".json") || lower.contains(".css") || lower.contains(".js") || lower.contains("token=") -> StreamFormat.HLS
       else -> StreamFormat.HLS
     }
   }
@@ -322,179 +348,203 @@ class TodExoPlayerManager(
     return newMuted
   }
 
+  fun toggleControlsLock(): Boolean {
+    val newLock = !_playerState.value.isControlsLocked
+    _playerState.update { it.copy(isControlsLocked = newLock) }
+    return newLock
+  }
+
+  fun toggleStatsHud(): Boolean {
+    val newStats = !_playerState.value.showStatsHud
+    _playerState.update { it.copy(showStatsHud = newStats) }
+    return newStats
+  }
+
   fun setSleepTimer(minutes: Int) {
-    val totalSec = minutes * 60
-    _playerState.update {
-      it.copy(sleepTimerMinutes = minutes, sleepTimerRemainingSec = totalSec)
+    sleepTimerJob?.cancel()
+    if (minutes <= 0) {
+      cancelSleepTimer()
+      return
+    }
+    _playerState.update { it.copy(sleepTimerMinutes = minutes, sleepTimerRemainingSec = minutes * 60) }
+    sleepTimerJob = coroutineScope.launch(Dispatchers.Main) {
+      var remaining = minutes * 60
+      while (remaining > 0 && isActive) {
+        delay(1000)
+        remaining--
+        _playerState.update { it.copy(sleepTimerRemainingSec = remaining) }
+      }
+      if (remaining <= 0) {
+        pause()
+        _playerState.update { it.copy(sleepTimerMinutes = null, sleepTimerRemainingSec = 0) }
+      }
     }
   }
 
   fun cancelSleepTimer() {
-    _playerState.update {
-      it.copy(sleepTimerMinutes = null, sleepTimerRemainingSec = 0)
-    }
-  }
-
-  fun reloadStream() {
-    currentStream?.let { playStream(it) }
+    sleepTimerJob?.cancel()
+    sleepTimerJob = null
+    _playerState.update { it.copy(sleepTimerMinutes = null, sleepTimerRemainingSec = 0) }
   }
 
   fun setAudioBoostPercent(percent: Int) {
-    _playerState.update { it.copy(audioBoostPercent = percent) }
-    // Standard volume adjustment on ExoPlayer (1.0 = normal, up to 2.0 boost)
-    val normalizedVol = 1.0f + (percent / 100f)
-    exoPlayer.volume = normalizedVol.coerceIn(0f, 2.0f)
-  }
-
-  fun toggleControlsLock() {
-    _playerState.update { it.copy(isControlsLocked = !it.isControlsLocked) }
-  }
-
-  fun toggleStatsHud() {
-    _playerState.update { it.copy(showStatsHud = !it.showStatsHud) }
+    val clamped = percent.coerceIn(0, 100)
+    _playerState.update { it.copy(audioBoostPercent = clamped) }
+    if (!_playerState.value.isMuted) {
+      val volumeFactor = 1.0f + (clamped / 100f)
+      exoPlayer.volume = volumeFactor.coerceIn(0f, 2.0f)
+    }
   }
 
   fun selectQuality(quality: VideoQualityTrack) {
-    val parameters = trackSelector.buildUponParameters()
     if (quality.isAuto) {
-      parameters.clearOverridesOfType(C.TRACK_TYPE_VIDEO)
-      parameters.setMaxVideoSizeSd()
-      parameters.clearVideoSizeConstraints()
-      parameters.setMaxVideoBitrate(Int.MAX_VALUE)
+      trackSelector.setParameters(
+        trackSelector.buildUponParameters()
+          .clearOverridesOfType(C.TRACK_TYPE_VIDEO)
+          .setMaxVideoSizeSd()
+      )
     } else {
-      parameters.setMaxVideoSize(quality.width, quality.height)
-      parameters.setMaxVideoBitrate(if (quality.bitrate > 0) (quality.bitrate * 1.2).toInt() else Int.MAX_VALUE)
-    }
-    trackSelector.setParameters(parameters)
-    _playerState.update { state ->
-      state.copy(
-        selectedQuality = quality,
-        qualities = state.qualities.map { it.copy(isSelected = it.id == quality.id) }
-      )
-    }
-  }
-
-  fun selectAudioTrack(option: AudioTrackOption) {
-    val parameters = trackSelector.buildUponParameters()
-    parameters.setPreferredAudioLanguage(option.language)
-    trackSelector.setParameters(parameters)
-    _playerState.update { state ->
-      state.copy(
-        selectedAudioTrack = option,
-        audioTracks = state.audioTracks.map { it.copy(isSelected = it.id == option.id) }
-      )
-    }
-  }
-
-  fun selectSubtitleTrack(option: SubtitleTrackOption?) {
-    val parameters = trackSelector.buildUponParameters()
-    if (option == null) {
-      parameters.setIgnoredTextSelectionFlags(C.SELECTION_FLAG_DEFAULT)
-      parameters.setPreferredTextLanguage(null)
-      parameters.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
-    } else {
-      parameters.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-      parameters.setPreferredTextLanguage(option.language)
-    }
-    trackSelector.setParameters(parameters)
-    _playerState.update { state ->
-      state.copy(
-        selectedSubtitleTrack = option,
-        subtitleTracks = state.subtitleTracks.map { it.copy(isSelected = it.id == option?.id) }
-      )
-    }
-  }
-
-  fun retryStream() {
-    currentStream?.let { playStream(it) }
-  }
-
-  fun startPeriodicTicker() {
-    if (tickerJob?.isActive == true) return
-    tickerJob = coroutineScope.launch(Dispatchers.Main) {
-      while (isActive) {
-        updateProgressAndStats()
-        delay(1000)
-      }
-    }
-  }
-
-  fun stopPeriodicTicker() {
-    tickerJob?.cancel()
-    tickerJob = null
-  }
-
-  private fun updateProgressAndStats() {
-    val position = exoPlayer.currentPosition
-    val duration = exoPlayer.duration.coerceAtLeast(0)
-    val buffered = exoPlayer.bufferedPosition
-    val isLive = exoPlayer.isCurrentMediaItemLive
-    val liveOffset = if (isLive) exoPlayer.currentLiveOffset else 0L
-
-    val bufferDurationSec = ((buffered - position).coerceAtLeast(0L) / 1000f)
-    val liveLatencySec = (liveOffset.coerceAtLeast(0L) / 1000f)
-
-    val currentStats = _playerState.value.stats.copy(
-      bufferDurationSec = bufferDurationSec,
-      liveLatencySec = liveLatencySec
-    )
-
-    // Handle sleep timer countdown every second
-    var newSleepRemaining = _playerState.value.sleepTimerRemainingSec
-    if (_playerState.value.sleepTimerMinutes != null) {
-      if (newSleepRemaining > 0) {
-        newSleepRemaining -= 1
-        if (newSleepRemaining <= 0) {
-          exoPlayer.pause()
-          stopPeriodicTicker()
-          _playerState.update { it.copy(sleepTimerMinutes = null, sleepTimerRemainingSec = 0, isPlaying = false) }
-          return
+      val tracks = exoPlayer.currentTracks
+      for (group in tracks.groups) {
+        if (group.type == C.TRACK_TYPE_VIDEO) {
+          for (i in 0 until group.length) {
+            val format = group.getTrackFormat(i)
+            if (format.height == quality.height) {
+              trackSelector.setParameters(
+                trackSelector.buildUponParameters()
+                  .setOverrideForType(
+                    TrackSelectionOverride(group.mediaTrackGroup, listOf(i))
+                  )
+              )
+              break
+            }
+          }
         }
       }
     }
+    _playerState.update { it.copy(selectedQuality = quality) }
+  }
 
-    _playerState.update {
-      it.copy(
-        isPlaying = exoPlayer.isPlaying,
-        currentPositionMs = position,
-        durationMs = duration,
-        bufferedPositionMs = buffered,
-        isLive = isLive,
-        liveOffsetMs = liveOffset,
-        sleepTimerRemainingSec = newSleepRemaining,
-        stats = currentStats
-      )
+  fun selectAudioTrack(audio: AudioTrackOption) {
+    val tracks = exoPlayer.currentTracks
+    for (group in tracks.groups) {
+      if (group.type == C.TRACK_TYPE_AUDIO) {
+        for (i in 0 until group.length) {
+          val id = "${group.mediaTrackGroup.id}_$i"
+          if (id == audio.id) {
+            trackSelector.setParameters(
+              trackSelector.buildUponParameters()
+                .setOverrideForType(
+                  TrackSelectionOverride(group.mediaTrackGroup, listOf(i))
+                )
+            )
+            _playerState.update { it.copy(selectedAudioTrack = audio) }
+            return
+          }
+        }
+      }
     }
+  }
+
+  fun selectSubtitleTrack(sub: SubtitleTrackOption?) {
+    if (sub == null) {
+      trackSelector.setParameters(
+        trackSelector.buildUponParameters()
+          .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+      )
+      _playerState.update { it.copy(selectedSubtitleTrack = null) }
+    } else {
+      val tracks = exoPlayer.currentTracks
+      for (group in tracks.groups) {
+        if (group.type == C.TRACK_TYPE_TEXT) {
+          for (i in 0 until group.length) {
+            val id = "${group.mediaTrackGroup.id}_$i"
+            if (id == sub.id) {
+              trackSelector.setParameters(
+                trackSelector.buildUponParameters()
+                  .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                  .setOverrideForType(
+                    TrackSelectionOverride(group.mediaTrackGroup, listOf(i))
+                  )
+              )
+              _playerState.update { it.copy(selectedSubtitleTrack = sub) }
+              return
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private fun startPeriodicTicker() {
+    stopPeriodicTicker()
+    tickerJob = coroutineScope.launch(Dispatchers.Main) {
+      while (isActive) {
+        if (exoPlayer.isPlaying) {
+          val pos = exoPlayer.currentPosition.coerceAtLeast(0)
+          val dur = exoPlayer.duration.coerceAtLeast(0)
+          val buf = exoPlayer.bufferedPosition.coerceAtLeast(0)
+          val live = exoPlayer.isCurrentMediaItemLive
+
+          _playerState.update { state ->
+            state.copy(
+              currentPositionMs = pos,
+              durationMs = dur,
+              bufferedPositionMs = buf,
+              isLive = live,
+              stats = state.stats.copy(
+                bufferDurationSec = ((buf - pos).coerceAtLeast(0) / 1000f)
+              )
+            )
+          }
+        }
+        delay(500)
+      }
+    }
+  }
+
+  private fun stopPeriodicTicker() {
+    tickerJob?.cancel()
+    tickerJob = null
   }
 
   private val playerListener = object : Player.Listener {
     override fun onPlaybackStateChanged(playbackState: Int) {
       val isBuffering = playbackState == Player.STATE_BUFFERING
+      val isEnded = playbackState == Player.STATE_ENDED
+      val isReady = playbackState == Player.STATE_READY
+
       _playerState.update {
         it.copy(
           isBuffering = isBuffering,
-          isLive = exoPlayer.isCurrentMediaItemLive,
-          durationMs = exoPlayer.duration.coerceAtLeast(0)
+          durationMs = exoPlayer.duration.coerceAtLeast(0),
+          isLive = exoPlayer.isCurrentMediaItemLive
         )
       }
-      if (playbackState == Player.STATE_READY) {
-        extractTracks()
+
+      if (isReady && exoPlayer.playWhenReady) {
+        startPeriodicTicker()
+      } else if (isEnded) {
+        stopPeriodicTicker()
       }
     }
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
-      _playerState.update { it.copy(isPlaying = isPlaying) }
+      _playerState.update {
+        it.copy(
+          isPlaying = isPlaying,
+          isBuffering = false
+        )
+      }
       if (isPlaying) {
         startPeriodicTicker()
-      } else {
-        stopPeriodicTicker()
       }
     }
 
     override fun onVideoSizeChanged(videoSize: VideoSize) {
       val res = "${videoSize.width}x${videoSize.height}"
       val badge = when {
-        videoSize.height >= 2160 || videoSize.width >= 3840 -> "4K UHD"
+        videoSize.height >= 2160 -> "4K UHD"
         videoSize.height >= 1080 -> "1080p FHD"
         videoSize.height >= 720 -> "720p HD"
         videoSize.height > 0 -> "${videoSize.height}p SD"
@@ -514,45 +564,7 @@ class TodExoPlayerManager(
 
     override fun onPlayerError(error: PlaybackException) {
       Log.e("TodExoPlayerManager", "Player error: ${error.errorCodeName}", error)
-
-      val isFormatError = error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED ||
-          error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED ||
-          error.errorCode == PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED ||
-          (error.message?.contains("UnrecognizedInputFormatException", ignoreCase = true) == true) ||
-          (error.message?.contains("Extractor", ignoreCase = true) == true)
-
-      if (!hasAttemptedFallback && isFormatError && currentStream != null) {
-        hasAttemptedFallback = true
-        val stream = currentStream!!
-        val altFormat = if (stream.format == StreamFormat.HLS) StreamFormat.PROGRESSIVE else StreamFormat.HLS
-        Log.i("TodExoPlayerManager", "Retrying playback with alternative format: $altFormat")
-        playStream(stream.copy(format = altFormat), isFallback = true)
-        return
-      }
-
-      val friendlyMessage = when {
-        error.errorCode == PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND ->
-          "تعذر العثور على مصدر البث أو الرابط غير صالح (ملف غير موجود)."
-        error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ->
-          "انتهت صلاحية البث أو تم رفض الوصول من السيرفر (HTTP Error)."
-        error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
-        error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ->
-          "فشل الاتصال بالشبكة أو انتهت مهلة السيرفر. يرجى التحقق من اتصال الإنترنت."
-        error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED ||
-        error.errorCode == PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED ||
-        error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED ->
-          "صيغة البث غير مدعومة من هذا السيرفر."
-        else ->
-          error.message?.takeIf { !it.contains("ENOENT") && !it.contains("htt:") }
-            ?: "تعذر تشغيل هذا البث (${error.errorCodeName})"
-      }
-      _playerState.update {
-        it.copy(
-          isBuffering = false,
-          isPlaying = false,
-          errorMessage = friendlyMessage
-        )
-      }
+      handlePlaybackRetry(error.errorCodeName)
     }
   }
 
@@ -600,7 +612,7 @@ class TodExoPlayerManager(
     videoQualities.add(
       VideoQualityTrack(
         id = "auto",
-        label = "Auto (Adaptive)",
+        label = "تلقائي (Auto Adaptive)",
         width = 0,
         height = 0,
         bitrate = 0,
@@ -636,12 +648,11 @@ class TodExoPlayerManager(
             val format = group.getTrackFormat(i)
             val lang = format.language ?: "und"
             val label = when (lang.lowercase()) {
-              "en", "eng" -> "English Commentary"
-              "ar", "ara" -> "Arabic Commentary (TOD)"
-              "es", "spa" -> "Spanish Commentary"
-              "fr", "fra" -> "French Commentary"
-              "de", "deu" -> "German Commentary"
-              else -> if (format.label != null) format.label!! else "Audio Channel ${audioTracks.size + 1} ($lang)"
+              "ar", "ara" -> "تعليق عربي (TOD Arabic)"
+              "en", "eng" -> "تعليق إنجليزي (English)"
+              "fr", "fra" -> "تعليق فرنسي (French)"
+              "es", "spa" -> "تعليق إسباني (Spanish)"
+              else -> if (format.label != null) format.label!! else "قناة صوتية ${audioTracks.size + 1} ($lang)"
             }
             audioTracks.add(
               AudioTrackOption(
@@ -659,11 +670,10 @@ class TodExoPlayerManager(
             val format = group.getTrackFormat(i)
             val lang = format.language ?: "und"
             val label = when (lang.lowercase()) {
+              "ar", "ara" -> "ترجمة عربية"
               "en", "eng" -> "English"
-              "ar", "ara" -> "Arabic"
-              "es", "spa" -> "Spanish"
-              "fr", "fra" -> "French"
-              else -> format.label ?: "Subtitles ($lang)"
+              "fr", "fra" -> "Français"
+              else -> format.label ?: "ترجمة ($lang)"
             }
             subtitleTracks.add(
               SubtitleTrackOption(
@@ -689,6 +699,7 @@ class TodExoPlayerManager(
 
   fun release() {
     tickerJob?.cancel()
+    sleepTimerJob?.cancel()
     exoPlayer.removeListener(playerListener)
     exoPlayer.removeAnalyticsListener(analyticsListener)
     exoPlayer.release()

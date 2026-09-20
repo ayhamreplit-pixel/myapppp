@@ -553,3 +553,52 @@ fun TodWatermarkBadge(
     }
   }
 }
+
+/**
+ * Custom TOD Icon: Stream Reload / Replay curved circular arrow.
+ * Sleek and pixel-perfect matching TOD.
+ */
+@Composable
+fun TodReloadIcon(
+  modifier: Modifier = Modifier,
+  tint: Color = Color.White,
+  size: Dp = 22.dp
+) {
+  Canvas(modifier = modifier.size(size)) {
+    val center = Offset(size.toPx() / 2f, size.toPx() / 2f)
+    val radius = size.toPx() * 0.40f
+    val strokeWidth = size.toPx() * 0.085f
+
+    // Draw circular arc (~300 degrees)
+    val path = Path().apply {
+      arcTo(
+        rect = androidx.compose.ui.geometry.Rect(
+          center.x - radius,
+          center.y - radius,
+          center.x + radius,
+          center.y + radius
+        ),
+        startAngleDegrees = -70f,
+        sweepAngleDegrees = 300f,
+        forceMoveTo = false
+      )
+    }
+    drawPath(
+      path = path,
+      color = tint,
+      style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+    )
+
+    // Draw Arrow tip at the top
+    val arrowAngle = -70f * (PI / 180f).toFloat()
+    val arrowTip = Offset(center.x + radius * cos(arrowAngle), center.y + radius * sin(arrowAngle))
+    val arrowPath = Path().apply {
+      moveTo(arrowTip.x + size.toPx() * 0.04f, arrowTip.y - size.toPx() * 0.12f)
+      lineTo(arrowTip.x - size.toPx() * 0.14f, arrowTip.y - size.toPx() * 0.02f)
+      lineTo(arrowTip.x - size.toPx() * 0.02f, arrowTip.y + size.toPx() * 0.12f)
+      close()
+    }
+    drawPath(path = arrowPath, color = tint, style = Fill)
+  }
+}
+
