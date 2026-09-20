@@ -1,14 +1,28 @@
 package com.example.ui
 
 import android.app.Activity
+import android.content.ContentValues
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Rect
 import android.media.AudioManager
+import android.os.Build
+import android.os.Environment
+import android.os.Handler
+import android.os.Looper
+import android.provider.MediaStore
+import android.util.Log
+import android.view.PixelCopy
 import android.view.ViewGroup
 import android.view.WindowManager
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,6 +34,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -30,9 +45,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.BrightnessMedium
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
@@ -49,6 +69,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -63,6 +84,7 @@ import com.example.model.BroadcastStream
 import com.example.model.MatchMoment
 import com.example.model.TodPlayerState
 import com.example.player.TodExoPlayerManager
+import com.example.ui.theme.TodAmberYellow
 import com.example.ui.theme.TodCyan
 import com.example.ui.theme.TodViolet
 import kotlinx.coroutines.delay
@@ -103,7 +125,75 @@ fun TodPlayerView(
 
   var showDoubleTapFeedback by remember { mutableStateOf<String?>(null) }
 
+  // Snapshot Capture States
+  var capturedSnapshot by remember { mutableStateOf<Bitmap?>(null) }
+  var showSnapshotFlash by remember { mutableStateOf(false) }
+  var snapshotMessage by remember { mutableStateOf<String?>(null) }
+  var showSnapshotPreview by remember { mutableStateOf(false) }
+
   val coroutineScope = rememberCoroutineScope()
+
+  val takeSnapshot: () -> Unit = {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && activity != null) {
+      val window = activity.window
+      val view = window.decorView
+      if (view.width > 0 && view.height > 0) {
+        val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+        val locationOfViewInWindow = IntArray(2)
+        view.getLocationInWindow(locationOfViewInWindow)
+        try {
+          PixelCopy.request(
+            window,
+            Rect(
+              locationOfViewInWindow[0],
+              locationOfViewInWindow[1],
+              locationOfViewInWindow[0] + view.width,
+              locationOfViewInWindow[1] + view.height
+            ),
+            bitmap,
+            { copyResult ->
+              if (copyResult == PixelCopy.SUCCESS) {
+                capturedSnapshot = bitmap
+                showSnapshotFlash = true
+                showSnapshotPreview = true
+                snapshotMessage = "تم حفظ لقطة الشاشة في ألبوم الصور بنجاح! 📸"
+
+                // Auto-save to Pictures/TOD_Live
+                try {
+                  val resolver = context.contentResolver
+                  val contentValues = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, "TOD_Snapshot_${System.currentTimeMillis()}.jpg")
+                    put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                      put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/TOD_Live")
+                    }
+                  }
+                  val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+                  if (uri != null) {
+                    resolver.openOutputStream(uri)?.use { stream ->
+                      bitmap.compress(Bitmap.CompressFormat.JPEG, 95, stream)
+                    }
+                  }
+                } catch (e: Exception) {
+                  Log.e("TodPlayerView", "Error saving snapshot", e)
+                }
+
+                coroutineScope.launch {
+                  delay(450)
+                  showSnapshotFlash = false
+                  delay(4000)
+                  showSnapshotPreview = false
+                }
+              }
+            },
+            Handler(Looper.getMainLooper())
+          )
+        } catch (e: Exception) {
+          Log.e("TodPlayerView", "PixelCopy failed", e)
+        }
+      }
+    }
+  }
 
   // Auto-hide controls timer
   LaunchedEffect(controlsVisible, playerState.isPlaying, lastUserInteraction) {
@@ -395,6 +485,7 @@ fun TodPlayerView(
         playerManager.seekTo(moment.timeSeconds * 1000)
         lastUserInteraction = System.currentTimeMillis().toFloat()
       },
+      onTakeSnapshot = { takeSnapshot() },
       brightnessLevel = brightnessPercent,
       onBrightnessChange = { newB ->
         brightnessPercent = newB
@@ -412,6 +503,84 @@ fun TodPlayerView(
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, targetVol, 0)
       }
     )
+
+    // Snapshot Camera Flash Animation
+    AnimatedVisibility(
+      visible = showSnapshotFlash,
+      enter = fadeIn(tween(50)),
+      exit = fadeOut(tween(350)),
+      modifier = Modifier.fillMaxSize()
+    ) {
+      Box(
+        modifier = Modifier
+          .fillMaxSize()
+          .background(Color.White.copy(alpha = 0.85f))
+      )
+    }
+
+    // Snapshot Saved Floating Capsule Banner
+    AnimatedVisibility(
+      visible = showSnapshotPreview,
+      enter = fadeIn() + slideInVertically { -it },
+      exit = fadeOut() + slideOutVertically { -it },
+      modifier = Modifier
+        .align(Alignment.TopCenter)
+        .padding(top = 24.dp)
+    ) {
+      Box(
+        modifier = Modifier
+          .clip(RoundedCornerShape(16.dp))
+          .background(Color(0xE6101524))
+          .border(1.dp, TodAmberYellow.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
+          .padding(horizontal = 16.dp, vertical = 10.dp)
+      ) {
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+          capturedSnapshot?.let { bmp ->
+            Image(
+              bitmap = bmp.asImageBitmap(),
+              contentDescription = "Snapshot Thumbnail",
+              modifier = Modifier
+                .size(44.dp, 30.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+            )
+          }
+
+          Icon(
+            imageVector = Icons.Default.CheckCircle,
+            contentDescription = null,
+            tint = TodAmberYellow,
+            modifier = Modifier.size(20.dp)
+          )
+
+          Column {
+            Text(
+              text = "تم التقاط لقطة الشاشة 📸",
+              color = Color.White,
+              fontWeight = FontWeight.Bold,
+              fontSize = 13.sp
+            )
+            Text(
+              text = "تم حفظ الصورة عالية الدقة في ألبوم الصور",
+              color = Color(0xFFB0B0B0),
+              fontSize = 11.sp
+            )
+          }
+
+          Icon(
+            imageVector = Icons.Default.Close,
+            contentDescription = "Close",
+            tint = Color.White.copy(alpha = 0.7f),
+            modifier = Modifier
+              .size(18.dp)
+              .clickable { showSnapshotPreview = false }
+          )
+        }
+      }
+    }
 
     // Stats for Nerds Telemetry HUD
     if (playerState.showStatsHud) {
@@ -481,13 +650,13 @@ fun TodPlayerView(
             Box(
               modifier = Modifier
                 .clip(RoundedCornerShape(8.dp))
-                .background(TodCyan)
+                .background(TodAmberYellow)
                 .clickable { playerManager.retryStream() }
                 .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
               Text(
                 text = "إعادة المحاولة",
-                color = Color(0xFF00222B),
+                color = Color.Black,
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp
               )

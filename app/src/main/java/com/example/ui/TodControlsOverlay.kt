@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material3.CircularProgressIndicator
@@ -92,6 +93,7 @@ fun TodControlsOverlay(
   onToggleFullscreen: () -> Unit,
   onNavigateBack: () -> Unit,
   onSelectMoment: (MatchMoment) -> Unit,
+  onTakeSnapshot: () -> Unit = {},
   brightnessLevel: Float = 0.65f,
   onBrightnessChange: (Float) -> Unit = {},
   volumeLevel: Float = 0.5f,
@@ -169,7 +171,7 @@ fun TodControlsOverlay(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
           ) {
-            // Left side icons: Subtitles, Settings Cog with Play inside, 4-Grid, Lock
+            // Left side icons: Subtitles, Settings Cog with Play inside, 4-Grid, Snapshot Camera, Lock
             Row(
               verticalAlignment = Alignment.CenterVertically,
               horizontalArrangement = Arrangement.spacedBy(18.dp)
@@ -207,7 +209,22 @@ fun TodControlsOverlay(
                 TodGridFour(size = 24.dp, tint = Color.White)
               }
 
-              // 4. Quick Touch Lock (locks gestures for safe viewing)
+              // 4. Instant Snapshot Camera Button
+              Box(
+                modifier = Modifier
+                  .size(36.dp)
+                  .clickable { onTakeSnapshot() },
+                contentAlignment = Alignment.Center
+              ) {
+                Icon(
+                  imageVector = Icons.Default.CameraAlt,
+                  contentDescription = "Take Snapshot",
+                  tint = Color.White,
+                  modifier = Modifier.size(22.dp)
+                )
+              }
+
+              // 5. Quick Touch Lock (locks gestures for safe viewing)
               Box(
                 modifier = Modifier
                   .size(36.dp)
@@ -393,11 +410,6 @@ fun TodControlsOverlay(
 
           // Sun / Brightness Icon underneath slider (Screenshot 5)
           TodSunBrightness(size = 20.dp, tint = Color.White)
-
-          Spacer(modifier = Modifier.height(10.dp))
-
-          // TOD Dolphin crest watermark badge (Screenshots 9, 12, 13)
-          TodWatermarkBadge(size = 38.dp)
         }
 
         // ==========================================

@@ -1,6 +1,8 @@
 package com.example.player
 
 import android.content.Context
+import android.net.Uri
+import android.util.Log
 import com.example.model.XtreamAccountInfo
 import com.example.model.XtreamCategory
 import com.example.model.XtreamChannel
@@ -10,28 +12,85 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
 
 class XtreamRepository(context: Context) {
   private val prefs = context.getSharedPreferences("xtream_prefs", Context.MODE_PRIVATE)
 
-  private val client = OkHttpClient.Builder()
-    .connectTimeout(20, TimeUnit.SECONDS)
-    .readTimeout(25, TimeUnit.SECONDS)
-    .followRedirects(true)
-    .retryOnConnectionFailure(true)
-    .build()
+  // Tolerant OkHttpClient with universal SSL trust and redirect handling for IPTV servers
+  private val client: OkHttpClient by lazy {
+    try {
+      val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
+        override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+        override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+        override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+      })
+
+      val sslContext = SSLContext.getInstance("SSL").apply {
+        init(null, trustAllCerts, SecureRandom())
+      }
+
+      OkHttpClient.Builder()
+        .sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
+        .hostnameVerifier { _, _ -> true }
+        .connectTimeout(25, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .followRedirects(true)
+        .followSslRedirects(true)
+        .retryOnConnectionFailure(true)
+        .build()
+    } catch (e: Exception) {
+      OkHttpClient.Builder()
+        .connectTimeout(25, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .followRedirects(true)
+        .followSslRedirects(true)
+        .retryOnConnectionFailure(true)
+        .build()
+    }
+  }
+
+  // Sanitizes server URL from any extra path like /c/, /player_api.php, /get.php, etc.
+  fun cleanServerUrl(input: String): String {
+    var s = input.trim()
+    if (!s.startsWith("http://", ignoreCase = true) && !s.startsWith("https://", ignoreCase = true)) {
+      s = "http://$s"
+    }
+    // Remove trailing slashes and common web-player suffixes
+    s = s.trimEnd('/')
+    val suffixesToRemove = listOf(
+      "/player_api.php",
+      "/get.php",
+      "/xmltv.php",
+      "/c",
+      "/live",
+      "/en",
+      "/panel",
+      "/stalker_portal"
+    )
+    for (suffix in suffixesToRemove) {
+      if (s.endsWith(suffix, ignoreCase = true)) {
+        s = s.substring(0, s.length - suffix.length).trimEnd('/')
+      }
+    }
+    return s
+  }
 
   fun getSavedCredentials(): Triple<String, String, String>? {
     val server = prefs.getString("server_url", null) ?: return null
     val user = prefs.getString("username", null) ?: return null
     val pass = prefs.getString("password", null) ?: return null
-    return Triple(server, user, pass)
+    return Triple(cleanServerUrl(server), user, pass)
   }
 
   fun saveCredentials(server: String, user: String, pass: String) {
     prefs.edit()
-      .putString("server_url", server.trim().trimEnd('/'))
+      .putString("server_url", cleanServerUrl(server))
       .putString("username", user.trim())
       .putString("password", pass.trim())
       .apply()
@@ -44,22 +103,24 @@ class XtreamRepository(context: Context) {
   suspend fun login(serverUrl: String, username: String, password: String): Result<XtreamAccountInfo> =
     withContext(Dispatchers.IO) {
       try {
-        var cleanServer = serverUrl.trim().trimEnd('/')
-        if (!cleanServer.startsWith("http://", ignoreCase = true) && !cleanServer.startsWith("https://", ignoreCase = true)) {
-          cleanServer = "http://$cleanServer"
-        }
+        val cleanServer = cleanServerUrl(serverUrl)
         val cleanUser = username.trim()
         val cleanPass = password.trim()
+
+        if (cleanUser.isEmpty() || cleanPass.isEmpty()) {
+          return@withContext Result.failure(Exception("يرجى إدخال اسم المستخدم وكلمة المرور"))
+        }
 
         val url = "$cleanServer/player_api.php?username=$cleanUser&password=$cleanPass"
         val request = Request.Builder()
           .url(url)
           .header("User-Agent", "IPTVSmartersPro/3.1.5 (Linux; Android 12)")
+          .header("Accept", "*/*")
           .build()
 
         val response = client.newCall(request).execute()
         if (!response.isSuccessful) {
-          return@withContext Result.failure(Exception("رمز الاستجابة من السيرفر: ${response.code}"))
+          return@withContext Result.failure(Exception("فشل الاتصال: السيرفر أعاد رمز (${response.code})"))
         }
 
         val body = response.body?.string() ?: return@withContext Result.failure(Exception("استجابة السيرفر فارغة"))
@@ -91,6 +152,7 @@ class XtreamRepository(context: Context) {
           Result.failure(Exception(msg))
         }
       } catch (e: Exception) {
+        Log.e("XtreamRepository", "Login error", e)
         Result.failure(Exception("تعذر الاتصال بالسيرفر: ${e.localizedMessage ?: "تأكد من عنوان السيرفر والإنترنت"}"))
       }
     }
@@ -98,10 +160,7 @@ class XtreamRepository(context: Context) {
   suspend fun fetchCategories(serverUrl: String, username: String, password: String): Result<List<XtreamCategory>> =
     withContext(Dispatchers.IO) {
       try {
-        var cleanServer = serverUrl.trim().trimEnd('/')
-        if (!cleanServer.startsWith("http://", ignoreCase = true) && !cleanServer.startsWith("https://", ignoreCase = true)) {
-          cleanServer = "http://$cleanServer"
-        }
+        val cleanServer = cleanServerUrl(serverUrl)
         val cleanUser = username.trim()
         val cleanPass = password.trim()
 
@@ -109,23 +168,47 @@ class XtreamRepository(context: Context) {
         val request = Request.Builder()
           .url(url)
           .header("User-Agent", "IPTVSmartersPro/3.1.5 (Linux; Android 12)")
+          .header("Accept", "*/*")
           .build()
 
         val response = client.newCall(request).execute()
-        val body = response.body?.string() ?: return@withContext Result.failure(Exception("فارغ"))
+        val body = response.body?.string()?.trim() ?: return@withContext Result.failure(Exception("فارغ"))
 
-        val array = JSONArray(body)
         val list = mutableListOf<XtreamCategory>()
-        for (i in 0 until array.length()) {
-          val obj = array.getJSONObject(i)
-          val id = obj.optString("category_id", "")
-          val name = obj.optString("category_name", "باقة بدون اسم")
-          if (id.isNotEmpty()) {
-            list.add(XtreamCategory(id, name))
+
+        if (body.startsWith("[")) {
+          // Parse JSONArray
+          val array = JSONArray(body)
+          for (i in 0 until array.length()) {
+            val obj = array.optJSONObject(i) ?: continue
+            val id = if (obj.has("category_id")) {
+              obj.optString("category_id", "").ifEmpty { obj.optInt("category_id", 0).toString() }
+            } else {
+              obj.optString("id", "")
+            }
+            val name = obj.optString("category_name", "").ifEmpty { obj.optString("name", "باقة بدون اسم") }
+            if (id.isNotEmpty() && id != "0") {
+              list.add(XtreamCategory(id, name))
+            }
+          }
+        } else if (body.startsWith("{")) {
+          // Parse JSONObject (map format)
+          val jsonObj = JSONObject(body)
+          val keys = jsonObj.keys()
+          while (keys.hasNext()) {
+            val key = keys.next()
+            val child = jsonObj.optJSONObject(key)
+            if (child != null) {
+              val id = child.optString("category_id", key).ifEmpty { key }
+              val name = child.optString("category_name", child.optString("name", "باقة $key"))
+              list.add(XtreamCategory(id, name))
+            }
           }
         }
+
         Result.success(list)
       } catch (e: Exception) {
+        Log.e("XtreamRepository", "Fetch categories error", e)
         Result.failure(e)
       }
     }
@@ -137,70 +220,139 @@ class XtreamRepository(context: Context) {
     categoryId: String? = null
   ): Result<List<XtreamChannel>> = withContext(Dispatchers.IO) {
     try {
-      var cleanServer = serverUrl.trim().trimEnd('/')
-      if (!cleanServer.startsWith("http://", ignoreCase = true) && !cleanServer.startsWith("https://", ignoreCase = true)) {
-        cleanServer = "http://$cleanServer"
-      }
+      val cleanServer = cleanServerUrl(serverUrl)
       val cleanUser = username.trim()
       val cleanPass = password.trim()
 
+      val isFilterRequested = !categoryId.isNullOrEmpty() && categoryId != "ALL"
+
       val url = buildString {
         append("$cleanServer/player_api.php?username=$cleanUser&password=$cleanPass&action=get_live_streams")
-        if (!categoryId.isNullOrEmpty() && categoryId != "ALL") {
+        if (isFilterRequested) {
           append("&category_id=$categoryId")
         }
       }
+
       val request = Request.Builder()
         .url(url)
         .header("User-Agent", "IPTVSmartersPro/3.1.5 (Linux; Android 12)")
+        .header("Accept", "*/*")
         .build()
 
       val response = client.newCall(request).execute()
-      val body = response.body?.string() ?: return@withContext Result.failure(Exception("قائمة القنوات فارغة"))
+      val body = response.body?.string()?.trim() ?: return@withContext Result.failure(Exception("قائمة القنوات فارغة"))
 
-      val array = JSONArray(body)
-      val list = ArrayList<XtreamChannel>(array.length())
-      for (i in 0 until array.length()) {
-        val obj = array.getJSONObject(i)
-        // Parse stream_id safely whether it's integer or string
-        val streamId = if (obj.has("stream_id")) {
-          obj.optString("stream_id", "").ifEmpty { obj.optInt("stream_id", 0).toString() }
-        } else {
-          obj.optString("id", "")
+      var list = parseStreamsJson(body, cleanServer, cleanUser, cleanPass)
+
+      // Fallback: If filtered fetch returned empty or failed because the server doesn't support &category_id=,
+      // fetch all streams and filter in memory
+      if (list.isEmpty() && isFilterRequested) {
+        val allUrl = "$cleanServer/player_api.php?username=$cleanUser&password=$cleanPass&action=get_live_streams"
+        val allReq = Request.Builder()
+          .url(allUrl)
+          .header("User-Agent", "IPTVSmartersPro/3.1.5 (Linux; Android 12)")
+          .header("Accept", "*/*")
+          .build()
+        val allRes = client.newCall(allReq).execute()
+        val allBody = allRes.body?.string()?.trim()
+        if (!allBody.isNullOrEmpty()) {
+          val allChannels = parseStreamsJson(allBody, cleanServer, cleanUser, cleanPass)
+          list = allChannels.filter { it.categoryId == categoryId }
         }
-
-        if (streamId.isEmpty() || streamId == "0") continue
-
-        val name = obj.optString("name", "قناة").ifEmpty { "قناة $streamId" }
-        val icon = obj.optString("stream_icon", null).takeIf { !it.isNullOrBlank() }
-        val catId = obj.optString("category_id", null)
-        val containerExtension = obj.optString("container_extension", "m3u8")
-
-        // Construct standard HLS live URL, with .m3u8 extension for optimum player streaming
-        val ext = if (containerExtension.isNotBlank()) containerExtension else "m3u8"
-        val playUrl = "$cleanServer/live/$cleanUser/$cleanPass/$streamId.$ext"
-
-        list.add(
-          XtreamChannel(
-            streamId = streamId,
-            name = name,
-            iconUrl = icon,
-            categoryId = catId,
-            playUrl = playUrl
-          )
-        )
       }
+
       Result.success(list)
     } catch (e: Exception) {
+      Log.e("XtreamRepository", "Fetch streams error", e)
       Result.failure(e)
     }
+  }
+
+  private fun parseStreamsJson(
+    body: String,
+    cleanServer: String,
+    cleanUser: String,
+    cleanPass: String
+  ): List<XtreamChannel> {
+    val list = mutableListOf<XtreamChannel>()
+
+    if (body.startsWith("[")) {
+      val array = JSONArray(body)
+      for (i in 0 until array.length()) {
+        val obj = array.optJSONObject(i) ?: continue
+        val channel = parseSingleChannel(obj, cleanServer, cleanUser, cleanPass)
+        if (channel != null) {
+          list.add(channel)
+        }
+      }
+    } else if (body.startsWith("{")) {
+      val jsonObj = JSONObject(body)
+      val keys = jsonObj.keys()
+      while (keys.hasNext()) {
+        val key = keys.next()
+        val obj = jsonObj.optJSONObject(key)
+        if (obj != null) {
+          val channel = parseSingleChannel(obj, cleanServer, cleanUser, cleanPass)
+          if (channel != null) {
+            list.add(channel)
+          }
+        }
+      }
+    }
+    return list
+  }
+
+  private fun parseSingleChannel(
+    obj: JSONObject,
+    cleanServer: String,
+    cleanUser: String,
+    cleanPass: String
+  ): XtreamChannel? {
+    val streamId = when {
+      obj.has("stream_id") -> obj.optString("stream_id", "").ifEmpty { obj.optInt("stream_id", 0).toString() }
+      obj.has("id") -> obj.optString("id", "")
+      obj.has("num") -> obj.optString("num", "")
+      else -> ""
+    }
+
+    if (streamId.isEmpty() || streamId == "0") return null
+
+    val name = obj.optString("name", "").ifEmpty {
+      obj.optString("title", "").ifEmpty {
+        obj.optString("stream_name", "قناة $streamId")
+      }
+    }
+
+    val icon = obj.optString("stream_icon", null)?.takeIf { it.isNotBlank() }
+      ?: obj.optString("icon", null)?.takeIf { it.isNotBlank() }
+      ?: obj.optString("logo", null)?.takeIf { it.isNotBlank() }
+
+    val catId = when {
+      obj.has("category_id") -> obj.optString("category_id", "").ifEmpty { obj.optInt("category_id", 0).toString() }
+      else -> null
+    }
+
+    val containerExtension = obj.optString("container_extension", "m3u8")
+    val ext = if (containerExtension.isNotBlank()) containerExtension else "m3u8"
+    val playUrl = "$cleanServer/live/$cleanUser/$cleanPass/$streamId.$ext"
+
+    return XtreamChannel(
+      streamId = streamId,
+      name = name,
+      iconUrl = icon,
+      categoryId = catId,
+      playUrl = playUrl
+    )
   }
 
   suspend fun parseM3uPlaylist(urlOrContent: String): Result<List<XtreamChannel>> =
     withContext(Dispatchers.IO) {
       try {
         val content = if (urlOrContent.startsWith("http://") || urlOrContent.startsWith("https://")) {
-          val req = Request.Builder().url(urlOrContent).build()
+          val req = Request.Builder()
+            .url(urlOrContent)
+            .header("User-Agent", "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36")
+            .build()
           client.newCall(req).execute().body?.string() ?: ""
         } else {
           urlOrContent
@@ -215,13 +367,10 @@ class XtreamRepository(context: Context) {
         for (line in lines) {
           val trimmed = line.trim()
           if (trimmed.startsWith("#EXTINF:")) {
-            // Parse name
             currentName = trimmed.substringAfterLast(",").trim()
-            // Parse logo
             currentLogo = if (trimmed.contains("tvg-logo=\"")) {
               trimmed.substringAfter("tvg-logo=\"").substringBefore("\"")
             } else null
-            // Parse group
             currentGroup = if (trimmed.contains("group-title=\"")) {
               trimmed.substringAfter("group-title=\"").substringBefore("\"")
             } else null
@@ -230,7 +379,7 @@ class XtreamRepository(context: Context) {
             val name = currentName ?: "Channel ${channels.size + 1}"
             channels.add(
               XtreamChannel(
-                streamId = channels.size.toString(),
+                streamId = (channels.size + 1).toString(),
                 name = name,
                 iconUrl = currentLogo,
                 categoryId = currentGroup,

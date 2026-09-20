@@ -1,9 +1,12 @@
 package com.example.ui.theme
 
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 
 private val TodColorScheme =
   darkColorScheme(
@@ -36,7 +39,14 @@ fun MyApplicationTheme(
   MaterialTheme(
     colorScheme = TodColorScheme,
     typography = Typography,
-    content = content,
-  )
+  ) {
+    CompositionLocalProvider(
+      LocalTextStyle provides TextStyle(
+        fontFamily = AppFontFamily,
+        color = DarkTextPrimary
+      ),
+      content = content
+    )
+  }
 }
 

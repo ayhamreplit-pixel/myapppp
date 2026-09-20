@@ -48,8 +48,10 @@ import com.example.ui.theme.DarkSurfaceBorder
 import com.example.ui.theme.DarkSurfaceElevated
 import com.example.ui.theme.DarkTextPrimary
 import com.example.ui.theme.DarkTextSecondary
+import com.example.ui.theme.TodAmberYellow
 import com.example.ui.theme.TodCyan
 import com.example.ui.theme.TodCyanGlow
+import com.example.ui.theme.TodGold
 import com.example.ui.theme.TodViolet
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -95,7 +97,7 @@ fun VideoQualitySheet(
             modifier = Modifier
               .fillMaxWidth()
               .clip(RoundedCornerShape(12.dp))
-              .background(if (isSelected) TodCyan.copy(alpha = 0.15f) else DarkSurfaceElevated)
+              .background(if (isSelected) TodAmberYellow.copy(alpha = 0.18f) else DarkSurfaceElevated)
               .clickable {
                 onSelect(quality)
                 onDismiss()
@@ -107,7 +109,7 @@ fun VideoQualitySheet(
             Column {
               Text(
                 text = quality.label,
-                color = if (isSelected) TodCyan else DarkTextPrimary,
+                color = if (isSelected) TodAmberYellow else DarkTextPrimary,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                 fontSize = 15.sp
               )
@@ -129,7 +131,7 @@ fun VideoQualitySheet(
               Icon(
                 imageVector = Icons.Default.Check,
                 contentDescription = "Selected",
-                tint = TodCyan,
+                tint = TodAmberYellow,
                 modifier = Modifier.size(20.dp)
               )
             }
@@ -191,7 +193,7 @@ fun AudioTrackSheet(
               modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))
-                .background(if (isSelected) TodCyan.copy(alpha = 0.15f) else DarkSurfaceElevated)
+                .background(if (isSelected) TodAmberYellow.copy(alpha = 0.18f) else DarkSurfaceElevated)
                 .clickable {
                   onSelect(track)
                   onDismiss()
@@ -204,13 +206,13 @@ fun AudioTrackSheet(
                 Box(
                   modifier = Modifier
                     .size(36.dp)
-                    .background(Color(0xFF1E2638), CircleShape),
+                    .background(if (isSelected) TodAmberYellow.copy(alpha = 0.25f) else Color(0xFF1E2638), CircleShape),
                   contentAlignment = Alignment.Center
                 ) {
                   Icon(
                     imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                     contentDescription = null,
-                    tint = if (isSelected) TodCyan else DarkTextSecondary,
+                    tint = if (isSelected) TodAmberYellow else DarkTextSecondary,
                     modifier = Modifier.size(18.dp)
                   )
                 }
@@ -218,7 +220,7 @@ fun AudioTrackSheet(
                 Column {
                   Text(
                     text = track.label,
-                    color = if (isSelected) TodCyan else DarkTextPrimary,
+                    color = if (isSelected) TodAmberYellow else DarkTextPrimary,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                     fontSize = 15.sp
                   )
@@ -233,7 +235,7 @@ fun AudioTrackSheet(
                 Icon(
                   imageVector = Icons.Default.Check,
                   contentDescription = "Selected",
-                  tint = TodCyan,
+                  tint = TodAmberYellow,
                   modifier = Modifier.size(20.dp)
                 )
               }
@@ -284,7 +286,7 @@ fun SubtitleTrackSheet(
         modifier = Modifier
           .fillMaxWidth()
           .clip(RoundedCornerShape(12.dp))
-          .background(if (isOff) TodCyan.copy(alpha = 0.15f) else DarkSurfaceElevated)
+          .background(if (isOff) TodAmberYellow.copy(alpha = 0.18f) else DarkSurfaceElevated)
           .clickable {
             onSelect(null)
             onDismiss()
@@ -295,12 +297,12 @@ fun SubtitleTrackSheet(
       ) {
         Text(
           text = "Off",
-          color = if (isOff) TodCyan else DarkTextPrimary,
+          color = if (isOff) TodAmberYellow else DarkTextPrimary,
           fontWeight = if (isOff) FontWeight.Bold else FontWeight.Medium,
           fontSize = 15.sp
         )
         if (isOff) {
-          Icon(Icons.Default.Check, "Selected", tint = TodCyan, modifier = Modifier.size(20.dp))
+          Icon(Icons.Default.Check, "Selected", tint = TodAmberYellow, modifier = Modifier.size(20.dp))
         }
       }
 
@@ -314,7 +316,7 @@ fun SubtitleTrackSheet(
             modifier = Modifier
               .fillMaxWidth()
               .clip(RoundedCornerShape(12.dp))
-              .background(if (isSelected) TodCyan.copy(alpha = 0.15f) else DarkSurfaceElevated)
+              .background(if (isSelected) TodAmberYellow.copy(alpha = 0.18f) else DarkSurfaceElevated)
               .clickable {
                 onSelect(sub)
                 onDismiss()
@@ -325,12 +327,12 @@ fun SubtitleTrackSheet(
           ) {
             Text(
               text = sub.label,
-              color = if (isSelected) TodCyan else DarkTextPrimary,
+              color = if (isSelected) TodAmberYellow else DarkTextPrimary,
               fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
               fontSize = 15.sp
             )
             if (isSelected) {
-              Icon(Icons.Default.Check, "Selected", tint = TodCyan, modifier = Modifier.size(20.dp))
+              Icon(Icons.Default.Check, "Selected", tint = TodAmberYellow, modifier = Modifier.size(20.dp))
             }
           }
         }
@@ -375,7 +377,7 @@ fun PlaybackSettingsSheet(
 
       // Playback speed
       Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.Default.Speed, contentDescription = null, tint = TodCyan, modifier = Modifier.size(20.dp))
+        Icon(Icons.Default.Speed, contentDescription = null, tint = TodAmberYellow, modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(8.dp))
         Text("Playback Speed", color = DarkTextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
       }
@@ -389,15 +391,15 @@ fun PlaybackSettingsSheet(
           Box(
             modifier = Modifier
               .clip(RoundedCornerShape(8.dp))
-              .background(if (isSelected) TodCyan else DarkSurfaceElevated)
+              .background(if (isSelected) TodAmberYellow else DarkSurfaceElevated)
               .clickable { onSpeedChange(speed) }
               .padding(horizontal = 10.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center
           ) {
             Text(
               text = if (speed == 1.0f) "Normal" else "${speed}x",
-              color = if (isSelected) Color(0xFF00222B) else DarkTextPrimary,
-              fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+              color = if (isSelected) Color.Black else DarkTextPrimary,
+              fontWeight = if (isSelected) FontWeight.Black else FontWeight.Normal,
               fontSize = 12.sp
             )
           }
@@ -408,7 +410,7 @@ fun PlaybackSettingsSheet(
 
       // Aspect Ratio Mode
       Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.Default.AspectRatio, contentDescription = null, tint = TodViolet, modifier = Modifier.size(20.dp))
+        Icon(Icons.Default.AspectRatio, contentDescription = null, tint = TodAmberYellow, modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(8.dp))
         Text("Aspect Ratio / Resize Mode", color = DarkTextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
       }
@@ -423,15 +425,15 @@ fun PlaybackSettingsSheet(
             modifier = Modifier
               .weight(1f)
               .clip(RoundedCornerShape(8.dp))
-              .background(if (isSelected) TodViolet else DarkSurfaceElevated)
+              .background(if (isSelected) TodAmberYellow else DarkSurfaceElevated)
               .clickable { onAspectChange(mode) }
               .padding(vertical = 8.dp),
             contentAlignment = Alignment.Center
           ) {
             Text(
               text = mode.label,
-              color = if (isSelected) Color.White else DarkTextPrimary,
-              fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+              color = if (isSelected) Color.Black else DarkTextPrimary,
+              fontWeight = if (isSelected) FontWeight.Black else FontWeight.Normal,
               fontSize = 11.sp,
               maxLines = 1
             )

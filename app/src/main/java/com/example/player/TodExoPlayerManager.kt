@@ -81,12 +81,16 @@ class TodExoPlayerManager(
 
   private var tickerJob: Job? = null
   private var currentStream: BroadcastStream? = null
+  private var hasAttemptedFallback = false
 
   init {
     startPeriodicTicker()
   }
 
-  fun playStream(stream: BroadcastStream) {
+  fun playStream(stream: BroadcastStream, isFallback: Boolean = false) {
+    if (!isFallback) {
+      hasAttemptedFallback = false
+    }
     currentStream = stream
     val rawUrl = stream.streamUrl.trim()
 
@@ -134,12 +138,18 @@ class TodExoPlayerManager(
       exoPlayer.play()
     } catch (e: Exception) {
       Log.e("TodExoPlayerManager", "Error preparing stream", e)
-      _playerState.update {
-        it.copy(
-          isBuffering = false,
-          isPlaying = false,
-          errorMessage = "تعذر تشغيل الرابط: ${e.localizedMessage}"
-        )
+      if (!hasAttemptedFallback) {
+        hasAttemptedFallback = true
+        val altFormat = if (stream.format == StreamFormat.HLS) StreamFormat.PROGRESSIVE else StreamFormat.HLS
+        playStream(stream.copy(format = altFormat), isFallback = true)
+      } else {
+        _playerState.update {
+          it.copy(
+            isBuffering = false,
+            isPlaying = false,
+            errorMessage = "تعذر تشغيل الرابط: ${e.localizedMessage}"
+          )
+        }
       }
     }
   }
@@ -147,24 +157,24 @@ class TodExoPlayerManager(
   private fun createMediaSource(stream: BroadcastStream): MediaSource {
     val uri = Uri.parse(stream.streamUrl)
 
-    // Build HTTP data source with custom headers if provided
-    val defaultUa = "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36 ExoPlayer/2.19.1"
+    // Build HTTP data source with custom headers and modern browser/IPTV user agents
+    val defaultUa = "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36 IPTVSmartersPro/3.1.5 ExoPlayer/2.19.1"
     val chosenUserAgent = if (!stream.userAgent.isNullOrBlank()) stream.userAgent else defaultUa
 
     val httpDataSourceFactory = DefaultHttpDataSource.Factory()
       .setUserAgent(chosenUserAgent)
       .setAllowCrossProtocolRedirects(true)
       .setKeepPostFor302Redirects(true)
-      .setConnectTimeoutMs(15_000)
-      .setReadTimeoutMs(20_000)
+      .setConnectTimeoutMs(20_000)
+      .setReadTimeoutMs(25_000)
       .apply {
         val headers = mutableMapOf<String, String>()
+        headers["Accept"] = "*/*"
+        headers["Connection"] = "keep-alive"
         if (!stream.origin.isNullOrBlank()) headers["Origin"] = stream.origin
         if (!stream.referer.isNullOrBlank()) headers["Referer"] = stream.referer
         if (!stream.cookie.isNullOrBlank()) headers["Cookie"] = stream.cookie
-        if (headers.isNotEmpty()) {
-          setDefaultRequestProperties(headers)
-        }
+        setDefaultRequestProperties(headers)
       }
 
     val dataSourceFactory = DefaultDataSource.Factory(context, httpDataSourceFactory)
@@ -187,7 +197,7 @@ class TodExoPlayerManager(
       mediaItemBuilder.setDrmConfiguration(drmConfigBuilder.build())
     }
 
-    // Determine format either by explicit enum or URI inspection
+    // Determine format either by explicit enum or intelligent URI / IPTV extension inspection
     val format = when (stream.format) {
       StreamFormat.AUTO -> detectFormat(stream.streamUrl)
       else -> stream.format
@@ -207,8 +217,12 @@ class TodExoPlayerManager(
         SsMediaSource.Factory(dataSourceFactory)
           .createMediaSource(mediaItemBuilder.setMimeType(MimeTypes.APPLICATION_SS).build())
       }
-      StreamFormat.PROGRESSIVE, StreamFormat.AUTO -> {
+      StreamFormat.PROGRESSIVE -> {
         ProgressiveMediaSource.Factory(dataSourceFactory)
+          .createMediaSource(mediaItemBuilder.build())
+      }
+      StreamFormat.AUTO -> {
+        DefaultMediaSourceFactory(dataSourceFactory)
           .createMediaSource(mediaItemBuilder.build())
       }
     }
@@ -217,10 +231,21 @@ class TodExoPlayerManager(
   private fun detectFormat(url: String): StreamFormat {
     val lower = url.lowercase()
     return when {
-      lower.contains(".m3u8") -> StreamFormat.HLS
       lower.contains(".mpd") -> StreamFormat.DASH
       lower.contains(".ism") -> StreamFormat.SMOOTH_STREAMING
-      else -> StreamFormat.PROGRESSIVE
+      lower.contains(".mp4") || lower.contains(".mkv") || lower.contains(".flv") || lower.contains(".avi") -> StreamFormat.PROGRESSIVE
+      // In IPTV & Web streaming, .m3u8, .php, .js, .json, .css, /live/, /get.php, token query endpoints are almost always HLS playlists
+      lower.contains(".m3u8") ||
+      lower.contains(".php") ||
+      lower.contains(".js") ||
+      lower.contains(".json") ||
+      lower.contains(".css") ||
+      lower.contains("/live/") ||
+      lower.contains("token=") ||
+      lower.contains("hls") ||
+      lower.contains("playlist") -> StreamFormat.HLS
+      lower.contains(".ts") -> StreamFormat.PROGRESSIVE
+      else -> StreamFormat.HLS
     }
   }
 
@@ -412,6 +437,22 @@ class TodExoPlayerManager(
 
     override fun onPlayerError(error: PlaybackException) {
       Log.e("TodExoPlayerManager", "Player error: ${error.errorCodeName}", error)
+
+      val isFormatError = error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED ||
+          error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED ||
+          error.errorCode == PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED ||
+          (error.message?.contains("UnrecognizedInputFormatException", ignoreCase = true) == true) ||
+          (error.message?.contains("Extractor", ignoreCase = true) == true)
+
+      if (!hasAttemptedFallback && isFormatError && currentStream != null) {
+        hasAttemptedFallback = true
+        val stream = currentStream!!
+        val altFormat = if (stream.format == StreamFormat.HLS) StreamFormat.PROGRESSIVE else StreamFormat.HLS
+        Log.i("TodExoPlayerManager", "Retrying playback with alternative format: $altFormat")
+        playStream(stream.copy(format = altFormat), isFallback = true)
+        return
+      }
+
       val friendlyMessage = when {
         error.errorCode == PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND ->
           "تعذر العثور على مصدر البث أو الرابط غير صالح (ملف غير موجود)."
@@ -423,7 +464,7 @@ class TodExoPlayerManager(
         error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED ||
         error.errorCode == PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED ||
         error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED ->
-          "صيغة البث غير مدعومة أو تالفة."
+          "صيغة البث غير مدعومة من هذا السيرفر."
         else ->
           error.message?.takeIf { !it.contains("ENOENT") && !it.contains("htt:") }
             ?: "تعذر تشغيل هذا البث (${error.errorCodeName})"

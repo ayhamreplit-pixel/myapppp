@@ -44,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -55,8 +56,10 @@ import com.example.model.BroadcastStream
 import com.example.ui.theme.DarkSurface
 import com.example.ui.theme.DarkSurfaceBorder
 import com.example.ui.theme.DarkSurfaceElevated
+import com.example.ui.theme.DarkSurfaceHigh
 import com.example.ui.theme.DarkTextSecondary
 import com.example.ui.theme.TodGold
+import com.example.ui.theme.TodGradients
 
 @Composable
 fun TodInPlayerChannelDrawer(
@@ -178,12 +181,22 @@ fun TodInPlayerChannelDrawer(
                 Row(
                   modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(if (isPlaying) Color(0x33F5A623) else DarkSurfaceElevated)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                      if (isPlaying) {
+                        Brush.horizontalGradient(
+                          listOf(Color(0x33F5A623), Color(0x15F5A623))
+                        )
+                      } else {
+                        Brush.horizontalGradient(
+                          listOf(DarkSurfaceElevated, DarkSurface)
+                        )
+                      }
+                    )
                     .border(
                       1.dp,
-                      if (isPlaying) TodGold else Color.Transparent,
-                      RoundedCornerShape(10.dp)
+                      if (isPlaying) TodGold else DarkSurfaceBorder,
+                      RoundedCornerShape(12.dp)
                     )
                     .clickable {
                       onSelectChannel(stream)
@@ -200,9 +213,10 @@ fun TodInPlayerChannelDrawer(
                   ) {
                     Box(
                       modifier = Modifier
-                        .size(34.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(Color(0x33000000)),
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isPlaying) Color(0x44F5A623) else DarkSurfaceHigh)
+                        .border(1.dp, if (isPlaying) TodGold.copy(alpha = 0.5f) else Color(0x1AFFFFFF), RoundedCornerShape(8.dp)),
                       contentAlignment = Alignment.Center
                     ) {
                       Icon(
@@ -237,8 +251,8 @@ fun TodInPlayerChannelDrawer(
                     Box(
                       modifier = Modifier
                         .clip(CircleShape)
-                        .background(TodGold)
-                        .padding(4.dp)
+                        .background(TodGradients.GoldAccent)
+                        .padding(5.dp)
                     ) {
                       Icon(
                         imageVector = Icons.Default.PlayArrow,

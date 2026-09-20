@@ -106,8 +106,11 @@ import com.example.ui.theme.DarkTextPrimary
 import com.example.ui.theme.DarkTextSecondary
 import com.example.ui.theme.DarkTextTertiary
 import com.example.ui.theme.TodGold
+import com.example.ui.theme.TodGoldGlow
+import com.example.ui.theme.TodGreenLight
 import com.example.ui.theme.TodLiveRed
 import com.example.ui.theme.TodAmberYellow
+import com.example.ui.theme.TodGradients
 import com.example.ui.theme.CyberNeonBlue
 import com.example.ui.theme.CyberElectricIndigo
 import com.example.ui.theme.PremiumGoldGradStart
@@ -217,17 +220,6 @@ fun TodModernHubScreen(
     }
   }
 
-  val infiniteTransition = rememberInfiniteTransition(label = "beacon")
-  val liveDotAlpha by infiniteTransition.animateFloat(
-    initialValue = 0.4f,
-    targetValue = 1.0f,
-    animationSpec = infiniteRepeatable(
-      animation = tween(800),
-      repeatMode = RepeatMode.Reverse
-    ),
-    label = "dotAlpha"
-  )
-
   Surface(
     modifier = modifier.fillMaxSize(),
     color = DarkBg
@@ -239,25 +231,14 @@ fun TodModernHubScreen(
         .navigationBarsPadding()
         .imePadding()
     ) {
-      // 1. TOP BRANDING BAR with ultra-modern glassmorphic styling & cyber glow
+      // 1. CLEAN ELEGANT TOD TOP BAR WITH GRADIENT
       Box(
         modifier = Modifier
           .fillMaxWidth()
-          .background(
-            Brush.verticalGradient(
-              listOf(Color(0xFF131B2C), Color(0xFF090D15))
-            )
-          )
+          .background(TodGradients.HeaderGlass)
           .border(
             width = 1.dp,
-            brush = Brush.horizontalGradient(
-              listOf(
-                Color(0x1000E5FF),
-                TodAmberYellow.copy(alpha = 0.45f),
-                CyberNeonBlue.copy(alpha = 0.35f),
-                Color(0x1000E5FF)
-              )
-            ),
+            color = DarkSurfaceBorder,
             shape = RoundedCornerShape(0.dp)
           )
           .padding(horizontal = 18.dp, vertical = 12.dp)
@@ -275,86 +256,67 @@ fun TodModernHubScreen(
               modifier = Modifier
                 .size(42.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(
-                  Brush.linearGradient(
-                    listOf(Color(0xFF1E293B), Color(0xFF0F172A))
-                  )
-                )
-                .border(
-                  1.dp,
-                  Brush.linearGradient(listOf(TodGold, CyberNeonBlue)),
-                  RoundedCornerShape(12.dp)
-                ),
+                .background(DarkSurfaceElevated)
+                .border(1.dp, TodGradients.BorderGold, RoundedCornerShape(12.dp)),
               contentAlignment = Alignment.Center
             ) {
-              TodWatermarkBadge(size = 32.dp)
+              Icon(
+                imageVector = Icons.Default.LiveTv,
+                contentDescription = null,
+                tint = TodGold,
+                modifier = Modifier.size(24.dp)
+              )
             }
 
             Column {
               Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                  text = "TOD PLAYER",
-                  color = Color.White,
-                  fontSize = 18.sp,
+                  text = "TOD",
+                  color = TodGold,
+                  fontSize = 20.sp,
                   fontWeight = FontWeight.Black,
-                  letterSpacing = 0.8.sp
+                  letterSpacing = 1.sp
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Box(
-                  modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(
-                      Brush.horizontalGradient(
-                        listOf(PremiumGoldGradStart, PremiumGoldGradEnd)
-                      )
-                    )
-                    .padding(horizontal = 7.dp, vertical = 2.dp)
-                ) {
-                  Text(
-                    text = "PRO ULTRA",
-                    color = Color.Black,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Black
-                  )
-                }
+                Text(
+                  text = "TV",
+                  color = Color.White,
+                  fontSize = 18.sp,
+                  fontWeight = FontWeight.Bold
+                )
               }
               Text(
-                text = "مشغل IPTV المباشر وسيرفرات البث الفائق",
+                text = "مشغل IPTV المباشر البسيط والأنيق",
                 color = DarkTextSecondary,
                 fontSize = 11.sp,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Normal
               )
             }
           }
 
-          // Modern Status Beacon Pill
+          // Clean Status Pill with Smooth Gradient
           Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
               .clip(RoundedCornerShape(20.dp))
-              .background(
-                if (xtreamAccount != null) Color(0x2210B981) else Color(0x22FF2A55)
-              )
+              .background(if (xtreamAccount != null) Color(0x2210B981) else Color(0x22F5A623))
               .border(
                 1.dp,
-                if (xtreamAccount != null) Color(0x6610B981) else Color(0x66FF2A55),
+                if (xtreamAccount != null) Color(0x6610B981) else Color(0x66F5A623),
                 RoundedCornerShape(20.dp)
               )
-              .padding(horizontal = 11.dp, vertical = 6.dp)
+              .padding(horizontal = 12.dp, vertical = 6.dp)
           ) {
             Box(
               modifier = Modifier
                 .size(8.dp)
                 .clip(CircleShape)
-                .background(
-                  if (xtreamAccount != null) Color(0xFF10B981)
-                  else TodLiveRed.copy(alpha = liveDotAlpha)
-                )
+                .background(if (xtreamAccount != null) TodGreenLight else TodGold)
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
-              text = if (xtreamAccount != null) "سيرفر متصل" else "بث جاهز",
-              color = if (xtreamAccount != null) Color(0xFF34D399) else Color(0xFFFF8080),
+              text = if (xtreamAccount != null) "سيرفر متصل" else "جاهز للبث",
+              color = if (xtreamAccount != null) TodGreenLight else TodGold,
               fontSize = 11.sp,
               fontWeight = FontWeight.Bold
             )
@@ -481,7 +443,7 @@ fun TodModernHubScreen(
                   category = "Xtream IPTV",
                   tournamentOrLeague = "سيرفر IPTV مباشر",
                   streamUrl = ch.playUrl,
-                  format = StreamFormat.HLS,
+                  format = StreamFormat.AUTO,
                   isLive = true
                 )
               }
@@ -493,7 +455,7 @@ fun TodModernHubScreen(
                 category = "Xtream IPTV",
                 tournamentOrLeague = "سيرفر IPTV مباشر",
                 streamUrl = channel.playUrl,
-                format = StreamFormat.HLS,
+                format = StreamFormat.AUTO,
                 isLive = true
               )
               onPlayStream(targetStream, channelStreams)
@@ -631,29 +593,19 @@ private fun TabItem(
   modifier: Modifier = Modifier,
   onClick: () -> Unit
 ) {
+  val borderModifier = if (isSelected) {
+    Modifier.border(1.dp, TodGoldGlow.copy(alpha = 0.8f), RoundedCornerShape(12.dp))
+  } else {
+    Modifier.border(1.dp, DarkSurfaceBorder, RoundedCornerShape(12.dp))
+  }
+
   Box(
     modifier = modifier
       .clip(RoundedCornerShape(12.dp))
       .background(
-        if (isSelected) {
-          Brush.horizontalGradient(
-            listOf(PremiumGoldGradStart, PremiumGoldGradEnd)
-          )
-        } else {
-          Brush.linearGradient(
-            listOf(Color.Transparent, Color.Transparent)
-          )
-        }
+        if (isSelected) TodGradients.ActiveTab else TodGradients.InactiveTab
       )
-      .then(
-        if (isSelected) {
-          Modifier.border(
-            1.dp,
-            Color(0x66FFFFFF),
-            RoundedCornerShape(12.dp)
-          )
-        } else Modifier
-      )
+      .then(borderModifier)
       .clickable(onClick = onClick)
       .padding(vertical = 10.dp, horizontal = 12.dp),
     contentAlignment = Alignment.Center
@@ -670,7 +622,7 @@ private fun TabItem(
       )
       Text(
         text = title,
-        color = if (isSelected) Color.Black else DarkTextSecondary,
+        color = if (isSelected) Color.Black else Color.White,
         fontSize = 13.sp,
         fontWeight = if (isSelected) FontWeight.Black else FontWeight.Medium
       )
@@ -720,20 +672,10 @@ private fun XtreamContent(
         Column(
           modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(
-              Brush.verticalGradient(
-                listOf(DarkSurfaceElevated, DarkSurface)
-              )
-            )
-            .border(
-              1.dp,
-              Brush.linearGradient(
-                listOf(TodGold.copy(alpha = 0.5f), CyberNeonBlue.copy(alpha = 0.3f), Color(0x22FFFFFF))
-              ),
-              RoundedCornerShape(20.dp)
-            )
-            .padding(20.dp),
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color(0xFF141720))
+            .border(1.dp, Color(0xFF262B3B), RoundedCornerShape(18.dp))
+            .padding(18.dp),
           verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
           Row(
@@ -744,7 +686,7 @@ private fun XtreamContent(
               modifier = Modifier
                 .size(38.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(Color(0x22F5A623)),
+                .background(Color(0x22FFC107)),
               contentAlignment = Alignment.Center
             ) {
               Icon(Icons.Default.Dns, contentDescription = null, tint = TodGold, modifier = Modifier.size(22.dp))
@@ -757,19 +699,12 @@ private fun XtreamContent(
                 fontWeight = FontWeight.Bold
               )
               Text(
-                text = "فحص تلقائي وتحميل فائق السرعة",
+                text = "جلب الباقات والقنوات بسرعه فائقة",
                 color = DarkTextSecondary,
                 fontSize = 11.sp
               )
             }
           }
-
-          Text(
-            text = "أدخل بيانات اشتراكك ليتم جلب كافة باقات القنوات ومطابقتها فوراً بدون أي تعليق أو بطء.",
-            color = DarkTextSecondary,
-            fontSize = 12.sp,
-            lineHeight = 18.sp
-          )
 
           OutlinedTextField(
             value = server,
@@ -780,8 +715,10 @@ private fun XtreamContent(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
+              focusedContainerColor = Color(0xFF1B1F2B),
+              unfocusedContainerColor = Color(0xFF1B1F2B),
               focusedBorderColor = TodGold,
-              unfocusedBorderColor = DarkSurfaceBorder,
+              unfocusedBorderColor = Color(0xFF2D3345),
               focusedLabelColor = TodGold,
               unfocusedLabelColor = DarkTextSecondary,
               focusedTextColor = Color.White,
@@ -797,8 +734,10 @@ private fun XtreamContent(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
+              focusedContainerColor = Color(0xFF1B1F2B),
+              unfocusedContainerColor = Color(0xFF1B1F2B),
               focusedBorderColor = TodGold,
-              unfocusedBorderColor = DarkSurfaceBorder,
+              unfocusedBorderColor = Color(0xFF2D3345),
               focusedLabelColor = TodGold,
               unfocusedLabelColor = DarkTextSecondary,
               focusedTextColor = Color.White,
@@ -815,8 +754,10 @@ private fun XtreamContent(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
+              focusedContainerColor = Color(0xFF1B1F2B),
+              unfocusedContainerColor = Color(0xFF1B1F2B),
               focusedBorderColor = TodGold,
-              unfocusedBorderColor = DarkSurfaceBorder,
+              unfocusedBorderColor = Color(0xFF2D3345),
               focusedLabelColor = TodGold,
               unfocusedLabelColor = DarkTextSecondary,
               focusedTextColor = Color.White,
@@ -982,8 +923,10 @@ private fun XtreamContent(
               singleLine = true,
               modifier = Modifier.weight(1f),
               colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color(0xFF1B1F2B),
+                unfocusedContainerColor = Color(0xFF1B1F2B),
                 focusedBorderColor = TodGold,
-                unfocusedBorderColor = DarkSurfaceBorder,
+                unfocusedBorderColor = Color(0xFF2D3345),
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White
               ),
@@ -1531,8 +1474,12 @@ private fun DirectUrlContent(
           modifier = Modifier.fillMaxWidth(),
           shape = RoundedCornerShape(12.dp),
           colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = Color(0xFF1B1F2B),
+            unfocusedContainerColor = Color(0xFF1B1F2B),
             focusedBorderColor = TodGold,
-            unfocusedBorderColor = DarkSurfaceBorder,
+            unfocusedBorderColor = Color(0xFF2D3345),
+            focusedLabelColor = TodGold,
+            unfocusedLabelColor = DarkTextSecondary,
             focusedTextColor = Color.White,
             unfocusedTextColor = Color.White
           )
@@ -1563,8 +1510,12 @@ private fun DirectUrlContent(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
+              focusedContainerColor = Color(0xFF1B1F2B),
+              unfocusedContainerColor = Color(0xFF1B1F2B),
               focusedBorderColor = TodGold,
-              unfocusedBorderColor = DarkSurfaceBorder,
+              unfocusedBorderColor = Color(0xFF2D3345),
+              focusedLabelColor = TodGold,
+              unfocusedLabelColor = DarkTextSecondary,
               focusedTextColor = Color.White,
               unfocusedTextColor = Color.White
             )
@@ -1857,8 +1808,12 @@ private fun DualStreamSetupContent(
           modifier = Modifier.fillMaxWidth(),
           shape = RoundedCornerShape(12.dp),
           colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = Color(0xFF1B1F2B),
+            unfocusedContainerColor = Color(0xFF1B1F2B),
             focusedBorderColor = TodAmberYellow,
-            unfocusedBorderColor = DarkSurfaceBorder,
+            unfocusedBorderColor = Color(0xFF2D3345),
+            focusedLabelColor = TodAmberYellow,
+            unfocusedLabelColor = DarkTextSecondary,
             focusedTextColor = Color.White,
             unfocusedTextColor = Color.White
           )
@@ -1872,8 +1827,12 @@ private fun DualStreamSetupContent(
           modifier = Modifier.fillMaxWidth(),
           shape = RoundedCornerShape(12.dp),
           colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = Color(0xFF1B1F2B),
+            unfocusedContainerColor = Color(0xFF1B1F2B),
             focusedBorderColor = TodAmberYellow,
-            unfocusedBorderColor = DarkSurfaceBorder,
+            unfocusedBorderColor = Color(0xFF2D3345),
+            focusedLabelColor = TodAmberYellow,
+            unfocusedLabelColor = DarkTextSecondary,
             focusedTextColor = Color.White,
             unfocusedTextColor = Color.White
           )
@@ -1938,8 +1897,12 @@ private fun DualStreamSetupContent(
           modifier = Modifier.fillMaxWidth(),
           shape = RoundedCornerShape(12.dp),
           colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = Color(0xFF1B1F2B),
+            unfocusedContainerColor = Color(0xFF1B1F2B),
             focusedBorderColor = TodCyan,
-            unfocusedBorderColor = DarkSurfaceBorder,
+            unfocusedBorderColor = Color(0xFF2D3345),
+            focusedLabelColor = TodCyan,
+            unfocusedLabelColor = DarkTextSecondary,
             focusedTextColor = Color.White,
             unfocusedTextColor = Color.White
           )
@@ -1953,8 +1916,12 @@ private fun DualStreamSetupContent(
           modifier = Modifier.fillMaxWidth(),
           shape = RoundedCornerShape(12.dp),
           colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = Color(0xFF1B1F2B),
+            unfocusedContainerColor = Color(0xFF1B1F2B),
             focusedBorderColor = TodCyan,
-            unfocusedBorderColor = DarkSurfaceBorder,
+            unfocusedBorderColor = Color(0xFF2D3345),
+            focusedLabelColor = TodCyan,
+            unfocusedLabelColor = DarkTextSecondary,
             focusedTextColor = Color.White,
             unfocusedTextColor = Color.White
           )

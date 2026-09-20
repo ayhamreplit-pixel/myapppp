@@ -63,6 +63,7 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
   var showSettingsSheet by remember { mutableStateOf(false) }
 
   val exitPlayerToHome: () -> Unit = {
+    playerManager.stop()
     showInPlayerChannelDrawer = false
     isFullscreen = false
     activity?.let { act ->
