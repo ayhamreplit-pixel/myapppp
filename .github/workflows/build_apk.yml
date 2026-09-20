@@ -87,10 +87,7 @@ jobs:
             -Dorg.gradle.workers.max=2 \
             -Dorg.gradle.jvmargs="-Xmx2048m -XX:+UseParallelGC" \
             -x test \
-            -x testDebugUnitTest \
-            -x lint \
-            -x lintVitalRelease \
-            -x roborazzi
+            -x lint
 
       - name: Upload APKs to Artifacts
         uses: actions/upload-artifact@v4
