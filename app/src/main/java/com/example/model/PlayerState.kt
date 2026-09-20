@@ -66,5 +66,9 @@ data class TodPlayerState(
   val selectedAudioTrack: AudioTrackOption? = null,
   val subtitleTracks: List<SubtitleTrackOption> = emptyList(),
   val selectedSubtitleTrack: SubtitleTrackOption? = null,
+  val sleepTimerMinutes: Int? = null,
+  val sleepTimerRemainingSec: Int = 0,
+  val activeResolutionBadge: String = "HD",
+  val isMuted: Boolean = false,
   val errorMessage: String? = null
 )

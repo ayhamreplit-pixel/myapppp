@@ -6,6 +6,7 @@ import android.util.Log
 import com.example.model.XtreamAccountInfo
 import com.example.model.XtreamCategory
 import com.example.model.XtreamChannel
+import com.example.model.XtreamPlaylistConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -21,6 +22,35 @@ import javax.net.ssl.X509TrustManager
 
 class XtreamRepository(context: Context) {
   private val prefs = context.getSharedPreferences("xtream_prefs", Context.MODE_PRIVATE)
+
+  companion object {
+    // In-memory cache for ultra-fast instant 0ms category & channel access
+    private val categoryCache = mutableMapOf<String, List<XtreamCategory>>()
+    private val streamCache = mutableMapOf<String, List<XtreamChannel>>()
+  }
+
+  fun clearMemoryCache() {
+    categoryCache.clear()
+    streamCache.clear()
+  }
+
+  suspend fun pingServer(serverUrl: String): Long = withContext(Dispatchers.IO) {
+    try {
+      val clean = cleanServerUrl(serverUrl)
+      val startTime = System.currentTimeMillis()
+      val req = Request.Builder()
+        .url("$clean/player_api.php")
+        .head()
+        .header("User-Agent", "IPTVSmartersPro/3.1.5 (Linux; Android 12)")
+        .build()
+      val response = client.newCall(req).execute()
+      response.close()
+      val duration = System.currentTimeMillis() - startTime
+      if (duration > 0) duration else 15L
+    } catch (e: Exception) {
+      -1L
+    }
+  }
 
   // Tolerant OkHttpClient with universal SSL trust and redirect handling for IPTV servers
   private val client: OkHttpClient by lazy {
@@ -157,12 +187,25 @@ class XtreamRepository(context: Context) {
       }
     }
 
-  suspend fun fetchCategories(serverUrl: String, username: String, password: String): Result<List<XtreamCategory>> =
+  suspend fun fetchCategories(
+    serverUrl: String,
+    username: String,
+    password: String,
+    forceRefresh: Boolean = false
+  ): Result<List<XtreamCategory>> =
     withContext(Dispatchers.IO) {
       try {
         val cleanServer = cleanServerUrl(serverUrl)
         val cleanUser = username.trim()
         val cleanPass = password.trim()
+        val cacheKey = "$cleanServer|$cleanUser"
+
+        if (!forceRefresh && categoryCache.containsKey(cacheKey)) {
+          val cached = categoryCache[cacheKey]
+          if (!cached.isNullOrEmpty()) {
+            return@withContext Result.success(cached)
+          }
+        }
 
         val url = "$cleanServer/player_api.php?username=$cleanUser&password=$cleanPass&action=get_live_categories"
         val request = Request.Builder()
@@ -206,6 +249,9 @@ class XtreamRepository(context: Context) {
           }
         }
 
+        if (list.isNotEmpty()) {
+          categoryCache[cacheKey] = list
+        }
         Result.success(list)
       } catch (e: Exception) {
         Log.e("XtreamRepository", "Fetch categories error", e)
@@ -217,12 +263,22 @@ class XtreamRepository(context: Context) {
     serverUrl: String,
     username: String,
     password: String,
-    categoryId: String? = null
+    categoryId: String? = null,
+    preferredFormat: String = "MPEG-TS (.ts)",
+    forceRefresh: Boolean = false
   ): Result<List<XtreamChannel>> = withContext(Dispatchers.IO) {
     try {
       val cleanServer = cleanServerUrl(serverUrl)
       val cleanUser = username.trim()
       val cleanPass = password.trim()
+      val cacheKey = "$cleanServer|$cleanUser|${categoryId ?: "ALL"}"
+
+      if (!forceRefresh && streamCache.containsKey(cacheKey)) {
+        val cached = streamCache[cacheKey]
+        if (!cached.isNullOrEmpty()) {
+          return@withContext Result.success(cached)
+        }
+      }
 
       val isFilterRequested = !categoryId.isNullOrEmpty() && categoryId != "ALL"
 
@@ -242,7 +298,7 @@ class XtreamRepository(context: Context) {
       val response = client.newCall(request).execute()
       val body = response.body?.string()?.trim() ?: return@withContext Result.failure(Exception("قائمة القنوات فارغة"))
 
-      var list = parseStreamsJson(body, cleanServer, cleanUser, cleanPass)
+      var list = parseStreamsJson(body, cleanServer, cleanUser, cleanPass, preferredFormat)
 
       // Fallback: If filtered fetch returned empty or failed because the server doesn't support &category_id=,
       // fetch all streams and filter in memory
@@ -256,11 +312,14 @@ class XtreamRepository(context: Context) {
         val allRes = client.newCall(allReq).execute()
         val allBody = allRes.body?.string()?.trim()
         if (!allBody.isNullOrEmpty()) {
-          val allChannels = parseStreamsJson(allBody, cleanServer, cleanUser, cleanPass)
+          val allChannels = parseStreamsJson(allBody, cleanServer, cleanUser, cleanPass, preferredFormat)
           list = allChannels.filter { it.categoryId == categoryId }
         }
       }
 
+      if (list.isNotEmpty()) {
+        streamCache[cacheKey] = list
+      }
       Result.success(list)
     } catch (e: Exception) {
       Log.e("XtreamRepository", "Fetch streams error", e)
@@ -272,7 +331,8 @@ class XtreamRepository(context: Context) {
     body: String,
     cleanServer: String,
     cleanUser: String,
-    cleanPass: String
+    cleanPass: String,
+    preferredFormat: String
   ): List<XtreamChannel> {
     val list = mutableListOf<XtreamChannel>()
 
@@ -280,7 +340,7 @@ class XtreamRepository(context: Context) {
       val array = JSONArray(body)
       for (i in 0 until array.length()) {
         val obj = array.optJSONObject(i) ?: continue
-        val channel = parseSingleChannel(obj, cleanServer, cleanUser, cleanPass)
+        val channel = parseSingleChannel(obj, cleanServer, cleanUser, cleanPass, preferredFormat)
         if (channel != null) {
           list.add(channel)
         }
@@ -292,7 +352,7 @@ class XtreamRepository(context: Context) {
         val key = keys.next()
         val obj = jsonObj.optJSONObject(key)
         if (obj != null) {
-          val channel = parseSingleChannel(obj, cleanServer, cleanUser, cleanPass)
+          val channel = parseSingleChannel(obj, cleanServer, cleanUser, cleanPass, preferredFormat)
           if (channel != null) {
             list.add(channel)
           }
@@ -306,7 +366,8 @@ class XtreamRepository(context: Context) {
     obj: JSONObject,
     cleanServer: String,
     cleanUser: String,
-    cleanPass: String
+    cleanPass: String,
+    preferredFormat: String
   ): XtreamChannel? {
     val streamId = when {
       obj.has("stream_id") -> obj.optString("stream_id", "").ifEmpty { obj.optInt("stream_id", 0).toString() }
@@ -332,8 +393,15 @@ class XtreamRepository(context: Context) {
       else -> null
     }
 
-    val containerExtension = obj.optString("container_extension", "m3u8")
-    val ext = if (containerExtension.isNotBlank()) containerExtension else "m3u8"
+    val ext = when {
+      preferredFormat.contains("m3u8", ignoreCase = true) || preferredFormat.contains("hls", ignoreCase = true) -> "m3u8"
+      preferredFormat.contains("ts", ignoreCase = true) -> "ts"
+      else -> {
+        val containerExtension = obj.optString("container_extension", "ts")
+        if (containerExtension.isNotBlank()) containerExtension else "ts"
+      }
+    }
+
     val playUrl = "$cleanServer/live/$cleanUser/$cleanPass/$streamId.$ext"
 
     return XtreamChannel(
@@ -397,7 +465,126 @@ class XtreamRepository(context: Context) {
       }
     }
 
-  // Favorites management
+  // Multiple Playlists persistence
+  fun getAllPlaylists(): List<XtreamPlaylistConfig> {
+    val jsonString = prefs.getString("saved_playlists_json", null) ?: return emptyList()
+    return try {
+      val array = JSONArray(jsonString)
+      val list = mutableListOf<XtreamPlaylistConfig>()
+      for (i in 0 until array.length()) {
+        val obj = array.getJSONObject(i)
+        list.add(
+          XtreamPlaylistConfig(
+            playlistName = obj.optString("playlistName", "سيرفر"),
+            username = obj.optString("username", ""),
+            password = obj.optString("password", ""),
+            serverUrl = obj.optString("serverUrl", ""),
+            isM3u = obj.optBoolean("isM3u", false),
+            m3uUrl = obj.optString("m3uUrl", ""),
+            useDefaultUserAgent = obj.optBoolean("useDefaultUserAgent", true),
+            customUserAgent = obj.optString("customUserAgent", "IPTVSmartersPro/3.1.5 (Linux; Android 12)"),
+            isEnabled = obj.optBoolean("isEnabled", true),
+            updateInterval = obj.optString("updateInterval", "كل يوم"),
+            enableChannels = obj.optBoolean("enableChannels", true),
+            enableMovies = obj.optBoolean("enableMovies", true),
+            enableSeries = obj.optBoolean("enableSeries", true),
+            streamFormat = obj.optString("streamFormat", "MPEG-TS (.ts)"),
+            archivePeriod = obj.optString("archivePeriod", "تلقائي")
+          )
+        )
+      }
+      list
+    } catch (e: Exception) {
+      emptyList()
+    }
+  }
+
+  fun savePlaylistConfig(config: XtreamPlaylistConfig) {
+    val current = getAllPlaylists().filter {
+      if (config.isM3u) it.m3uUrl != config.m3uUrl
+      else (it.serverUrl != config.serverUrl || it.username != config.username)
+    }.toMutableList()
+    current.add(0, config)
+
+    val array = JSONArray()
+    for (p in current) {
+      val obj = JSONObject()
+      obj.put("playlistName", p.playlistName)
+      obj.put("username", p.username)
+      obj.put("password", p.password)
+      obj.put("serverUrl", p.serverUrl)
+      obj.put("isM3u", p.isM3u)
+      obj.put("m3uUrl", p.m3uUrl)
+      obj.put("useDefaultUserAgent", p.useDefaultUserAgent)
+      obj.put("customUserAgent", p.customUserAgent)
+      obj.put("isEnabled", p.isEnabled)
+      obj.put("updateInterval", p.updateInterval)
+      obj.put("enableChannels", p.enableChannels)
+      obj.put("enableMovies", p.enableMovies)
+      obj.put("enableSeries", p.enableSeries)
+      obj.put("streamFormat", p.streamFormat)
+      obj.put("archivePeriod", p.archivePeriod)
+      array.put(obj)
+    }
+    prefs.edit()
+      .putString("saved_playlists_json", array.toString())
+      .putString("active_playlist_key", if (config.isM3u) config.m3uUrl else "${config.serverUrl}_${config.username}")
+      .apply()
+
+    if (!config.isM3u) {
+      saveCredentials(config.serverUrl, config.username, config.password)
+    }
+  }
+
+  fun getActivePlaylistConfig(): XtreamPlaylistConfig? {
+    val all = getAllPlaylists()
+    if (all.isEmpty()) {
+      // Check legacy single credentials
+      val legacy = getSavedCredentials()
+      if (legacy != null && legacy.first.isNotBlank() && legacy.second.isNotBlank()) {
+        return XtreamPlaylistConfig(
+          playlistName = legacy.second,
+          username = legacy.second,
+          password = legacy.third,
+          serverUrl = legacy.first
+        )
+      }
+      return null
+    }
+    val activeKey = prefs.getString("active_playlist_key", null)
+    return all.find {
+      val key = if (it.isM3u) it.m3uUrl else "${it.serverUrl}_${it.username}"
+      key == activeKey
+    } ?: all.first()
+  }
+
+  fun deletePlaylistConfig(config: XtreamPlaylistConfig) {
+    val current = getAllPlaylists().filter {
+      if (config.isM3u) it.m3uUrl != config.m3uUrl
+      else (it.serverUrl != config.serverUrl || it.username != config.username)
+    }
+    val array = JSONArray()
+    for (p in current) {
+      val obj = JSONObject()
+      obj.put("playlistName", p.playlistName)
+      obj.put("username", p.username)
+      obj.put("password", p.password)
+      obj.put("serverUrl", p.serverUrl)
+      obj.put("isM3u", p.isM3u)
+      obj.put("m3uUrl", p.m3uUrl)
+      obj.put("useDefaultUserAgent", p.useDefaultUserAgent)
+      obj.put("customUserAgent", p.customUserAgent)
+      obj.put("isEnabled", p.isEnabled)
+      obj.put("updateInterval", p.updateInterval)
+      obj.put("enableChannels", p.enableChannels)
+      obj.put("enableMovies", p.enableMovies)
+      obj.put("enableSeries", p.enableSeries)
+      obj.put("streamFormat", p.streamFormat)
+      obj.put("archivePeriod", p.archivePeriod)
+      array.put(obj)
+    }
+    prefs.edit().putString("saved_playlists_json", array.toString()).apply()
+  }
   fun getFavorites(): Set<String> {
     return prefs.getStringSet("favorite_channels", emptySet()) ?: emptySet()
   }

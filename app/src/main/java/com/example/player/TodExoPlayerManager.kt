@@ -61,11 +61,12 @@ class TodExoPlayerManager(
   val exoPlayer: ExoPlayer by lazy {
     val loadControl = DefaultLoadControl.Builder()
       .setBufferDurationsMs(
-        /* minBufferMs = */ 5_000,
-        /* maxBufferMs = */ 25_000,
-        /* bufferForPlaybackMs = */ 400,
-        /* bufferForPlaybackAfterRebufferMs = */ 800
+        /* minBufferMs = */ 3_000,
+        /* maxBufferMs = */ 15_000,
+        /* bufferForPlaybackMs = */ 250,
+        /* bufferForPlaybackAfterRebufferMs = */ 500
       )
+      .setBackBuffer(10_000, true)
       .setPrioritizeTimeOverSizeThresholds(true)
       .build()
 
@@ -297,6 +298,45 @@ class TodExoPlayerManager(
     _playerState.update { it.copy(aspectRatioMode = mode) }
   }
 
+  fun cycleAspectRatio(): AspectRatioMode {
+    val current = _playerState.value.aspectRatioMode
+    val modes = AspectRatioMode.entries
+    val nextIndex = (modes.indexOf(current) + 1) % modes.size
+    val nextMode = modes[nextIndex]
+    setAspectRatioMode(nextMode)
+    return nextMode
+  }
+
+  fun toggleMute(): Boolean {
+    val currentlyMuted = _playerState.value.isMuted
+    val newMuted = !currentlyMuted
+    if (newMuted) {
+      exoPlayer.volume = 0f
+    } else {
+      val normalizedVol = 1.0f + (_playerState.value.audioBoostPercent / 100f)
+      exoPlayer.volume = normalizedVol.coerceIn(0f, 2.0f)
+    }
+    _playerState.update { it.copy(isMuted = newMuted) }
+    return newMuted
+  }
+
+  fun setSleepTimer(minutes: Int) {
+    val totalSec = minutes * 60
+    _playerState.update {
+      it.copy(sleepTimerMinutes = minutes, sleepTimerRemainingSec = totalSec)
+    }
+  }
+
+  fun cancelSleepTimer() {
+    _playerState.update {
+      it.copy(sleepTimerMinutes = null, sleepTimerRemainingSec = 0)
+    }
+  }
+
+  fun reloadStream() {
+    currentStream?.let { playStream(it) }
+  }
+
   fun setAudioBoostPercent(percent: Int) {
     _playerState.update { it.copy(audioBoostPercent = percent) }
     // Standard volume adjustment on ExoPlayer (1.0 = normal, up to 2.0 boost)
@@ -377,6 +417,8 @@ class TodExoPlayerManager(
     }
   }
 
+  private var tickerCounter = 0
+
   private fun updateProgressAndStats() {
     val position = exoPlayer.currentPosition
     val duration = exoPlayer.duration.coerceAtLeast(0)
@@ -392,6 +434,20 @@ class TodExoPlayerManager(
       liveLatencySec = liveLatencySec
     )
 
+    // Handle sleep timer countdown approximately every 1 second (every 2.5 ticks of 400ms)
+    tickerCounter++
+    var newSleepRemaining = _playerState.value.sleepTimerRemainingSec
+    if (_playerState.value.sleepTimerMinutes != null && tickerCounter % 2 == 0) {
+      if (newSleepRemaining > 0) {
+        newSleepRemaining -= 1
+        if (newSleepRemaining <= 0) {
+          exoPlayer.pause()
+          _playerState.update { it.copy(sleepTimerMinutes = null, sleepTimerRemainingSec = 0, isPlaying = false) }
+          return
+        }
+      }
+    }
+
     _playerState.update {
       it.copy(
         isPlaying = exoPlayer.isPlaying,
@@ -400,6 +456,7 @@ class TodExoPlayerManager(
         bufferedPositionMs = buffered,
         isLive = isLive,
         liveOffsetMs = liveOffset,
+        sleepTimerRemainingSec = newSleepRemaining,
         stats = currentStats
       )
     }
@@ -426,8 +483,18 @@ class TodExoPlayerManager(
 
     override fun onVideoSizeChanged(videoSize: VideoSize) {
       val res = "${videoSize.width}x${videoSize.height}"
+      val badge = when {
+        videoSize.height >= 2160 || videoSize.width >= 3840 -> "4K UHD"
+        videoSize.height >= 1080 -> "1080p FHD"
+        videoSize.height >= 720 -> "720p HD"
+        videoSize.height > 0 -> "${videoSize.height}p SD"
+        else -> "HD"
+      }
       _playerState.update { state ->
-        state.copy(stats = state.stats.copy(resolution = res))
+        state.copy(
+          activeResolutionBadge = badge,
+          stats = state.stats.copy(resolution = res)
+        )
       }
     }
 

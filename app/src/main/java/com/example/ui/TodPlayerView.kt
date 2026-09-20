@@ -107,6 +107,10 @@ fun TodPlayerView(
   onSelectMoment: (MatchMoment) -> Unit,
   onNavigateBack: () -> Unit = {},
   onOpenGrid: () -> Unit = {},
+  onNextChannel: (() -> Unit)? = null,
+  onPreviousChannel: (() -> Unit)? = null,
+  onToggleFavorite: () -> Unit = {},
+  isFavorite: Boolean = false,
   modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
@@ -486,6 +490,16 @@ fun TodPlayerView(
         lastUserInteraction = System.currentTimeMillis().toFloat()
       },
       onTakeSnapshot = { takeSnapshot() },
+      onCycleAspectRatio = { playerManager.cycleAspectRatio() },
+      onSetSleepTimer = { mins -> playerManager.setSleepTimer(mins) },
+      onCancelSleepTimer = { playerManager.cancelSleepTimer() },
+      onNextChannel = onNextChannel,
+      onPreviousChannel = onPreviousChannel,
+      onReloadStream = { playerManager.reloadStream() },
+      onTriggerPip = onTriggerPip,
+      onToggleFavorite = onToggleFavorite,
+      isFavorite = isFavorite,
+      onToggleMute = { playerManager.toggleMute() },
       brightnessLevel = brightnessPercent,
       onBrightnessChange = { newB ->
         brightnessPercent = newB

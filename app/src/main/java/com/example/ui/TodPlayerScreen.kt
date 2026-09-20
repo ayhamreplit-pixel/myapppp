@@ -26,6 +26,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import com.example.model.BroadcastCatalog
 import com.example.model.BroadcastStream
 import com.example.player.TodExoPlayerManager
+import com.example.player.XtreamRepository
 
 enum class ScreenDestination {
   START_INPUT,
@@ -38,6 +39,9 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
   val context = LocalContext.current
   val activity = context as? Activity
   val coroutineScope = rememberCoroutineScope()
+
+  val xtreamRepo = remember { XtreamRepository(context) }
+  var favoriteIds by remember { mutableStateOf(xtreamRepo.getFavorites()) }
 
   val playerManager = remember { TodExoPlayerManager(context, coroutineScope) }
   val playerState by playerManager.playerState.collectAsState()
@@ -172,6 +176,28 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
 
       ScreenDestination.PLAYER -> {
         // 2. TOD Video Player Screen: Starts directly in Landscape Fullscreen
+        val currentIndex = activeChannelList.indexOfFirst { it.id == currentStream.id }
+        val hasNext = currentIndex != -1 && currentIndex < activeChannelList.size - 1
+        val hasPrev = currentIndex > 0
+
+        val onNext: (() -> Unit)? = if (hasNext) {
+          {
+            val next = activeChannelList[currentIndex + 1]
+            currentStream = next
+            playerManager.playStream(next)
+          }
+        } else null
+
+        val onPrev: (() -> Unit)? = if (hasPrev) {
+          {
+            val prev = activeChannelList[currentIndex - 1]
+            currentStream = prev
+            playerManager.playStream(prev)
+          }
+        } else null
+
+        val isFav = favoriteIds.contains(currentStream.id)
+
         TodPlayerView(
           playerManager = playerManager,
           playerState = playerState,
@@ -198,6 +224,13 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
             // Open in-player channel drawer for instant channel switching!
             showInPlayerChannelDrawer = true
           },
+          onNextChannel = onNext,
+          onPreviousChannel = onPrev,
+          onToggleFavorite = {
+            xtreamRepo.toggleFavorite(currentStream.id)
+            favoriteIds = xtreamRepo.getFavorites()
+          },
+          isFavorite = isFav,
           modifier = Modifier.fillMaxSize()
         )
 
