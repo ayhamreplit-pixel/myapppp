@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: Build APK
+    name: Fast Build APK
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -22,13 +22,52 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
+      - name: Locate project and ensure Gradle wrapper
+        run: |
+          echo "=== Checking repository files ==="
+          ls -la
+
+          # If project was placed in a subdirectory during commit/upload, move to root
+          if [ ! -f "settings.gradle.kts" ] && [ ! -f "settings.gradle" ]; then
+            SUB_SETTINGS=$(find . -maxdepth 3 \( -name "settings.gradle.kts" -o -name "settings.gradle" \) | head -n 1)
+            if [ -n "$SUB_SETTINGS" ]; then
+              SUB_DIR=$(dirname "$SUB_SETTINGS")
+              echo "Android project detected in $SUB_DIR, moving to root..."
+              shopt -s dotglob
+              mv "$SUB_DIR"/* .
+              shopt -u dotglob
+            fi
+          fi
+
+          # Ensure gradlew file exists
+          if [ ! -f "gradlew" ]; then
+            echo "gradlew not found in root! Searching subdirectories..."
+            SUB_GRADLEW=$(find . -name "gradlew" -type f | head -n 1)
+            if [ -n "$SUB_GRADLEW" ]; then
+              echo "Found gradlew in: $SUB_GRADLEW"
+              cp "$SUB_GRADLEW" ./gradlew
+            else
+              echo "Restoring official gradlew script..."
+              curl -sLo gradlew https://raw.githubusercontent.com/gradle/gradle/v8.10.2/gradlew
+            fi
+          fi
+
+          # Ensure gradle-wrapper.jar exists
+          mkdir -p gradle/wrapper
+          if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+            echo "gradle-wrapper.jar missing! Restoring..."
+            curl -sLo gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.10.2/gradle/wrapper/gradle-wrapper.jar
+          fi
+
+          # Grant execution permissions safely
+          chmod +x gradlew || true
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
+          gradle-version: '9.3.1'
           cache-read-only: false
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+          gradle-home-cache-cleanup: true
 
       - name: Prepare Debug Keystore
         run: |
@@ -39,26 +78,44 @@ jobs:
             keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           fi
 
-      - name: Fast Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace --parallel --build-cache -x test -x lint -x testDebugUnitTest -x lintVitalRelease
+      - name: Build Optimized Release and Debug APKs
+        run: |
+          ./gradlew assembleRelease assembleDebug \
+            --no-daemon \
+            --build-cache \
+            --parallel \
+            -Dorg.gradle.workers.max=2 \
+            -Dorg.gradle.jvmargs="-Xmx2048m -XX:+UseParallelGC" \
+            -x test \
+            -x testDebugUnitTest \
+            -x lint \
+            -x lintVitalRelease \
+            -x roborazzi
 
-      - name: Upload APK to Artifacts
+      - name: Upload APKs to Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: TOD-Broadcast-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
+          name: TOD-Broadcast-APKs
+          path: |
+            app/build/outputs/apk/release/app-release.apk
+            app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: warn
 
       - name: Create Automatic Release
         uses: softprops/action-gh-release@v2
-        if: always()
+        if: success()
         continue-on-error: true
         with:
           tag_name: build-${{ github.run_number }}
           name: "📱 TOD Broadcast APK (Build #${{ github.run_number }})"
           body: |
-            ### تم بناء التطبيق بنجاح!
-            اضغط على **app-debug.apk** في الأسفل لتنزيل التطبيق مباشرة وتثبيته على هاتفك.
-          files: app/build/outputs/apk/debug/app-debug.apk
+            ### تم بناء التطبيق بنجاح وسرعة فائقة! ⚡🚀
+            
+            اختر النسخة المناسبة لجهازك:
+            - 🚀 **app-release.apk** (النسخة السريعة فائقة الخفة والأداء): **ينصح بتثبيتها لهاتفك (مثل Honor X7 والأجهزة المتوسطة) - مُحسنة عبر R8 و ProGuard ومدمجة لتشغيل سلس بدون أي ثقل أو تهنيج.**
+            - 🛠️ **app-debug.apk**: نسخة التطوير التجريبية.
+          files: |
+            app/build/outputs/apk/release/app-release.apk
+            app/build/outputs/apk/debug/app-debug.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

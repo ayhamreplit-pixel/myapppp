@@ -85,7 +85,7 @@ class TodExoPlayerManager(
   private var hasAttemptedFallback = false
 
   init {
-    startPeriodicTicker()
+    // Ticker starts lazily only when stream playback actually starts
   }
 
   fun playStream(stream: BroadcastStream, isFallback: Boolean = false) {
@@ -263,10 +263,12 @@ class TodExoPlayerManager(
 
   fun pause() {
     exoPlayer.pause()
+    stopPeriodicTicker()
   }
 
   fun stop() {
     exoPlayer.stop()
+    stopPeriodicTicker()
   }
 
   fun seekTo(positionMs: Long) {
@@ -407,17 +409,20 @@ class TodExoPlayerManager(
     currentStream?.let { playStream(it) }
   }
 
-  private fun startPeriodicTicker() {
-    tickerJob?.cancel()
+  fun startPeriodicTicker() {
+    if (tickerJob?.isActive == true) return
     tickerJob = coroutineScope.launch(Dispatchers.Main) {
       while (isActive) {
         updateProgressAndStats()
-        delay(400)
+        delay(1000)
       }
     }
   }
 
-  private var tickerCounter = 0
+  fun stopPeriodicTicker() {
+    tickerJob?.cancel()
+    tickerJob = null
+  }
 
   private fun updateProgressAndStats() {
     val position = exoPlayer.currentPosition
@@ -434,14 +439,14 @@ class TodExoPlayerManager(
       liveLatencySec = liveLatencySec
     )
 
-    // Handle sleep timer countdown approximately every 1 second (every 2.5 ticks of 400ms)
-    tickerCounter++
+    // Handle sleep timer countdown every second
     var newSleepRemaining = _playerState.value.sleepTimerRemainingSec
-    if (_playerState.value.sleepTimerMinutes != null && tickerCounter % 2 == 0) {
+    if (_playerState.value.sleepTimerMinutes != null) {
       if (newSleepRemaining > 0) {
         newSleepRemaining -= 1
         if (newSleepRemaining <= 0) {
           exoPlayer.pause()
+          stopPeriodicTicker()
           _playerState.update { it.copy(sleepTimerMinutes = null, sleepTimerRemainingSec = 0, isPlaying = false) }
           return
         }
@@ -479,6 +484,11 @@ class TodExoPlayerManager(
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
       _playerState.update { it.copy(isPlaying = isPlaying) }
+      if (isPlaying) {
+        startPeriodicTicker()
+      } else {
+        stopPeriodicTicker()
+      }
     }
 
     override fun onVideoSizeChanged(videoSize: VideoSize) {

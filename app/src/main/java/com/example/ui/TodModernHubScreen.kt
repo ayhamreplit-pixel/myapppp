@@ -97,6 +97,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.model.BroadcastStream
 import com.example.model.StreamFormat
 import com.example.model.XtreamAccountInfo
@@ -108,6 +109,55 @@ import com.example.ui.theme.DarkTextSecondary
 import com.example.ui.theme.TodAmberYellow
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+
+private fun buildOptimizedPlaybackList(
+  clickedChannel: XtreamChannel,
+  channelList: List<XtreamChannel>,
+  categoryName: String
+): Pair<BroadcastStream, List<BroadcastStream>> {
+  val targetStream = BroadcastStream(
+    id = clickedChannel.streamId,
+    title = clickedChannel.name,
+    subtitle = categoryName,
+    category = "IPTV Live",
+    tournamentOrLeague = categoryName,
+    streamUrl = clickedChannel.playUrl,
+    format = StreamFormat.AUTO,
+    isLive = true
+  )
+
+  val streams = if (channelList.size > 120) {
+    val idx = channelList.indexOf(clickedChannel).coerceAtLeast(0)
+    val start = (idx - 50).coerceAtLeast(0)
+    val end = (idx + 50).coerceAtMost(channelList.size)
+    channelList.subList(start, end).map { ch ->
+      BroadcastStream(
+        id = ch.streamId,
+        title = ch.name,
+        subtitle = categoryName,
+        category = "IPTV Live",
+        tournamentOrLeague = categoryName,
+        streamUrl = ch.playUrl,
+        format = StreamFormat.AUTO,
+        isLive = true
+      )
+    }
+  } else {
+    channelList.map { ch ->
+      BroadcastStream(
+        id = ch.streamId,
+        title = ch.name,
+        subtitle = categoryName,
+        category = "IPTV Live",
+        tournamentOrLeague = categoryName,
+        streamUrl = ch.playUrl,
+        format = StreamFormat.AUTO,
+        isLive = true
+      )
+    }
+  }
+  return Pair(targetStream, streams)
+}
 
 enum class HubViewMode {
   ONBOARDING,    // First launch setup screen
@@ -769,28 +819,7 @@ fun TodModernHubScreen(
                         xtreamRepo.addRecentChannel(ch)
                         recentChannels = xtreamRepo.getRecentChannels()
 
-                        val streamList = matchingChannels.map { channel ->
-                          BroadcastStream(
-                            id = channel.streamId,
-                            title = channel.name,
-                            subtitle = "IPTV Stream",
-                            category = "IPTV Live",
-                            tournamentOrLeague = "Live Channel",
-                            streamUrl = channel.playUrl,
-                            format = StreamFormat.AUTO,
-                            isLive = true
-                          )
-                        }
-                        val currentStream = BroadcastStream(
-                          id = ch.streamId,
-                          title = ch.name,
-                          subtitle = "IPTV Stream",
-                          category = "IPTV Live",
-                          tournamentOrLeague = "Live Channel",
-                          streamUrl = ch.playUrl,
-                          format = StreamFormat.AUTO,
-                          isLive = true
-                        )
+                        val (currentStream, streamList) = buildOptimizedPlaybackList(ch, matchingChannels, "Live Channel")
                         onPlayStream(currentStream, streamList)
                       }
                       .padding(horizontal = 20.dp, vertical = 14.dp),
@@ -826,7 +855,11 @@ fun TodModernHubScreen(
 
                       if (!ch.iconUrl.isNullOrBlank()) {
                         AsyncImage(
-                          model = ch.iconUrl,
+                          model = ImageRequest.Builder(LocalContext.current)
+                            .data(ch.iconUrl)
+                            .size(96, 96)
+                            .crossfade(false)
+                            .build(),
                           contentDescription = null,
                           modifier = Modifier
                             .size(32.dp)
@@ -995,28 +1028,7 @@ fun TodModernHubScreen(
                         xtreamRepo.addRecentChannel(ch)
                         recentChannels = xtreamRepo.getRecentChannels()
 
-                        val channelStreams = visibleChannels.map { channel ->
-                          BroadcastStream(
-                            id = channel.streamId,
-                            title = channel.name,
-                            subtitle = catName,
-                            category = "IPTV Live",
-                            tournamentOrLeague = catName,
-                            streamUrl = channel.playUrl,
-                            format = StreamFormat.AUTO,
-                            isLive = true
-                          )
-                        }
-                        val currentStream = BroadcastStream(
-                          id = ch.streamId,
-                          title = ch.name,
-                          subtitle = catName,
-                          category = "IPTV Live",
-                          tournamentOrLeague = catName,
-                          streamUrl = ch.playUrl,
-                          format = StreamFormat.AUTO,
-                          isLive = true
-                        )
+                        val (currentStream, channelStreams) = buildOptimizedPlaybackList(ch, visibleChannels, catName)
                         onPlayStream(currentStream, channelStreams)
                       }
                       .padding(10.dp),
@@ -1028,7 +1040,11 @@ fun TodModernHubScreen(
                     ) {
                       if (!ch.iconUrl.isNullOrBlank()) {
                         AsyncImage(
-                          model = ch.iconUrl,
+                          model = ImageRequest.Builder(LocalContext.current)
+                            .data(ch.iconUrl)
+                            .size(96, 96)
+                            .crossfade(false)
+                            .build(),
                           contentDescription = null,
                           modifier = Modifier
                             .size(44.dp)
@@ -1076,28 +1092,7 @@ fun TodModernHubScreen(
                         xtreamRepo.addRecentChannel(ch)
                         recentChannels = xtreamRepo.getRecentChannels()
 
-                        val channelStreams = visibleChannels.map { channel ->
-                          BroadcastStream(
-                            id = channel.streamId,
-                            title = channel.name,
-                            subtitle = catName,
-                            category = "IPTV Live",
-                            tournamentOrLeague = catName,
-                            streamUrl = channel.playUrl,
-                            format = StreamFormat.AUTO,
-                            isLive = true
-                          )
-                        }
-                        val currentStream = BroadcastStream(
-                          id = ch.streamId,
-                          title = ch.name,
-                          subtitle = catName,
-                          category = "IPTV Live",
-                          tournamentOrLeague = catName,
-                          streamUrl = ch.playUrl,
-                          format = StreamFormat.AUTO,
-                          isLive = true
-                        )
+                        val (currentStream, channelStreams) = buildOptimizedPlaybackList(ch, visibleChannels, catName)
                         onPlayStream(currentStream, channelStreams)
                       }
                       .padding(12.dp),
@@ -1111,7 +1106,11 @@ fun TodModernHubScreen(
                     ) {
                       if (!ch.iconUrl.isNullOrBlank()) {
                         AsyncImage(
-                          model = ch.iconUrl,
+                          model = ImageRequest.Builder(LocalContext.current)
+                            .data(ch.iconUrl)
+                            .size(96, 96)
+                            .crossfade(false)
+                            .build(),
                           contentDescription = null,
                           modifier = Modifier
                             .size(38.dp)
@@ -1247,6 +1246,45 @@ fun TodModernHubScreen(
               contentPadding = PaddingValues(16.dp),
               verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+              item {
+                // Quick Direct Stream Option inside settings
+                Box(
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color(0xFF1B2030))
+                    .border(1.dp, TodAmberYellow.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
+                    .clickable { showDirectLinkModal = true }
+                    .padding(14.dp)
+                ) {
+                  Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                  ) {
+                    Icon(Icons.Default.KeyboardArrowLeft, contentDescription = null, tint = TodAmberYellow)
+                    Row(
+                      verticalAlignment = Alignment.CenterVertically,
+                      horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                      Column(horizontalAlignment = Alignment.End) {
+                        Text("تشغيل رابط بث مباشر فوراً ⚡", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text("شغل أي رابط M3U8 أو TS أو MP4 بكيفك بدون حفظ", color = DarkTextSecondary, fontSize = 11.sp)
+                      }
+                      Box(
+                        modifier = Modifier
+                          .size(38.dp)
+                          .clip(RoundedCornerShape(10.dp))
+                          .background(TodAmberYellow.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                      ) {
+                        Icon(Icons.Default.Bolt, contentDescription = null, tint = TodAmberYellow, modifier = Modifier.size(22.dp))
+                      }
+                    }
+                  }
+                }
+              }
+
               item {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                   // 1. Playlist Name
@@ -1535,6 +1573,43 @@ fun TodModernHubScreen(
                 .padding(20.dp),
               verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+              // Quick Direct Stream Option inside M3U settings
+              Box(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .clip(RoundedCornerShape(14.dp))
+                  .background(Color(0xFF1B2030))
+                  .border(1.dp, TodAmberYellow.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
+                  .clickable { showDirectLinkModal = true }
+                  .padding(14.dp)
+              ) {
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                  Icon(Icons.Default.KeyboardArrowLeft, contentDescription = null, tint = TodAmberYellow)
+                  Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                  ) {
+                    Column(horizontalAlignment = Alignment.End) {
+                      Text("تشغيل رابط بث مباشر فوراً ⚡", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                      Text("شغل أي رابط M3U8 أو TS أو MP4 بكيفك بدون حفظ", color = DarkTextSecondary, fontSize = 11.sp)
+                    }
+                    Box(
+                      modifier = Modifier
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(TodAmberYellow.copy(alpha = 0.2f)),
+                      contentAlignment = Alignment.Center
+                    ) {
+                      Icon(Icons.Default.Bolt, contentDescription = null, tint = TodAmberYellow, modifier = Modifier.size(22.dp))
+                    }
+                  }
+                }
+              }
+
               Text("اسم القائمة", color = TodAmberYellow, fontSize = 13.sp, fontWeight = FontWeight.Bold)
               OutlinedTextField(
                 value = m3uName,
