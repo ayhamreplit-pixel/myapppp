@@ -82,6 +82,7 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
   val launchPlayerInLandscape: (BroadcastStream, List<BroadcastStream>) -> Unit = { stream, channels ->
     currentStream = stream
     activeChannelList = channels
+    playerManager.setChannelListContext(channels)
     isFullscreen = true
     activity?.let { act ->
       val controller = WindowCompat.getInsetsController(act.window, act.window.decorView)
@@ -185,7 +186,7 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
           {
             val next = activeChannelList[currentIndex + 1]
             currentStream = next
-            playerManager.playStream(next)
+            playerManager.zapToChannel(next)
           }
         } else null
 
@@ -193,7 +194,7 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
           {
             val prev = activeChannelList[currentIndex - 1]
             currentStream = prev
-            playerManager.playStream(prev)
+            playerManager.zapToChannel(prev)
           }
         } else null
 

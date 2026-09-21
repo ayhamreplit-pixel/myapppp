@@ -72,5 +72,8 @@ data class TodPlayerState(
   val sleepTimerRemainingSec: Int = 0,
   val activeResolutionBadge: String = "HD",
   val isMuted: Boolean = false,
+  val autoFailoverMessage: String? = null,
+  val isMiniChannelBarVisible: Boolean = false,
   val errorMessage: String? = null
 )
+

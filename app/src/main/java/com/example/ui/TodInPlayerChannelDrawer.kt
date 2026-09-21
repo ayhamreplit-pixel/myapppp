@@ -95,13 +95,9 @@ fun TodInPlayerChannelDrawer(
           .align(Alignment.CenterEnd)
           .fillMaxHeight()
           .width(360.dp)
-          .background(
-            Brush.horizontalGradient(
-              listOf(Color(0xEB0A0E18), Color(0xF505080E))
-            )
-          )
-          .border(1.dp, Color(0x33FFB800), RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp))
-          .clip(RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp))
+          .background(DarkSurface)
+          .border(1.dp, DarkSurfaceBorder, RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp))
+          .clip(RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp))
           .clickable(enabled = false) {}
           .padding(18.dp)
       ) {

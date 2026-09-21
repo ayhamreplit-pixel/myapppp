@@ -855,4 +855,91 @@ class XtreamRepository(context: Context) {
     }
     prefs.edit().putString("custom_url_history", array.toString()).apply()
   }
+
+  // Theme persistence
+  fun getSavedTheme(): String {
+    return prefs.getString("app_theme_id", "gold") ?: "gold"
+  }
+
+  fun saveTheme(themeId: String) {
+    prefs.edit().putString("app_theme_id", themeId).apply()
+  }
+
+  // Instant 0ms Disk Cache for Categories and Streams
+  fun getCachedCategories(cacheKey: String): List<XtreamCategory> {
+    val json = prefs.getString("disk_categories_$cacheKey", null) ?: return emptyList()
+    return try {
+      val array = JSONArray(json)
+      val list = mutableListOf<XtreamCategory>()
+      for (i in 0 until array.length()) {
+        val obj = array.getJSONObject(i)
+        list.add(
+          XtreamCategory(
+            categoryId = obj.optString("categoryId"),
+            categoryName = obj.optString("categoryName"),
+            channelCount = obj.optInt("channelCount", 0)
+          )
+        )
+      }
+      list
+    } catch (e: Exception) {
+      emptyList()
+    }
+  }
+
+  fun saveCachedCategories(cacheKey: String, categories: List<XtreamCategory>) {
+    try {
+      val array = JSONArray()
+      for (cat in categories) {
+        val obj = JSONObject()
+        obj.put("categoryId", cat.categoryId)
+        obj.put("categoryName", cat.categoryName)
+        obj.put("channelCount", cat.channelCount)
+        array.put(obj)
+      }
+      prefs.edit().putString("disk_categories_$cacheKey", array.toString()).apply()
+    } catch (ignored: Exception) {}
+  }
+
+  fun getCachedStreams(cacheKey: String): List<XtreamChannel> {
+    val json = prefs.getString("disk_streams_$cacheKey", null) ?: return emptyList()
+    return try {
+      val array = JSONArray(json)
+      val list = mutableListOf<XtreamChannel>()
+      for (i in 0 until array.length()) {
+        val obj = array.getJSONObject(i)
+        list.add(
+          XtreamChannel(
+            streamId = obj.optString("streamId"),
+            name = obj.optString("name"),
+            iconUrl = obj.optString("iconUrl").takeIf { it.isNotEmpty() },
+            categoryId = obj.optString("categoryId").takeIf { it.isNotEmpty() },
+            playUrl = obj.optString("playUrl")
+          )
+        )
+      }
+      list
+    } catch (e: Exception) {
+      emptyList()
+    }
+  }
+
+  fun saveCachedStreams(cacheKey: String, channels: List<XtreamChannel>) {
+    try {
+      val array = JSONArray()
+      // Cache up to 1000 top channels to disk for instant zero-latency instant resume
+      val toSave = channels.take(1000)
+      for (ch in toSave) {
+        val obj = JSONObject()
+        obj.put("streamId", ch.streamId)
+        obj.put("name", ch.name)
+        obj.put("iconUrl", ch.iconUrl ?: "")
+        obj.put("categoryId", ch.categoryId ?: "")
+        obj.put("playUrl", ch.playUrl)
+        array.put(obj)
+      }
+      prefs.edit().putString("disk_streams_$cacheKey", array.toString()).apply()
+    } catch (ignored: Exception) {}
+  }
 }
+

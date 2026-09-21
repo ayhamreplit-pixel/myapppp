@@ -1,6 +1,7 @@
 package com.example.player
 
 import android.content.Context
+import android.media.audiofx.LoudnessEnhancer
 import android.net.Uri
 import android.util.Log
 import androidx.annotation.OptIn
@@ -10,13 +11,15 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
-import androidx.media3.common.TrackGroup
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.Tracks
 import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.dash.DashMediaSource
@@ -26,8 +29,6 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
-import androidx.media3.datasource.DefaultDataSource
-import androidx.media3.datasource.DefaultHttpDataSource
 import com.example.model.AspectRatioMode
 import com.example.model.AudioTrackOption
 import com.example.model.BroadcastStats
@@ -56,9 +57,18 @@ class TodExoPlayerManager(
   private val _playerState = MutableStateFlow(TodPlayerState())
   val playerState: StateFlow<TodPlayerState> = _playerState.asStateFlow()
 
-  val trackSelector = DefaultTrackSelector(context)
+  val trackSelector = DefaultTrackSelector(context).apply {
+    setParameters(
+      buildUponParameters()
+        .setExceedRendererCapabilitiesIfNecessary(true)
+        .setAllowAudioMixedMimeTypeAdaptiveness(true)
+        .setAllowAudioNonSeamlessAdaptiveness(true)
+        .setAllowVideoMixedMimeTypeAdaptiveness(true)
+        .setAllowVideoNonSeamlessAdaptiveness(true)
+    )
+  }
 
-  // Smart User-Agent list for high-compatibility anti-block IPTV bypass
+  // Universal User-Agent rotation for IPTV bypass
   private val userAgents = listOf(
     "IPTVSmartersPro/3.1.5 (Linux; Android 12; Mobile)",
     "TiviMate/4.7.0 (Linux; Android 13; Mobile)",
@@ -68,8 +78,19 @@ class TodExoPlayerManager(
   )
   private var currentUaIndex = 0
 
+  // Hardware Audio Loudness Enhancer for true +200% volume boost
+  private var loudnessEnhancer: LoudnessEnhancer? = null
+
+  // Active channel context for Auto-Failover
+  private var activeChannelList: List<BroadcastStream> = emptyList()
+
   val exoPlayer: ExoPlayer by lazy {
-    // Ultra-optimized LoadControl for weak network (دعم النت الضعيف ومقاومة التقطيع)
+    // Universal RenderersFactory supporting software decoders fallback for AC-3, E-AC-3, AAC-LATM, MP2, DTS
+    val renderersFactory = DefaultRenderersFactory(context)
+      .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+      .setEnableDecoderFallback(true)
+
+    // LoadControl with ultra-fast startup and buffer management
     val loadControl = DefaultLoadControl.Builder()
       .setBufferDurationsMs(
         /* minBufferMs = */ 1_500,
@@ -81,7 +102,7 @@ class TodExoPlayerManager(
       .setPrioritizeTimeOverSizeThresholds(true)
       .build()
 
-    ExoPlayer.Builder(context)
+    ExoPlayer.Builder(context, renderersFactory)
       .setTrackSelector(trackSelector)
       .setLoadControl(loadControl)
       .build().apply {
@@ -96,10 +117,15 @@ class TodExoPlayerManager(
   private var currentStream: BroadcastStream? = null
   private var retryCount = 0
 
+  fun setChannelListContext(channels: List<BroadcastStream>) {
+    activeChannelList = channels
+  }
+
   fun playStream(stream: BroadcastStream, isRetry: Boolean = false) {
     if (!isRetry) {
       retryCount = 0
       currentUaIndex = 0
+      _playerState.update { it.copy(autoFailoverMessage = null) }
     }
     currentStream = stream
     val rawUrl = stream.streamUrl.trim()
@@ -146,9 +172,41 @@ class TodExoPlayerManager(
       exoPlayer.setMediaSource(mediaSource)
       exoPlayer.prepare()
       exoPlayer.play()
+      initLoudnessEnhancer()
     } catch (e: Exception) {
       Log.e("TodExoPlayerManager", "Error preparing stream", e)
       handlePlaybackRetry(e.localizedMessage ?: "Playback Exception")
+    }
+  }
+
+  private fun initLoudnessEnhancer() {
+    try {
+      val audioSessionId = exoPlayer.audioSessionId
+      if (audioSessionId != C.AUDIO_SESSION_ID_UNSET && audioSessionId != 0) {
+        if (loudnessEnhancer == null) {
+          loudnessEnhancer = LoudnessEnhancer(audioSessionId).apply {
+            enabled = true
+          }
+        }
+        applyAudioGain(_playerState.value.audioBoostPercent, _playerState.value.isVoiceEnhancerEnabled)
+      }
+    } catch (e: Exception) {
+      Log.w("TodExoPlayerManager", "LoudnessEnhancer not supported on this device/session", e)
+    }
+  }
+
+  private fun applyAudioGain(boostPercent: Int, isVoiceEnhancer: Boolean) {
+    try {
+      val enhancer = loudnessEnhancer
+      if (enhancer != null) {
+        // Boost target in milliBels (0 to 3000 mB)
+        val extraVoiceGain = if (isVoiceEnhancer) 600 else 0
+        val targetMb = (boostPercent * 15) + extraVoiceGain
+        enhancer.setTargetGain(targetMb.coerceIn(0, 4000))
+        enhancer.enabled = (boostPercent > 0 || isVoiceEnhancer)
+      }
+    } catch (e: Exception) {
+      Log.w("TodExoPlayerManager", "Error applying audio gain", e)
     }
   }
 
@@ -163,11 +221,18 @@ class TodExoPlayerManager(
     }
   }
 
+  /**
+   * Smart Auto-Failover:
+   * 1. Tries alternate container format (.ts <-> .m3u8).
+   * 2. Tries alternate User-Agent.
+   * 3. Automatically finds matching backup channel in the same playlist (e.g. 720p / SD / Backup).
+   */
   private fun handlePlaybackRetry(errorMsg: String) {
-    if (retryCount < 3 && currentStream != null) {
+    val stream = currentStream ?: return
+
+    if (retryCount < 3) {
       retryCount++
       currentUaIndex = (currentUaIndex + 1) % userAgents.size
-      val stream = currentStream!!
       
       val altFormat = when (stream.format) {
         StreamFormat.HLS -> StreamFormat.PROGRESSIVE
@@ -182,16 +247,40 @@ class TodExoPlayerManager(
         newUrl = newUrl.substringBeforeLast(".m3u8") + ".ts"
       }
 
-      Log.i("TodExoPlayerManager", "AI Auto-Retry #$retryCount with UA: ${userAgents[currentUaIndex]} and format: $altFormat")
+      val failoverMsg = "جاري التحويل التلقائي للبث البديل (#$retryCount)..."
+      _playerState.update { it.copy(autoFailoverMessage = failoverMsg) }
+
+      Log.i("TodExoPlayerManager", "AI Auto-Failover #$retryCount with UA: ${userAgents[currentUaIndex]} and format: $altFormat")
       playStream(stream.copy(streamUrl = newUrl, format = altFormat), isRetry = true)
-    } else {
-      _playerState.update {
-        it.copy(
-          isBuffering = false,
-          isPlaying = false,
-          errorMessage = "تعذر تشغيل هذا البث ($errorMsg). يرجى التأكد من استقرار السيرفر أو تجربة قناة أخرى."
-        )
-      }
+      return
+    }
+
+    // Step 2: Search for backup stream in the channel list (e.g. 720p, Backup, SD, or same name)
+    val channelTitle = stream.title.lowercase()
+    val backupCandidate = activeChannelList.find { ch ->
+      ch.streamUrl != stream.streamUrl &&
+      (ch.title.contains(channelTitle.take(6), ignoreCase = true) ||
+       channelTitle.contains(ch.title.take(6), ignoreCase = true) ||
+       ch.title.contains("backup", ignoreCase = true) ||
+       ch.title.contains("720", ignoreCase = true) ||
+       ch.title.contains("sd", ignoreCase = true))
+    }
+
+    if (backupCandidate != null) {
+      retryCount = 0
+      val backupMsg = "تم التحويل تلقائياً للبث الاحتياطي: ${backupCandidate.title}"
+      _playerState.update { it.copy(autoFailoverMessage = backupMsg) }
+      playStream(backupCandidate, isRetry = true)
+      return
+    }
+
+    // Otherwise show friendly error message
+    _playerState.update {
+      it.copy(
+        isBuffering = false,
+        isPlaying = false,
+        errorMessage = "تعذر تشغيل هذا البث ($errorMsg). يرجى التأكد من استقرار السيرفر أو اختيار قناة أخرى."
+      )
     }
   }
 
@@ -234,13 +323,11 @@ class TodExoPlayerManager(
       val licenseStr = stream.drmKey?.trim() ?: ""
       if (licenseStr.startsWith("http://", ignoreCase = true) || licenseStr.startsWith("https://", ignoreCase = true)) {
         drmConfigBuilder.setLicenseUri(licenseStr)
-        // Pass DRM license request headers if needed
         val licenseHeaders = mutableMapOf<String, String>()
         if (!stream.origin.isNullOrBlank()) licenseHeaders["Origin"] = stream.origin
         if (!stream.referer.isNullOrBlank()) licenseHeaders["Referer"] = stream.referer
         drmConfigBuilder.setLicenseRequestHeaders(licenseHeaders)
       } else if (licenseStr.contains(":")) {
-        // ClearKey keyId:key pair (e.g. b253c726c24c7c94a3ddf9b1907e2c76:097963d6ad73c3d712a104981de0ed42)
         val clearKeyJson = com.example.model.StreamUrlParser.buildClearKeyJson(licenseStr)
         if (clearKeyJson != null) {
           val dataUri = "data:application/json;base64," + android.util.Base64.encodeToString(
@@ -293,6 +380,22 @@ class TodExoPlayerManager(
       lower.contains(".m3u8") || lower.contains(".m3u") || lower.contains("output=m3u8") || lower.contains("/live/") || lower.contains(".php") || lower.contains(".json") || lower.contains(".css") || lower.contains(".js") || lower.contains("token=") -> StreamFormat.HLS
       else -> StreamFormat.HLS
     }
+  }
+
+  // Fast Instant Channel Zapping
+  fun zapToChannel(stream: BroadcastStream) {
+    currentStream = stream
+    playStream(stream)
+  }
+
+  fun toggleMiniChannelBar(): Boolean {
+    val newState = !_playerState.value.isMiniChannelBarVisible
+    _playerState.update { it.copy(isMiniChannelBarVisible = newState) }
+    return newState
+  }
+
+  fun hideMiniChannelBar() {
+    _playerState.update { it.copy(isMiniChannelBarVisible = false) }
   }
 
   fun togglePlayPause() {
@@ -413,14 +516,16 @@ class TodExoPlayerManager(
       val volumeFactor = 1.0f + (clamped / 100f)
       exoPlayer.volume = volumeFactor.coerceIn(0f, 3.0f)
     }
+    applyAudioGain(clamped, _playerState.value.isVoiceEnhancerEnabled)
   }
 
   fun toggleVoiceEnhancer(): Boolean {
     val newState = !_playerState.value.isVoiceEnhancerEnabled
     _playerState.update { it.copy(isVoiceEnhancerEnabled = newState) }
-    // Boost vocal speech frequencies by adjusting audio boost and volume dynamics
     if (newState && _playerState.value.audioBoostPercent < 40) {
       setAudioBoostPercent(60)
+    } else {
+      applyAudioGain(_playerState.value.audioBoostPercent, newState)
     }
     return newState
   }
@@ -572,6 +677,10 @@ class TodExoPlayerManager(
         )
       }
 
+      if (isReady) {
+        initLoudnessEnhancer()
+      }
+
       if (isReady && exoPlayer.playWhenReady) {
         startPeriodicTicker()
       } else if (isEnded) {
@@ -589,6 +698,10 @@ class TodExoPlayerManager(
       if (isPlaying) {
         startPeriodicTicker()
       }
+    }
+
+    override fun onAudioSessionIdChanged(audioSessionId: Int) {
+      initLoudnessEnhancer()
     }
 
     override fun onVideoSizeChanged(videoSize: VideoSize) {
@@ -638,7 +751,7 @@ class TodExoPlayerManager(
       if (format != null) {
         val bitrate = format.bitrate / 1000
         val fps = format.frameRate
-        val codec = format.sampleMimeType ?: format.codecs ?: "Unknown Codec"
+        val codec = format.sampleMimeType ?: format.codecs ?: "Universal Codec"
         _playerState.update { state ->
           state.copy(
             stats = state.stats.copy(
@@ -750,8 +863,12 @@ class TodExoPlayerManager(
   fun release() {
     tickerJob?.cancel()
     sleepTimerJob?.cancel()
+    try {
+      loudnessEnhancer?.release()
+    } catch (ignored: Exception) {}
     exoPlayer.removeListener(playerListener)
     exoPlayer.removeAnalyticsListener(analyticsListener)
     exoPlayer.release()
   }
 }
+

@@ -169,9 +169,10 @@ fun TodControlsOverlay(
             Brush.verticalGradient(
               colors = listOf(
                 Color(0xCC000000),
-                Color(0x22000000),
-                Color(0x22000000),
-                Color(0xE6000000)
+                Color(0x33000000),
+                Color(0x00000000),
+                Color(0x44000000),
+                Color(0xEE000000)
               )
             )
           )
@@ -185,29 +186,7 @@ fun TodControlsOverlay(
             modifier = Modifier
               .fillMaxWidth()
               .align(Alignment.TopCenter)
-              .padding(horizontal = 16.dp, vertical = 14.dp)
-              .clip(RoundedCornerShape(16.dp))
-              .background(
-                Brush.horizontalGradient(
-                  colors = listOf(
-                    Color(0xCC0B101E),
-                    Color(0x99111827),
-                    Color(0xCC0B101E)
-                  )
-                )
-              )
-              .border(
-                1.dp,
-                Brush.horizontalGradient(
-                  listOf(
-                    Color.White.copy(alpha = 0.20f),
-                    Color.White.copy(alpha = 0.08f),
-                    Color.White.copy(alpha = 0.20f)
-                  )
-                ),
-                RoundedCornerShape(16.dp)
-              )
-              .padding(horizontal = 14.dp, vertical = 10.dp),
+              .padding(horizontal = 20.dp, vertical = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
           ) {
@@ -357,6 +336,36 @@ fun TodControlsOverlay(
 
                 // Thin white back arrow → (Screenshot 4)
                 TodArrowBackRtl(size = 24.dp, tint = Color.White)
+              }
+            }
+          }
+
+          // Auto-Failover or Stream Status Notification Banner
+          if (playerState.autoFailoverMessage != null) {
+            Box(
+              modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 60.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0xE6101926))
+                .border(1.dp, Color(0xFF00E5FF), RoundedCornerShape(8.dp))
+                .padding(horizontal = 14.dp, vertical = 6.dp)
+            ) {
+              Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+              ) {
+                CircularProgressIndicator(
+                  color = Color(0xFF00E5FF),
+                  strokeWidth = 2.dp,
+                  modifier = Modifier.size(14.dp)
+                )
+                Text(
+                  text = playerState.autoFailoverMessage,
+                  color = Color.White,
+                  fontSize = 12.sp,
+                  fontWeight = FontWeight.Bold
+                )
               }
             }
           }
@@ -556,29 +565,7 @@ fun TodControlsOverlay(
             modifier = Modifier
               .fillMaxWidth()
               .align(Alignment.BottomCenter)
-              .padding(horizontal = 16.dp, vertical = 14.dp)
-              .clip(RoundedCornerShape(16.dp))
-              .background(
-                Brush.horizontalGradient(
-                  colors = listOf(
-                    Color(0xCC0B101E),
-                    Color(0x99111827),
-                    Color(0xCC0B101E)
-                  )
-                )
-              )
-              .border(
-                1.dp,
-                Brush.horizontalGradient(
-                  listOf(
-                    Color.White.copy(alpha = 0.20f),
-                    Color.White.copy(alpha = 0.08f),
-                    Color.White.copy(alpha = 0.20f)
-                  )
-                ),
-                RoundedCornerShape(16.dp)
-              )
-              .padding(horizontal = 16.dp, vertical = 10.dp),
+              .padding(horizontal = 20.dp, vertical = 18.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
           ) {
