@@ -207,6 +207,18 @@ fun TodPlayerView(
     }
   }
 
+  DisposableEffect(Unit) {
+    onDispose {
+      try {
+        activity?.let { act ->
+          val lp = act.window.attributes
+          lp.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+          act.window.attributes = lp
+        }
+      } catch (ignored: Exception) {}
+    }
+  }
+
   Box(
     modifier = modifier
       .fillMaxSize()

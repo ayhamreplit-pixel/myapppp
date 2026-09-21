@@ -165,53 +165,70 @@ fun TodModernHubScreen(
             serverUrl = config.m3uUrl
           )
         }.onFailure {
-          xtreamError = "فشل تحميل قائمة M3U: ${it.localizedMessage}"
+          xtreamError = "فشل تحميل قائمة M3U: ${it.localizedMessage ?: "تحقق من الرابط"}"
         }
       } else {
-        val loginRes = xtreamRepo.login(config.serverUrl, config.username, config.password)
-        loginRes.onSuccess { info ->
-          xtreamAccount = info
+        // Parallelize network requests for maximum speed and resiliency
+        val pingDeferred = async { xtreamRepo.pingServer(config.serverUrl) }
+        val loginDeferred = async { xtreamRepo.login(config.serverUrl, config.username, config.password) }
+        val catsDeferred = async { xtreamRepo.fetchCategories(config.serverUrl, config.username, config.password) }
+        val streamsDeferred = async {
+          xtreamRepo.fetchStreams(
+            serverUrl = config.serverUrl,
+            username = config.username,
+            password = config.password,
+            categoryId = null,
+            preferredFormat = config.streamFormat
+          )
+        }
 
-          // Parallelize network requests for maximum loading speed
-          val pingDeferred = async { xtreamRepo.pingServer(config.serverUrl) }
-          val catsDeferred = async { xtreamRepo.fetchCategories(config.serverUrl, config.username, config.password) }
-          val streamsDeferred = async {
-            xtreamRepo.fetchStreams(
-              serverUrl = config.serverUrl,
-              username = config.username,
-              password = config.password,
-              categoryId = null,
-              preferredFormat = config.streamFormat
-            )
-          }
+        val streamsRes = streamsDeferred.await()
+        val catsRes = catsDeferred.await()
+        val loginRes = loginDeferred.await()
+        val ping = pingDeferred.await()
 
-          val streamsRes = streamsDeferred.await()
-          val catsRes = catsDeferred.await()
-          val ping = pingDeferred.await()
-          if (ping > 0) {
-            serverPingMs = ping
-          }
+        if (ping > 0) {
+          serverPingMs = ping
+        }
 
-          if (streamsRes.isSuccess) {
-            allChannels.clear()
-            allChannels.addAll(streamsRes.getOrDefault(emptyList()))
-          }
+        if (streamsRes.isSuccess && streamsRes.getOrDefault(emptyList()).isNotEmpty()) {
+          val streams = streamsRes.getOrDefault(emptyList())
+          allChannels.clear()
+          allChannels.addAll(streams)
 
-          if (catsRes.isSuccess) {
-            val cats = catsRes.getOrDefault(emptyList())
-            xtreamCategories.clear()
-            xtreamCategories.add(XtreamCategory("ALL", "جميع القنوات", allChannels.size))
+          // Set Account Info from login or create dynamic active profile
+          xtreamAccount = loginRes.getOrNull() ?: XtreamAccountInfo(
+            username = config.username.ifBlank { config.playlistName },
+            status = "نشط",
+            expDate = "متصل",
+            serverUrl = config.serverUrl
+          )
 
+          // Build categories
+          val cats = catsRes.getOrDefault(emptyList())
+          xtreamCategories.clear()
+          xtreamCategories.add(XtreamCategory("ALL", "جميع القنوات", streams.size))
+
+          if (cats.isNotEmpty()) {
             cats.forEach { cat ->
-              val count = allChannels.count { it.categoryId == cat.categoryId }
-              xtreamCategories.add(XtreamCategory(cat.categoryId, cat.categoryName, if (count > 0) count else 0))
+              val count = streams.count { it.categoryId == cat.categoryId }
+              if (count > 0) {
+                xtreamCategories.add(XtreamCategory(cat.categoryId, cat.categoryName, count))
+              }
             }
           } else {
-            xtreamCategories.clear()
-            xtreamCategories.add(XtreamCategory("ALL", "جميع القنوات", allChannels.size))
+            // Auto extract categories dynamically from stream tags
+            val groupMap = streams.groupBy { it.categoryId ?: "عام" }
+            groupMap.forEach { (groupId, list) ->
+              xtreamCategories.add(XtreamCategory(groupId, groupId, list.size))
+            }
           }
-        }.onFailure {
-          xtreamError = it.localizedMessage ?: "فشل الاتصال بالسيرفر. تحقق من صحة البيانات"
+        } else {
+          // If streams failed, report specific reason or guidance
+          val reason = streamsRes.exceptionOrNull()?.localizedMessage
+            ?: loginRes.exceptionOrNull()?.localizedMessage
+            ?: "تعذر جلب قنوات السيرفر. يرجى التحقق من صحة الرابط واسم المستخدم وكلمة المرور"
+          xtreamError = reason
         }
       }
       isXtreamLoading = false
@@ -548,7 +565,16 @@ fun TodModernHubScreen(
                   Text("رابط السيرفر (Host & Port)", color = TodGold, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                   OutlinedTextField(
                     value = serverInput,
-                    onValueChange = { serverInput = it },
+                    onValueChange = { input ->
+                      serverInput = input
+                      // Smart auto extract if full link pasted
+                      val extracted = xtreamRepo.smartExtractXtreamDetails(input)
+                      if (extracted != null) {
+                        serverInput = extracted.first
+                        userInput = extracted.second
+                        passInput = extracted.third
+                      }
+                    },
                     placeholder = { Text("http://example.com:8080", color = DarkTextSecondary) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
@@ -596,6 +622,52 @@ fun TodModernHubScreen(
                       unfocusedTextColor = Color.White
                     )
                   )
+
+                  Text("صيغة البث المفضلة", color = TodGold, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                  Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    listOf("MPEG-TS (.ts)", "HLS (.m3u8)").forEach { fmt ->
+                      val isSel = streamFormat == fmt
+                      Button(
+                        onClick = { streamFormat = fmt },
+                        colors = ButtonDefaults.buttonColors(
+                          containerColor = if (isSel) TodGold else Color(0xFF1F1F27),
+                          contentColor = if (isSel) Color.Black else Color.White
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                      ) {
+                        Text(fmt, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                      }
+                    }
+                  }
+
+                  Spacer(modifier = Modifier.height(12.dp))
+
+                  Button(
+                    onClick = {
+                      val updated = activeConfig.copy(
+                        playlistName = nameInput.ifBlank { userInput.ifBlank { "سيرفر Xtream" } },
+                        username = userInput.trim(),
+                        password = passInput.trim(),
+                        serverUrl = serverInput.trim(),
+                        streamFormat = streamFormat,
+                        isM3u = false
+                      )
+                      xtreamRepo.savePlaylistConfig(updated)
+                      savedPlaylists = xtreamRepo.getAllPlaylists()
+                      playlistConfig = updated
+                      loadPlaylistData(updated)
+                      viewMode = HubViewMode.CATEGORIES
+                    },
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .height(52.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = TodGold, contentColor = Color.Black),
+                    shape = RoundedCornerShape(12.dp)
+                  ) {
+                    Icon(Icons.Default.Check, contentDescription = null, tint = Color.Black)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("اتصال ومزامنة القنوات ⚡", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                  }
                 }
               }
             }
@@ -625,7 +697,7 @@ fun TodModernHubScreen(
                 onClick = {
                   val updated = activeConfig.copy(
                     playlistName = m3uName.ifBlank { "قائمة M3U" },
-                    m3uUrl = m3uUrlInput,
+                    m3uUrl = m3uUrlInput.trim(),
                     isM3u = true
                   )
                   xtreamRepo.savePlaylistConfig(updated)
@@ -686,6 +758,32 @@ fun TodModernHubScreen(
                   unfocusedTextColor = Color.White
                 )
               )
+
+              Spacer(modifier = Modifier.height(12.dp))
+
+              Button(
+                onClick = {
+                  val updated = activeConfig.copy(
+                    playlistName = m3uName.ifBlank { "قائمة M3U" },
+                    m3uUrl = m3uUrlInput.trim(),
+                    isM3u = true
+                  )
+                  xtreamRepo.savePlaylistConfig(updated)
+                  savedPlaylists = xtreamRepo.getAllPlaylists()
+                  playlistConfig = updated
+                  loadPlaylistData(updated)
+                  viewMode = HubViewMode.CATEGORIES
+                },
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .height(52.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = TodGold, contentColor = Color.Black),
+                shape = RoundedCornerShape(12.dp)
+              ) {
+                Icon(Icons.Default.Check, contentDescription = null, tint = Color.Black)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("اتصال وتحميل القنوات ⚡", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+              }
             }
           }
         }

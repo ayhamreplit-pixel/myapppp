@@ -68,16 +68,16 @@ class XtreamRepository(context: Context) {
       OkHttpClient.Builder()
         .sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
         .hostnameVerifier { _, _ -> true }
-        .connectTimeout(25, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
+        .connectTimeout(35, TimeUnit.SECONDS)
+        .readTimeout(50, TimeUnit.SECONDS)
         .followRedirects(true)
         .followSslRedirects(true)
         .retryOnConnectionFailure(true)
         .build()
     } catch (e: Exception) {
       OkHttpClient.Builder()
-        .connectTimeout(25, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
+        .connectTimeout(35, TimeUnit.SECONDS)
+        .readTimeout(50, TimeUnit.SECONDS)
         .followRedirects(true)
         .followSslRedirects(true)
         .retryOnConnectionFailure(true)
@@ -88,8 +88,13 @@ class XtreamRepository(context: Context) {
   // Sanitizes server URL from any extra path like /c/, /player_api.php, /get.php, etc.
   fun cleanServerUrl(input: String): String {
     var s = input.trim()
+    if (s.isEmpty()) return ""
     if (!s.startsWith("http://", ignoreCase = true) && !s.startsWith("https://", ignoreCase = true)) {
       s = "http://$s"
+    }
+    // Remove query params if any in base URL (e.g. ?username=...)
+    if (s.contains("?")) {
+      s = s.substringBefore("?")
     }
     // Remove trailing slashes and common web-player suffixes
     s = s.trimEnd('/')
@@ -109,6 +114,32 @@ class XtreamRepository(context: Context) {
       }
     }
     return s
+  }
+
+  // Intelligently extracts server URL, username, and password if the user pasted a full M3U or Xtream link
+  fun smartExtractXtreamDetails(input: String): Triple<String, String, String>? {
+    val trimmed = input.trim()
+    if (!trimmed.startsWith("http://", ignoreCase = true) && !trimmed.startsWith("https://", ignoreCase = true)) {
+      return null
+    }
+    try {
+      val uri = Uri.parse(trimmed)
+      val user = uri.getQueryParameter("username")
+      val pass = uri.getQueryParameter("password")
+      if (!user.isNullOrBlank() && !pass.isNullOrBlank()) {
+        val host = "${uri.scheme}://${uri.authority}"
+        return Triple(host, user, pass)
+      }
+      // Pattern: /live/username/password/streamId
+      val pathSegments = uri.pathSegments
+      if (pathSegments.size >= 3 && (pathSegments[0] == "live" || pathSegments[0] == "movie" || pathSegments[0] == "series")) {
+        val u = pathSegments[1]
+        val p = pathSegments[2]
+        val host = "${uri.scheme}://${uri.authority}"
+        return Triple(host, u, p)
+      }
+    } catch (ignored: Exception) {}
+    return null
   }
 
   fun getSavedCredentials(): Triple<String, String, String>? {
@@ -168,7 +199,7 @@ class XtreamRepository(context: Context) {
 
         if (isAuthOk) {
           saveCredentials(cleanServer, cleanUser, cleanPass)
-          val expDate = userInfo?.optString("exp_date", null)
+          val expDate = userInfo?.optString("exp_date", "")?.takeIf { it.isNotBlank() }
           Result.success(
             XtreamAccountInfo(
               username = cleanUser,
@@ -298,9 +329,9 @@ class XtreamRepository(context: Context) {
       val response = client.newCall(request).execute()
       val body = response.body?.string()?.trim() ?: return@withContext Result.failure(Exception("قائمة القنوات فارغة"))
 
-      var list = parseStreamsJson(body, cleanServer, cleanUser, cleanPass, preferredFormat)
+      var list = if (body.isNotEmpty()) parseStreamsJson(body, cleanServer, cleanUser, cleanPass, preferredFormat) else emptyList()
 
-      // Fallback: If filtered fetch returned empty or failed because the server doesn't support &category_id=,
+      // Fallback 1: If filtered fetch returned empty or failed because the server doesn't support &category_id=,
       // fetch all streams and filter in memory
       if (list.isEmpty() && isFilterRequested) {
         val allUrl = "$cleanServer/player_api.php?username=$cleanUser&password=$cleanPass&action=get_live_streams"
@@ -313,7 +344,17 @@ class XtreamRepository(context: Context) {
         val allBody = allRes.body?.string()?.trim()
         if (!allBody.isNullOrEmpty()) {
           val allChannels = parseStreamsJson(allBody, cleanServer, cleanUser, cleanPass, preferredFormat)
-          list = allChannels.filter { it.categoryId == categoryId }
+          list = if (categoryId != null && categoryId != "ALL") allChannels.filter { it.categoryId == categoryId } else allChannels
+        }
+      }
+
+      // Fallback 2: If player_api.php is blocked or returned empty, query get.php with m3u_plus
+      if (list.isEmpty()) {
+        val m3uUrl = "$cleanServer/get.php?username=$cleanUser&password=$cleanPass&type=m3u_plus&output=ts"
+        val m3uRes = parseM3uPlaylist(m3uUrl)
+        if (m3uRes.isSuccess) {
+          val m3uList = m3uRes.getOrDefault(emptyList())
+          list = if (isFilterRequested) m3uList.filter { it.categoryId == categoryId } else m3uList
         }
       }
 
@@ -322,7 +363,19 @@ class XtreamRepository(context: Context) {
       }
       Result.success(list)
     } catch (e: Exception) {
-      Log.e("XtreamRepository", "Fetch streams error", e)
+      Log.e("XtreamRepository", "Fetch streams error, trying m3u fallback", e)
+      try {
+        val cleanServer = cleanServerUrl(serverUrl)
+        val cleanUser = username.trim()
+        val cleanPass = password.trim()
+        val m3uUrl = "$cleanServer/get.php?username=$cleanUser&password=$cleanPass&type=m3u_plus&output=ts"
+        val m3uRes = parseM3uPlaylist(m3uUrl)
+        if (m3uRes.isSuccess && m3uRes.getOrDefault(emptyList()).isNotEmpty()) {
+          val m3uList = m3uRes.getOrDefault(emptyList())
+          val filtered = if (!categoryId.isNullOrEmpty() && categoryId != "ALL") m3uList.filter { it.categoryId == categoryId } else m3uList
+          return@withContext Result.success(filtered)
+        }
+      } catch (ignored: Exception) {}
       Result.failure(e)
     }
   }
@@ -384,9 +437,9 @@ class XtreamRepository(context: Context) {
       }
     }
 
-    val icon = obj.optString("stream_icon", null)?.takeIf { it.isNotBlank() }
-      ?: obj.optString("icon", null)?.takeIf { it.isNotBlank() }
-      ?: obj.optString("logo", null)?.takeIf { it.isNotBlank() }
+    val icon = obj.optString("stream_icon", "").takeIf { it.isNotBlank() }
+      ?: obj.optString("icon", "").takeIf { it.isNotBlank() }
+      ?: obj.optString("logo", "").takeIf { it.isNotBlank() }
 
     val catId = when {
       obj.has("category_id") -> obj.optString("category_id", "").ifEmpty { obj.optInt("category_id", 0).toString() }

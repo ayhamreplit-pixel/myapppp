@@ -71,8 +71,10 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
     showInPlayerChannelDrawer = false
     isFullscreen = false
     activity?.let { act ->
-      act.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-      WindowCompat.getInsetsController(act.window, act.window.decorView).show(WindowInsetsCompat.Type.systemBars())
+      act.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+      val controller = WindowCompat.getInsetsController(act.window, act.window.decorView)
+      controller.show(WindowInsetsCompat.Type.systemBars())
+      controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
     }
     screenDestination = ScreenDestination.START_INPUT
   }
@@ -82,11 +84,10 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
     activeChannelList = channels
     isFullscreen = true
     activity?.let { act ->
-      WindowCompat.getInsetsController(act.window, act.window.decorView).apply {
-        hide(WindowInsetsCompat.Type.ime())
-        hide(WindowInsetsCompat.Type.systemBars())
-        systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-      }
+      val controller = WindowCompat.getInsetsController(act.window, act.window.decorView)
+      controller.hide(WindowInsetsCompat.Type.ime())
+      controller.hide(WindowInsetsCompat.Type.systemBars())
+      controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
       act.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
     }
     playerManager.playStream(stream)
@@ -97,15 +98,15 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
     val target = !isFullscreen
     isFullscreen = target
     activity?.let { act ->
+      val controller = WindowCompat.getInsetsController(act.window, act.window.decorView)
       if (target) {
         act.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        WindowCompat.getInsetsController(act.window, act.window.decorView).apply {
-          hide(WindowInsetsCompat.Type.systemBars())
-          systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        }
+        controller.hide(WindowInsetsCompat.Type.systemBars())
+        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
       } else {
-        act.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        WindowCompat.getInsetsController(act.window, act.window.decorView).show(WindowInsetsCompat.Type.systemBars())
+        act.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        controller.show(WindowInsetsCompat.Type.systemBars())
+        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
       }
     }
   }

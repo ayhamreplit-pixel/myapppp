@@ -8,8 +8,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.example.R
 
-// خط ثمانية العربي الأصيل (Almarai / ثمانية)
+// خط تطبيق ثمانية العربي الحديث الفاخر (IBM Plex Sans Arabic / ثمانية)
 val ThmanyahFontFamily = FontFamily(
+  Font(R.font.ibm_plex_sans_arabic, FontWeight.Normal),
+  Font(R.font.ibm_plex_sans_arabic, FontWeight.Medium),
+  Font(R.font.ibm_plex_sans_arabic, FontWeight.SemiBold),
+  Font(R.font.ibm_plex_sans_arabic, FontWeight.Bold)
+)
+
+val TajawalFontFamily = FontFamily(
+  Font(R.font.tajawal, FontWeight.Normal),
+  Font(R.font.tajawal, FontWeight.Medium),
+  Font(R.font.tajawal, FontWeight.Bold)
+)
+
+val AlmaraiFontFamily = FontFamily(
   Font(R.font.almarai, FontWeight.Normal),
   Font(R.font.almarai, FontWeight.Medium),
   Font(R.font.almarai, FontWeight.SemiBold),
@@ -23,12 +36,7 @@ val CairoFontFamily = FontFamily(
   Font(R.font.cairo, FontWeight.Bold)
 )
 
-val IbmPlexSansArabic = FontFamily(
-  Font(R.font.ibm_plex_sans_arabic, FontWeight.Normal),
-  Font(R.font.ibm_plex_sans_arabic, FontWeight.Medium),
-  Font(R.font.ibm_plex_sans_arabic, FontWeight.SemiBold),
-  Font(R.font.ibm_plex_sans_arabic, FontWeight.Bold)
-)
+val IbmPlexSansArabic = ThmanyahFontFamily
 
 // الخط الموحد المطبق على التطبيق
 val AppFontFamily = ThmanyahFontFamily
