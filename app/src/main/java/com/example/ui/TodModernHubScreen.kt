@@ -1,8 +1,11 @@
 package com.example.ui
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +26,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bolt
@@ -33,8 +37,10 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -138,11 +144,18 @@ fun TodModernHubScreen(
   // Direct Stream Quick Player Inputs
   var directUrlInput by remember { mutableStateOf("") }
   var directTitleInput by remember { mutableStateOf("") }
+  var directUserAgentInput by remember { mutableStateOf("") }
+  var directOriginInput by remember { mutableStateOf("") }
+  var directRefererInput by remember { mutableStateOf("") }
+  var directCookieInput by remember { mutableStateOf("") }
+  var directDrmSchemeInput by remember { mutableStateOf("") }
+  var directDrmKeyInput by remember { mutableStateOf("") }
+  var showDirectAdvancedOptions by remember { mutableStateOf(false) }
 
   var serverPingMs by remember { mutableStateOf<Long?>(null) }
 
   // Helper: Reload playlist data with high-speed parallel fetching and ping
-  val loadPlaylistData: (XtreamPlaylistConfig) -> Unit = { config ->
+  val loadPlaylistData: (XtreamPlaylistConfig, Boolean) -> Unit = { config, forceRefresh ->
     scope.launch {
       isXtreamLoading = true
       xtreamError = null
@@ -165,6 +178,7 @@ fun TodModernHubScreen(
             expDate = "غير محدد",
             serverUrl = config.m3uUrl
           )
+          xtreamRepo.updatePlaylistTimestampAndCount(config, streams.size)
         }.onFailure {
           xtreamError = "فشل تحميل قائمة M3U: ${it.localizedMessage ?: "تحقق من الرابط"}"
         }
@@ -172,14 +186,15 @@ fun TodModernHubScreen(
         // Parallelize network requests for maximum speed and resiliency
         val pingDeferred = async { xtreamRepo.pingServer(config.serverUrl) }
         val loginDeferred = async { xtreamRepo.login(config.serverUrl, config.username, config.password) }
-        val catsDeferred = async { xtreamRepo.fetchCategories(config.serverUrl, config.username, config.password) }
+        val catsDeferred = async { xtreamRepo.fetchCategories(config.serverUrl, config.username, config.password, forceRefresh = forceRefresh) }
         val streamsDeferred = async {
           xtreamRepo.fetchStreams(
             serverUrl = config.serverUrl,
             username = config.username,
             password = config.password,
             categoryId = null,
-            preferredFormat = config.streamFormat
+            preferredFormat = config.streamFormat,
+            forceRefresh = forceRefresh
           )
         }
 
@@ -224,6 +239,7 @@ fun TodModernHubScreen(
               xtreamCategories.add(XtreamCategory(groupId, groupId, list.size))
             }
           }
+          xtreamRepo.updatePlaylistTimestampAndCount(config, streams.size)
         } else {
           // If streams failed, report specific reason or guidance
           val reason = streamsRes.exceptionOrNull()?.localizedMessage
@@ -236,13 +252,14 @@ fun TodModernHubScreen(
     }
   }
 
-  // Initial Startup Logic
+  // Initial Startup Logic with configurable update interval check
   LaunchedEffect(Unit) {
     val activeConfig = xtreamRepo.getActivePlaylistConfig()
     if (activeConfig != null) {
       playlistConfig = activeConfig
       viewMode = HubViewMode.CATEGORIES
-      loadPlaylistData(activeConfig)
+      val forceRefresh = xtreamRepo.shouldRefreshPlaylist(activeConfig)
+      loadPlaylistData(activeConfig, forceRefresh)
     } else {
       viewMode = HubViewMode.ONBOARDING
     }
@@ -432,7 +449,8 @@ fun TodModernHubScreen(
                     onSelectPlaylist = { config ->
                       playlistConfig = config
                       xtreamRepo.savePlaylistConfig(config)
-                      loadPlaylistData(config)
+                      val force = xtreamRepo.shouldRefreshPlaylist(config)
+                      loadPlaylistData(config, force)
                     },
                     onSwitchPlaylist = {
                       savedPlaylists = xtreamRepo.getAllPlaylists()
@@ -448,6 +466,9 @@ fun TodModernHubScreen(
                     },
                     onOpenDirectLink = {
                       showDirectLinkModal = true
+                    },
+                    onRefreshPlaylist = { config ->
+                      loadPlaylistData(config, true)
                     },
                     onDeletePlaylist = { config ->
                       xtreamRepo.deletePlaylistConfig(config)
@@ -490,6 +511,17 @@ fun TodModernHubScreen(
           var passInput by remember(activeConfig) { mutableStateOf(activeConfig.password) }
           var serverInput by remember(activeConfig) { mutableStateOf(activeConfig.serverUrl) }
           var streamFormat by remember(activeConfig) { mutableStateOf(activeConfig.streamFormat) }
+          var updateInterval by remember(activeConfig) { mutableStateOf(activeConfig.updateInterval.ifBlank { "عند بدء التطبيق" }) }
+
+          val intervalOptions = listOf(
+            "عند بدء التطبيق",
+            "كل ساعة",
+            "كل 4 ساعات",
+            "كل 6 ساعات",
+            "كل 12 ساعة",
+            "كل 24 ساعة",
+            "يدوياً فقط"
+          )
 
           Column(
             modifier = Modifier
@@ -512,12 +544,13 @@ fun TodModernHubScreen(
                     password = passInput,
                     serverUrl = serverInput,
                     streamFormat = streamFormat,
+                    updateInterval = updateInterval,
                     isM3u = false
                   )
                   xtreamRepo.savePlaylistConfig(updated)
                   savedPlaylists = xtreamRepo.getAllPlaylists()
                   playlistConfig = updated
-                  loadPlaylistData(updated)
+                  loadPlaylistData(updated, true)
                   viewMode = HubViewMode.CATEGORIES
                 }
               ) {
@@ -641,6 +674,31 @@ fun TodModernHubScreen(
                     }
                   }
 
+                  Spacer(modifier = Modifier.height(4.dp))
+
+                  Text("تحديث ومزامنة القنوات تلقائياً", color = TodGold, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                  Text("حدد متى يقوم التطبيق بتحديث قنوات وبيانات هذا الاشتراك", color = DarkTextSecondary, fontSize = 11.sp)
+                  Row(
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                  ) {
+                    intervalOptions.forEach { opt ->
+                      val isSel = updateInterval == opt
+                      Button(
+                        onClick = { updateInterval = opt },
+                        colors = ButtonDefaults.buttonColors(
+                          containerColor = if (isSel) TodGold else Color(0xFF1F1F27),
+                          contentColor = if (isSel) Color.Black else Color.White
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                      ) {
+                        Text(opt, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                      }
+                    }
+                  }
+
                   Spacer(modifier = Modifier.height(12.dp))
 
                   Button(
@@ -651,12 +709,13 @@ fun TodModernHubScreen(
                         password = passInput.trim(),
                         serverUrl = serverInput.trim(),
                         streamFormat = streamFormat,
+                        updateInterval = updateInterval,
                         isM3u = false
                       )
                       xtreamRepo.savePlaylistConfig(updated)
                       savedPlaylists = xtreamRepo.getAllPlaylists()
                       playlistConfig = updated
-                      loadPlaylistData(updated)
+                      loadPlaylistData(updated, true)
                       viewMode = HubViewMode.CATEGORIES
                     },
                     modifier = Modifier
@@ -680,6 +739,17 @@ fun TodModernHubScreen(
           val activeConfig = playlistConfig ?: XtreamPlaylistConfig(isM3u = true)
           var m3uName by remember { mutableStateOf(activeConfig.playlistName.ifBlank { "قائمة M3U" }) }
           var m3uUrlInput by remember { mutableStateOf(activeConfig.m3uUrl) }
+          var m3uUpdateInterval by remember { mutableStateOf(activeConfig.updateInterval.ifBlank { "عند بدء التطبيق" }) }
+
+          val intervalOptions = listOf(
+            "عند بدء التطبيق",
+            "كل ساعة",
+            "كل 4 ساعات",
+            "كل 6 ساعات",
+            "كل 12 ساعة",
+            "كل 24 ساعة",
+            "يدوياً فقط"
+          )
 
           Column(
             modifier = Modifier
@@ -699,12 +769,13 @@ fun TodModernHubScreen(
                   val updated = activeConfig.copy(
                     playlistName = m3uName.ifBlank { "قائمة M3U" },
                     m3uUrl = m3uUrlInput.trim(),
+                    updateInterval = m3uUpdateInterval,
                     isM3u = true
                   )
                   xtreamRepo.savePlaylistConfig(updated)
                   savedPlaylists = xtreamRepo.getAllPlaylists()
                   playlistConfig = updated
-                  loadPlaylistData(updated)
+                  loadPlaylistData(updated, true)
                   viewMode = HubViewMode.CATEGORIES
                 }
               ) {
@@ -760,6 +831,31 @@ fun TodModernHubScreen(
                 )
               )
 
+              Spacer(modifier = Modifier.height(4.dp))
+
+              Text("تحديث ومزامنة القنوات تلقائياً", color = TodGold, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+              Text("حدد متى يقوم التطبيق بتحديث قنوات وبيانات هذا الاشتراك", color = DarkTextSecondary, fontSize = 11.sp)
+              Row(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+              ) {
+                intervalOptions.forEach { opt ->
+                  val isSel = m3uUpdateInterval == opt
+                  Button(
+                    onClick = { m3uUpdateInterval = opt },
+                    colors = ButtonDefaults.buttonColors(
+                      containerColor = if (isSel) TodGold else Color(0xFF1F1F27),
+                      contentColor = if (isSel) Color.Black else Color.White
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                  ) {
+                    Text(opt, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                  }
+                }
+              }
+
               Spacer(modifier = Modifier.height(12.dp))
 
               Button(
@@ -767,12 +863,13 @@ fun TodModernHubScreen(
                   val updated = activeConfig.copy(
                     playlistName = m3uName.ifBlank { "قائمة M3U" },
                     m3uUrl = m3uUrlInput.trim(),
+                    updateInterval = m3uUpdateInterval,
                     isM3u = true
                   )
                   xtreamRepo.savePlaylistConfig(updated)
                   savedPlaylists = xtreamRepo.getAllPlaylists()
                   playlistConfig = updated
-                  loadPlaylistData(updated)
+                  loadPlaylistData(updated, true)
                   viewMode = HubViewMode.CATEGORIES
                 },
                 modifier = Modifier
@@ -905,7 +1002,8 @@ fun TodModernHubScreen(
                       .clickable {
                         playlistConfig = pl
                         xtreamRepo.setActivePlaylist(pl)
-                        loadPlaylistData(pl)
+                        val force = xtreamRepo.shouldRefreshPlaylist(pl)
+                        loadPlaylistData(pl, force)
                         showPlaylistsManagerModal = false
                       }
                       .padding(horizontal = 12.dp, vertical = 10.dp),
@@ -921,8 +1019,9 @@ fun TodModernHubScreen(
                           showPlaylistsManagerModal = false
                           viewMode = HubViewMode.ONBOARDING
                         } else if (isCurrent) {
-                          playlistConfig = savedPlaylists.first()
-                          loadPlaylistData(savedPlaylists.first())
+                          val nextPl = savedPlaylists.first()
+                          playlistConfig = nextPl
+                          loadPlaylistData(nextPl, xtreamRepo.shouldRefreshPlaylist(nextPl))
                         }
                       }
                     ) {
@@ -1067,10 +1166,23 @@ fun TodModernHubScreen(
 
             OutlinedTextField(
               value = directUrlInput,
-              onValueChange = { directUrlInput = it },
-              placeholder = { Text("https://domain.com/live/stream.m3u8", color = DarkTextSecondary, fontSize = 12.sp) },
+              onValueChange = { input ->
+                directUrlInput = input
+                // Automatically parse parameters if embedded in URL (e.g. ?|drmScheme=clearkey&drmLicense=... or headers)
+                if (input.contains("|") || input.contains("#") || input.contains("drm", ignoreCase = true) || input.contains("user-agent", ignoreCase = true)) {
+                  val parsed = com.example.model.StreamUrlParser.parse(input)
+                  if (!parsed.userAgent.isNullOrBlank()) directUserAgentInput = parsed.userAgent
+                  if (!parsed.origin.isNullOrBlank()) directOriginInput = parsed.origin
+                  if (!parsed.referer.isNullOrBlank()) directRefererInput = parsed.referer
+                  if (!parsed.cookie.isNullOrBlank()) directCookieInput = parsed.cookie
+                  if (!parsed.drmScheme.isNullOrBlank()) directDrmSchemeInput = parsed.drmScheme
+                  if (!parsed.drmLicense.isNullOrBlank()) directDrmKeyInput = parsed.drmLicense
+                }
+              },
+              placeholder = { Text("https://domain.com/index.mpd?|drmScheme=clearkey&drmLicense=...", color = DarkTextSecondary, fontSize = 11.sp) },
               modifier = Modifier.fillMaxWidth(),
-              singleLine = true,
+              singleLine = false,
+              maxLines = 3,
               shape = RoundedCornerShape(10.dp),
               colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = TodGold,
@@ -1082,18 +1194,185 @@ fun TodModernHubScreen(
               )
             )
 
+            // Toggle Advanced Headers & DRM parameters
+            Row(
+              modifier = Modifier
+                .fillMaxWidth()
+                .clickable { showDirectAdvancedOptions = !showDirectAdvancedOptions }
+                .padding(vertical = 4.dp),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Icon(
+                imageVector = if (showDirectAdvancedOptions) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                contentDescription = null,
+                tint = TodGold,
+                modifier = Modifier.size(20.dp)
+              )
+              Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("المعاملات المتقدمة (DRM, User-Agent, Cookie, Origin, Referer)", color = TodGold, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Icon(Icons.Default.Settings, contentDescription = null, tint = TodGold, modifier = Modifier.size(16.dp))
+              }
+            }
+
+            AnimatedVisibility(visible = showDirectAdvancedOptions) {
+              Column(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .background(Color(0xFF111116), RoundedCornerShape(10.dp))
+                  .border(1.dp, Color(0xFF262630), RoundedCornerShape(10.dp))
+                  .padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+              ) {
+                Text("معاملات الحماية DRM والترخيص", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                  listOf("ClearKey", "Widevine", "PlayReady").forEach { scheme ->
+                    val isSel = directDrmSchemeInput.equals(scheme, ignoreCase = true)
+                    Button(
+                      onClick = { directDrmSchemeInput = scheme.lowercase() },
+                      colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isSel) TodGold else Color(0xFF20202A),
+                        contentColor = if (isSel) Color.Black else Color.White
+                      ),
+                      shape = RoundedCornerShape(6.dp),
+                      contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                      modifier = Modifier.weight(1f).height(32.dp)
+                    ) {
+                      Text(scheme, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                  }
+                }
+
+                OutlinedTextField(
+                  value = directDrmKeyInput,
+                  onValueChange = { directDrmKeyInput = it },
+                  placeholder = { Text("مفتاح DRM (keyId:key أو رابط الترخيص)", color = DarkTextSecondary, fontSize = 10.sp) },
+                  modifier = Modifier.fillMaxWidth(),
+                  singleLine = true,
+                  shape = RoundedCornerShape(8.dp),
+                  colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = TodGold,
+                    unfocusedBorderColor = Color(0xFF2B2B36),
+                    focusedContainerColor = Color(0xFF181820),
+                    unfocusedContainerColor = Color(0xFF181820),
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White
+                  )
+                )
+
+                HorizontalDivider(color = Color(0xFF262630), thickness = 0.5.dp)
+
+                Text("ترويسات الشبكة (Headers)", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+
+                OutlinedTextField(
+                  value = directUserAgentInput,
+                  onValueChange = { directUserAgentInput = it },
+                  placeholder = { Text("User-Agent (تخطي حظر السيرفر)", color = DarkTextSecondary, fontSize = 10.sp) },
+                  modifier = Modifier.fillMaxWidth(),
+                  singleLine = true,
+                  shape = RoundedCornerShape(8.dp),
+                  colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = TodGold,
+                    unfocusedBorderColor = Color(0xFF2B2B36),
+                    focusedContainerColor = Color(0xFF181820),
+                    unfocusedContainerColor = Color(0xFF181820),
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White
+                  )
+                )
+
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                  OutlinedTextField(
+                    value = directRefererInput,
+                    onValueChange = { directRefererInput = it },
+                    placeholder = { Text("Referer", color = DarkTextSecondary, fontSize = 10.sp) },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                      focusedBorderColor = TodGold,
+                      unfocusedBorderColor = Color(0xFF2B2B36),
+                      focusedContainerColor = Color(0xFF181820),
+                      unfocusedContainerColor = Color(0xFF181820),
+                      focusedTextColor = Color.White,
+                      unfocusedTextColor = Color.White
+                    )
+                  )
+
+                  OutlinedTextField(
+                    value = directOriginInput,
+                    onValueChange = { directOriginInput = it },
+                    placeholder = { Text("Origin", color = DarkTextSecondary, fontSize = 10.sp) },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                      focusedBorderColor = TodGold,
+                      unfocusedBorderColor = Color(0xFF2B2B36),
+                      focusedContainerColor = Color(0xFF181820),
+                      unfocusedContainerColor = Color(0xFF181820),
+                      focusedTextColor = Color.White,
+                      unfocusedTextColor = Color.White
+                    )
+                  )
+                }
+
+                OutlinedTextField(
+                  value = directCookieInput,
+                  onValueChange = { directCookieInput = it },
+                  placeholder = { Text("Cookie / Cookies (session=...)", color = DarkTextSecondary, fontSize = 10.sp) },
+                  modifier = Modifier.fillMaxWidth(),
+                  singleLine = true,
+                  shape = RoundedCornerShape(8.dp),
+                  colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = TodGold,
+                    unfocusedBorderColor = Color(0xFF2B2B36),
+                    focusedContainerColor = Color(0xFF181820),
+                    unfocusedContainerColor = Color(0xFF181820),
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White
+                  )
+                )
+              }
+            }
+
             Button(
               onClick = {
                 if (directUrlInput.isNotBlank()) {
+                  val rawUrl = directUrlInput.trim()
+                  val parsed = com.example.model.StreamUrlParser.parse(rawUrl)
+
+                  val finalCleanUrl = parsed.cleanUrl.ifBlank { rawUrl }
+                  val finalUa = directUserAgentInput.trim().ifBlank { parsed.userAgent }
+                  val finalOrigin = directOriginInput.trim().ifBlank { parsed.origin }
+                  val finalReferer = directRefererInput.trim().ifBlank { parsed.referer }
+                  val finalCookie = directCookieInput.trim().ifBlank { parsed.cookie }
+                  val finalDrmScheme = directDrmSchemeInput.trim().ifBlank { parsed.drmScheme }
+                  val finalDrmKey = directDrmKeyInput.trim().ifBlank { parsed.drmLicense }
+
                   val stream = BroadcastStream(
                     id = "custom_${System.currentTimeMillis()}",
                     title = directTitleInput.ifBlank { "بث مباشر" },
-                    subtitle = "رابط خارجي مباشر",
+                    subtitle = if (!finalDrmScheme.isNullOrBlank()) "بث محمي ($finalDrmScheme)" else "رابط خارجي مباشر",
                     category = "Direct Stream",
-                    streamUrl = directUrlInput.trim(),
-                    isLive = true
+                    streamUrl = finalCleanUrl,
+                    format = parsed.format,
+                    isLive = true,
+                    origin = finalOrigin,
+                    referer = finalReferer,
+                    cookie = finalCookie,
+                    userAgent = finalUa,
+                    drmScheme = finalDrmScheme,
+                    drmKey = finalDrmKey,
+                    extraHeaders = parsed.extraHeaders
                   )
-                  xtreamRepo.addCustomUrlToHistory(directTitleInput.ifBlank { "بث مباشر" }, directUrlInput.trim())
+                  xtreamRepo.addCustomUrlToHistory(directTitleInput.ifBlank { "بث مباشر" }, finalCleanUrl)
                   showDirectLinkModal = false
                   onPlayStream(stream, listOf(stream))
                 }

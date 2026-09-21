@@ -213,6 +213,9 @@ class TodExoPlayerManager(
         if (!stream.origin.isNullOrBlank()) headers["Origin"] = stream.origin
         if (!stream.referer.isNullOrBlank()) headers["Referer"] = stream.referer
         if (!stream.cookie.isNullOrBlank()) headers["Cookie"] = stream.cookie
+        stream.extraHeaders.forEach { (k, v) ->
+          headers[k] = v
+        }
         setDefaultRequestProperties(headers)
       }
 
@@ -228,8 +231,24 @@ class TodExoPlayerManager(
       }
 
       val drmConfigBuilder = MediaItem.DrmConfiguration.Builder(drmUuid)
-      if (!stream.drmKey.isNullOrBlank() && stream.drmKey.startsWith("http")) {
-        drmConfigBuilder.setLicenseUri(stream.drmKey)
+      val licenseStr = stream.drmKey?.trim() ?: ""
+      if (licenseStr.startsWith("http://", ignoreCase = true) || licenseStr.startsWith("https://", ignoreCase = true)) {
+        drmConfigBuilder.setLicenseUri(licenseStr)
+        // Pass DRM license request headers if needed
+        val licenseHeaders = mutableMapOf<String, String>()
+        if (!stream.origin.isNullOrBlank()) licenseHeaders["Origin"] = stream.origin
+        if (!stream.referer.isNullOrBlank()) licenseHeaders["Referer"] = stream.referer
+        drmConfigBuilder.setLicenseRequestHeaders(licenseHeaders)
+      } else if (licenseStr.contains(":")) {
+        // ClearKey keyId:key pair (e.g. b253c726c24c7c94a3ddf9b1907e2c76:097963d6ad73c3d712a104981de0ed42)
+        val clearKeyJson = com.example.model.StreamUrlParser.buildClearKeyJson(licenseStr)
+        if (clearKeyJson != null) {
+          val dataUri = "data:application/json;base64," + android.util.Base64.encodeToString(
+            clearKeyJson.toByteArray(Charsets.UTF_8),
+            android.util.Base64.NO_WRAP
+          )
+          drmConfigBuilder.setLicenseUri(dataUri)
+        }
       }
       mediaItemBuilder.setDrmConfiguration(drmConfigBuilder.build())
     }
@@ -388,12 +407,43 @@ class TodExoPlayerManager(
   }
 
   fun setAudioBoostPercent(percent: Int) {
-    val clamped = percent.coerceIn(0, 100)
+    val clamped = percent.coerceIn(0, 200)
     _playerState.update { it.copy(audioBoostPercent = clamped) }
     if (!_playerState.value.isMuted) {
       val volumeFactor = 1.0f + (clamped / 100f)
-      exoPlayer.volume = volumeFactor.coerceIn(0f, 2.0f)
+      exoPlayer.volume = volumeFactor.coerceIn(0f, 3.0f)
     }
+  }
+
+  fun toggleVoiceEnhancer(): Boolean {
+    val newState = !_playerState.value.isVoiceEnhancerEnabled
+    _playerState.update { it.copy(isVoiceEnhancerEnabled = newState) }
+    // Boost vocal speech frequencies by adjusting audio boost and volume dynamics
+    if (newState && _playerState.value.audioBoostPercent < 40) {
+      setAudioBoostPercent(60)
+    }
+    return newState
+  }
+
+  fun toggleDataSaverMode(): Boolean {
+    val newState = !_playerState.value.isDataSaverMode
+    _playerState.update { it.copy(isDataSaverMode = newState) }
+    if (newState) {
+      // Force SD / low-bitrate to save bandwidth and prevent buffering on weak cellular
+      trackSelector.setParameters(
+        trackSelector.buildUponParameters()
+          .setMaxVideoSizeSd()
+          .setMaxVideoBitrate(1_200_000)
+      )
+    } else {
+      // Clear limits
+      trackSelector.setParameters(
+        trackSelector.buildUponParameters()
+          .clearVideoSizeConstraints()
+          .setMaxVideoBitrate(Int.MAX_VALUE)
+      )
+    }
+    return newState
   }
 
   fun selectQuality(quality: VideoQualityTrack) {

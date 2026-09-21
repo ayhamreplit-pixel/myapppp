@@ -13,6 +13,11 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
+import com.squareup.moshi.JsonReader
+import okio.buffer
+import okio.source
+import java.io.BufferedReader
+import java.io.InputStreamReader
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
@@ -327,9 +332,9 @@ class XtreamRepository(context: Context) {
         .build()
 
       val response = client.newCall(request).execute()
-      val body = response.body?.string()?.trim() ?: return@withContext Result.failure(Exception("قائمة القنوات فارغة"))
+      val responseBody = response.body ?: return@withContext Result.failure(Exception("قائمة القنوات فارغة"))
 
-      var list = if (body.isNotEmpty()) parseStreamsJson(body, cleanServer, cleanUser, cleanPass, preferredFormat) else emptyList()
+      var list = parseStreamsStreaming(responseBody, cleanServer, cleanUser, cleanPass, preferredFormat)
 
       // Fallback 1: If filtered fetch returned empty or failed because the server doesn't support &category_id=,
       // fetch all streams and filter in memory
@@ -341,9 +346,9 @@ class XtreamRepository(context: Context) {
           .header("Accept", "*/*")
           .build()
         val allRes = client.newCall(allReq).execute()
-        val allBody = allRes.body?.string()?.trim()
-        if (!allBody.isNullOrEmpty()) {
-          val allChannels = parseStreamsJson(allBody, cleanServer, cleanUser, cleanPass, preferredFormat)
+        val allResBody = allRes.body
+        if (allResBody != null) {
+          val allChannels = parseStreamsStreaming(allResBody, cleanServer, cleanUser, cleanPass, preferredFormat)
           list = if (categoryId != null && categoryId != "ALL") allChannels.filter { it.categoryId == categoryId } else allChannels
         }
       }
@@ -380,88 +385,142 @@ class XtreamRepository(context: Context) {
     }
   }
 
-  private fun parseStreamsJson(
-    body: String,
+  /**
+   * Ultra-high performance streaming JSON parser that can ingest 100,000+ channels
+   * without OOM or memory spikes by parsing tokens sequentially.
+   */
+  private fun parseStreamsStreaming(
+    responseBody: okhttp3.ResponseBody,
     cleanServer: String,
     cleanUser: String,
     cleanPass: String,
     preferredFormat: String
   ): List<XtreamChannel> {
-    val list = mutableListOf<XtreamChannel>()
+    val list = ArrayList<XtreamChannel>(2048)
+    try {
+      responseBody.byteStream().use { inputStream ->
+        val source = inputStream.source().buffer()
+        val reader = JsonReader.of(source)
+        reader.isLenient = true
 
-    if (body.startsWith("[")) {
-      val array = JSONArray(body)
-      for (i in 0 until array.length()) {
-        val obj = array.optJSONObject(i) ?: continue
-        val channel = parseSingleChannel(obj, cleanServer, cleanUser, cleanPass, preferredFormat)
-        if (channel != null) {
-          list.add(channel)
-        }
-      }
-    } else if (body.startsWith("{")) {
-      val jsonObj = JSONObject(body)
-      val keys = jsonObj.keys()
-      while (keys.hasNext()) {
-        val key = keys.next()
-        val obj = jsonObj.optJSONObject(key)
-        if (obj != null) {
-          val channel = parseSingleChannel(obj, cleanServer, cleanUser, cleanPass, preferredFormat)
-          if (channel != null) {
-            list.add(channel)
+        val token = reader.peek()
+        if (token == JsonReader.Token.BEGIN_ARRAY) {
+          reader.beginArray()
+          while (reader.hasNext()) {
+            if (reader.peek() == JsonReader.Token.BEGIN_OBJECT) {
+              val ch = parseSingleChannelStreaming(reader, cleanServer, cleanUser, cleanPass, preferredFormat)
+              if (ch != null) {
+                list.add(ch)
+              }
+            } else {
+              reader.skipValue()
+            }
           }
+          reader.endArray()
+        } else if (token == JsonReader.Token.BEGIN_OBJECT) {
+          reader.beginObject()
+          while (reader.hasNext()) {
+            reader.nextName() // object key
+            if (reader.peek() == JsonReader.Token.BEGIN_OBJECT) {
+              val ch = parseSingleChannelStreaming(reader, cleanServer, cleanUser, cleanPass, preferredFormat)
+              if (ch != null) {
+                list.add(ch)
+              }
+            } else {
+              reader.skipValue()
+            }
+          }
+          reader.endObject()
         }
       }
+    } catch (e: Exception) {
+      Log.e("XtreamRepository", "Streaming parse error", e)
     }
     return list
   }
 
-  private fun parseSingleChannel(
-    obj: JSONObject,
+  private fun parseSingleChannelStreaming(
+    reader: JsonReader,
     cleanServer: String,
     cleanUser: String,
     cleanPass: String,
     preferredFormat: String
   ): XtreamChannel? {
-    val streamId = when {
-      obj.has("stream_id") -> obj.optString("stream_id", "").ifEmpty { obj.optInt("stream_id", 0).toString() }
-      obj.has("id") -> obj.optString("id", "")
-      obj.has("num") -> obj.optString("num", "")
-      else -> ""
-    }
+    reader.beginObject()
+    var streamId = ""
+    var name = ""
+    var iconUrl: String? = null
+    var categoryId: String? = null
+    var containerExtension = "ts"
 
-    if (streamId.isEmpty() || streamId == "0") return null
-
-    val name = obj.optString("name", "").ifEmpty {
-      obj.optString("title", "").ifEmpty {
-        obj.optString("stream_name", "قناة $streamId")
+    while (reader.hasNext()) {
+      when (reader.nextName()) {
+        "stream_id", "id", "num" -> {
+          streamId = when (reader.peek()) {
+            JsonReader.Token.NUMBER, JsonReader.Token.STRING -> reader.nextString()
+            else -> {
+              reader.skipValue()
+              streamId
+            }
+          }
+        }
+        "name", "title", "stream_name" -> {
+          name = when (reader.peek()) {
+            JsonReader.Token.STRING -> reader.nextString()
+            else -> {
+              reader.skipValue()
+              name
+            }
+          }
+        }
+        "stream_icon", "icon", "logo" -> {
+          iconUrl = when (reader.peek()) {
+            JsonReader.Token.STRING -> reader.nextString().takeIf { it.isNotBlank() }
+            else -> {
+              reader.skipValue()
+              iconUrl
+            }
+          }
+        }
+        "category_id" -> {
+          categoryId = when (reader.peek()) {
+            JsonReader.Token.NUMBER, JsonReader.Token.STRING -> reader.nextString()
+            else -> {
+              reader.skipValue()
+              categoryId
+            }
+          }
+        }
+        "container_extension" -> {
+          containerExtension = when (reader.peek()) {
+            JsonReader.Token.STRING -> reader.nextString()
+            else -> {
+              reader.skipValue()
+              containerExtension
+            }
+          }
+        }
+        else -> reader.skipValue()
       }
     }
+    reader.endObject()
 
-    val icon = obj.optString("stream_icon", "").takeIf { it.isNotBlank() }
-      ?: obj.optString("icon", "").takeIf { it.isNotBlank() }
-      ?: obj.optString("logo", "").takeIf { it.isNotBlank() }
+    if (streamId.isBlank() || streamId == "0") return null
 
-    val catId = when {
-      obj.has("category_id") -> obj.optString("category_id", "").ifEmpty { obj.optInt("category_id", 0).toString() }
-      else -> null
-    }
-
+    val finalName = name.ifBlank { "قناة $streamId" }
     val ext = when {
       preferredFormat.contains("m3u8", ignoreCase = true) || preferredFormat.contains("hls", ignoreCase = true) -> "m3u8"
       preferredFormat.contains("ts", ignoreCase = true) -> "ts"
-      else -> {
-        val containerExtension = obj.optString("container_extension", "ts")
-        if (containerExtension.isNotBlank()) containerExtension else "ts"
-      }
+      else -> if (containerExtension.isNotBlank()) containerExtension else "ts"
     }
 
     val playUrl = "$cleanServer/live/$cleanUser/$cleanPass/$streamId.$ext"
 
     return XtreamChannel(
       streamId = streamId,
-      name = name,
-      iconUrl = icon,
-      categoryId = catId,
+      name = finalName,
+      iconUrl = iconUrl,
+      categoryId = categoryId,
       playUrl = playUrl
     )
   }
@@ -469,23 +528,12 @@ class XtreamRepository(context: Context) {
   suspend fun parseM3uPlaylist(urlOrContent: String): Result<List<XtreamChannel>> =
     withContext(Dispatchers.IO) {
       try {
-        val content = if (urlOrContent.startsWith("http://") || urlOrContent.startsWith("https://")) {
-          val req = Request.Builder()
-            .url(urlOrContent)
-            .header("User-Agent", "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36")
-            .build()
-          client.newCall(req).execute().body?.string() ?: ""
-        } else {
-          urlOrContent
-        }
-
-        val lines = content.lines()
-        val channels = mutableListOf<XtreamChannel>()
+        val channels = ArrayList<XtreamChannel>(2048)
         var currentName: String? = null
         var currentLogo: String? = null
         var currentGroup: String? = null
 
-        for (line in lines) {
+        val processLine: (String) -> Unit = { line ->
           val trimmed = line.trim()
           if (trimmed.startsWith("#EXTINF:")) {
             currentName = trimmed.substringAfterLast(",").trim()
@@ -512,6 +560,29 @@ class XtreamRepository(context: Context) {
             currentGroup = null
           }
         }
+
+        if (urlOrContent.startsWith("http://") || urlOrContent.startsWith("https://")) {
+          val req = Request.Builder()
+            .url(urlOrContent)
+            .header("User-Agent", "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36")
+            .build()
+          val res = client.newCall(req).execute()
+          val body = res.body
+          if (body != null) {
+            body.byteStream().use { inputStream ->
+              BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8), 16384).useLines { lines ->
+                for (line in lines) {
+                  processLine(line)
+                }
+              }
+            }
+          }
+        } else {
+          urlOrContent.lineSequence().forEach { line ->
+            processLine(line)
+          }
+        }
+
         Result.success(channels)
       } catch (e: Exception) {
         Result.failure(e)
@@ -537,7 +608,9 @@ class XtreamRepository(context: Context) {
             useDefaultUserAgent = obj.optBoolean("useDefaultUserAgent", true),
             customUserAgent = obj.optString("customUserAgent", "IPTVSmartersPro/3.1.5 (Linux; Android 12)"),
             isEnabled = obj.optBoolean("isEnabled", true),
-            updateInterval = obj.optString("updateInterval", "كل يوم"),
+            updateInterval = obj.optString("updateInterval", "عند بدء التطبيق"),
+            lastUpdatedTimestamp = obj.optLong("lastUpdatedTimestamp", 0L),
+            totalChannelCount = obj.optInt("totalChannelCount", 0),
             enableChannels = obj.optBoolean("enableChannels", true),
             enableMovies = obj.optBoolean("enableMovies", true),
             enableSeries = obj.optBoolean("enableSeries", true),
@@ -550,6 +623,31 @@ class XtreamRepository(context: Context) {
     } catch (e: Exception) {
       emptyList()
     }
+  }
+
+  fun shouldRefreshPlaylist(config: XtreamPlaylistConfig): Boolean {
+    if (config.lastUpdatedTimestamp <= 0L) return true
+    val now = System.currentTimeMillis()
+    val elapsed = now - config.lastUpdatedTimestamp
+
+    return when (config.updateInterval) {
+      "عند بدء التطبيق" -> true
+      "كل ساعة" -> elapsed >= 1 * 60 * 60 * 1000L
+      "كل 4 ساعات" -> elapsed >= 4 * 60 * 60 * 1000L
+      "كل 6 ساعات" -> elapsed >= 6 * 60 * 60 * 1000L
+      "كل 12 ساعة" -> elapsed >= 12 * 60 * 60 * 1000L
+      "كل 24 ساعة", "كل يوم" -> elapsed >= 24 * 60 * 60 * 1000L
+      "يدوياً فقط" -> false
+      else -> true
+    }
+  }
+
+  fun updatePlaylistTimestampAndCount(config: XtreamPlaylistConfig, channelCount: Int) {
+    val updated = config.copy(
+      lastUpdatedTimestamp = System.currentTimeMillis(),
+      totalChannelCount = channelCount
+    )
+    savePlaylistConfig(updated)
   }
 
   fun savePlaylistConfig(config: XtreamPlaylistConfig) {
@@ -572,6 +670,8 @@ class XtreamRepository(context: Context) {
       obj.put("customUserAgent", p.customUserAgent)
       obj.put("isEnabled", p.isEnabled)
       obj.put("updateInterval", p.updateInterval)
+      obj.put("lastUpdatedTimestamp", p.lastUpdatedTimestamp)
+      obj.put("totalChannelCount", p.totalChannelCount)
       obj.put("enableChannels", p.enableChannels)
       obj.put("enableMovies", p.enableMovies)
       obj.put("enableSeries", p.enableSeries)
@@ -637,6 +737,8 @@ class XtreamRepository(context: Context) {
       obj.put("customUserAgent", p.customUserAgent)
       obj.put("isEnabled", p.isEnabled)
       obj.put("updateInterval", p.updateInterval)
+      obj.put("lastUpdatedTimestamp", p.lastUpdatedTimestamp)
+      obj.put("totalChannelCount", p.totalChannelCount)
       obj.put("enableChannels", p.enableChannels)
       obj.put("enableMovies", p.enableMovies)
       obj.put("enableSeries", p.enableSeries)

@@ -31,7 +31,9 @@ data class XtreamPlaylistConfig(
   val useDefaultUserAgent: Boolean = true,
   val customUserAgent: String = "IPTVSmartersPro/3.1.5 (Linux; Android 12)",
   val isEnabled: Boolean = true,
-  val updateInterval: String = "كل يوم",
+  val updateInterval: String = "عند بدء التطبيق", // "عند بدء التطبيق", "كل ساعة", "كل 4 ساعات", "كل 6 ساعات", "كل 12 ساعة", "كل 24 ساعة", "يدوياً فقط"
+  val lastUpdatedTimestamp: Long = 0L,
+  val totalChannelCount: Int = 0,
   val enableChannels: Boolean = true,
   val enableMovies: Boolean = true,
   val enableSeries: Boolean = true,

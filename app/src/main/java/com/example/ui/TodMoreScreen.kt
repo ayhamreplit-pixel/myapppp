@@ -70,6 +70,7 @@ fun TodMoreScreen(
   onOpenXtreamForm: () -> Unit,
   onOpenM3uForm: () -> Unit,
   onOpenDirectLink: () -> Unit,
+  onRefreshPlaylist: (XtreamPlaylistConfig) -> Unit = {},
   onDeletePlaylist: (XtreamPlaylistConfig) -> Unit = {},
   modifier: Modifier = Modifier
 ) {
@@ -350,6 +351,48 @@ fun TodMoreScreen(
             ) {
               Text(accountInfo.expDate, color = TodGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold)
               Text("تاريخ الانتهاء:", color = DarkTextSecondary, fontSize = 13.sp)
+            }
+          }
+
+          Spacer(modifier = Modifier.height(8.dp))
+
+          // Update Interval
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+          ) {
+            Text(activeConfig.updateInterval.ifBlank { "عند بدء التطبيق" }, color = TodGold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text("معدل التحديث:", color = DarkTextSecondary, fontSize = 13.sp)
+          }
+
+          if (activeConfig.totalChannelCount > 0) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+              Text("${activeConfig.totalChannelCount} قناة", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+              Text("إجمالي القنوات:", color = DarkTextSecondary, fontSize = 13.sp)
+            }
+          }
+
+          Spacer(modifier = Modifier.height(14.dp))
+
+          // Instant Sync / Refresh Button
+          Button(
+            onClick = { onRefreshPlaylist(activeConfig) },
+            modifier = Modifier
+              .fillMaxWidth()
+              .height(42.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF22222E)),
+            shape = RoundedCornerShape(10.dp)
+          ) {
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+              Icon(Icons.Default.Refresh, contentDescription = null, tint = TodGold, modifier = Modifier.size(18.dp))
+              Text("تحديث ومزامنة القنوات الآن", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             }
           }
         }

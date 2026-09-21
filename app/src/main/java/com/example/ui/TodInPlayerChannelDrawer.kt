@@ -94,11 +94,16 @@ fun TodInPlayerChannelDrawer(
         modifier = Modifier
           .align(Alignment.CenterEnd)
           .fillMaxHeight()
-          .width(340.dp)
-          .background(DarkSurface)
-          .border(1.dp, DarkSurfaceBorder)
+          .width(360.dp)
+          .background(
+            Brush.horizontalGradient(
+              listOf(Color(0xEB0A0E18), Color(0xF505080E))
+            )
+          )
+          .border(1.dp, Color(0x33FFB800), RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp))
+          .clip(RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp))
           .clickable(enabled = false) {}
-          .padding(16.dp)
+          .padding(18.dp)
       ) {
         Column(modifier = Modifier.fillMaxSize()) {
           // Header

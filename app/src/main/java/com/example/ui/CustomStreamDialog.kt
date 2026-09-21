@@ -207,17 +207,26 @@ fun CustomStreamDialog(
       Button(
         onClick = {
           if (url.isNotBlank()) {
+            val rawUrl = url.trim()
+            val parsed = com.example.model.StreamUrlParser.parse(rawUrl, title)
             val stream = BroadcastStream(
               id = "custom_${System.currentTimeMillis()}",
               title = if (title.isNotBlank()) title else "بث مباشر مخصص",
-              subtitle = "رابط مخصص (${selectedFormat.extensionBadge})",
+              subtitle = "رابط مخصص (${(if (selectedFormat != StreamFormat.AUTO) selectedFormat else parsed.format).extensionBadge})",
               category = "Custom Stream",
-              streamUrl = url.trim(),
-              format = selectedFormat,
-              isLive = isLive || url.contains("live", ignoreCase = true) || selectedFormat == StreamFormat.HLS,
+              streamUrl = parsed.cleanUrl.ifBlank { rawUrl },
+              format = if (selectedFormat != StreamFormat.AUTO) selectedFormat else parsed.format,
+              isLive = isLive || rawUrl.contains("live", ignoreCase = true) || selectedFormat == StreamFormat.HLS,
               channelNumber = "CUSTOM",
               tournamentOrLeague = "بث مخصص",
-              resolutionLabel = "Direct Stream"
+              resolutionLabel = "Direct Stream",
+              origin = parsed.origin,
+              referer = parsed.referer,
+              cookie = parsed.cookie,
+              userAgent = parsed.userAgent,
+              drmScheme = parsed.drmScheme,
+              drmKey = parsed.drmLicense,
+              extraHeaders = parsed.extraHeaders
             )
             onPlayStream(stream)
             onDismiss()

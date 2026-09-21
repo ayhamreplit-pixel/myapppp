@@ -48,5 +48,6 @@ data class BroadcastStream(
   val cookie: String? = null,
   val userAgent: String? = null,
   val drmKey: String? = null,
-  val drmScheme: String? = null
+  val drmScheme: String? = null,
+  val extraHeaders: Map<String, String> = emptyMap()
 )

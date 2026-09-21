@@ -185,7 +185,29 @@ fun TodControlsOverlay(
             modifier = Modifier
               .fillMaxWidth()
               .align(Alignment.TopCenter)
-              .padding(horizontal = 20.dp, vertical = 16.dp),
+              .padding(horizontal = 16.dp, vertical = 14.dp)
+              .clip(RoundedCornerShape(16.dp))
+              .background(
+                Brush.horizontalGradient(
+                  colors = listOf(
+                    Color(0xCC0B101E),
+                    Color(0x99111827),
+                    Color(0xCC0B101E)
+                  )
+                )
+              )
+              .border(
+                1.dp,
+                Brush.horizontalGradient(
+                  listOf(
+                    Color.White.copy(alpha = 0.20f),
+                    Color.White.copy(alpha = 0.08f),
+                    Color.White.copy(alpha = 0.20f)
+                  )
+                ),
+                RoundedCornerShape(16.dp)
+              )
+              .padding(horizontal = 14.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
           ) {
@@ -256,35 +278,7 @@ fun TodControlsOverlay(
                 }
               }
 
-              // 5. Picture-in-Picture Button
-              Box(
-                modifier = Modifier
-                  .size(36.dp)
-                  .clickable { onTriggerPip() },
-                contentAlignment = Alignment.Center
-              ) {
-                Icon(
-                  imageVector = Icons.Default.PictureInPictureAlt,
-                  contentDescription = "Picture in Picture",
-                  tint = Color.White,
-                  modifier = Modifier.size(20.dp)
-                )
-              }
-
-              // 6. Instant Reload / Re-sync Stream Button (TOD Style)
-              Box(
-                modifier = Modifier
-                  .size(36.dp)
-                  .clickable { onReloadStream() },
-                contentAlignment = Alignment.Center
-              ) {
-                TodReloadIcon(
-                  size = 22.dp,
-                  tint = Color.White
-                )
-              }
-
-              // 7. Quick Touch Lock (locks gestures for safe viewing)
+              // 5. Quick Touch Lock (locks gestures for safe viewing)
               Box(
                 modifier = Modifier
                   .size(36.dp)
@@ -562,7 +556,29 @@ fun TodControlsOverlay(
             modifier = Modifier
               .fillMaxWidth()
               .align(Alignment.BottomCenter)
-              .padding(horizontal = 16.dp, vertical = 14.dp),
+              .padding(horizontal = 16.dp, vertical = 14.dp)
+              .clip(RoundedCornerShape(16.dp))
+              .background(
+                Brush.horizontalGradient(
+                  colors = listOf(
+                    Color(0xCC0B101E),
+                    Color(0x99111827),
+                    Color(0xCC0B101E)
+                  )
+                )
+              )
+              .border(
+                1.dp,
+                Brush.horizontalGradient(
+                  listOf(
+                    Color.White.copy(alpha = 0.20f),
+                    Color.White.copy(alpha = 0.08f),
+                    Color.White.copy(alpha = 0.20f)
+                  )
+                ),
+                RoundedCornerShape(16.dp)
+              )
+              .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
           ) {

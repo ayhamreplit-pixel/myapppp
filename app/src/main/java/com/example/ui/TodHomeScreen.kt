@@ -107,31 +107,33 @@ fun TodHomeScreen(
   var searchQuery by remember { mutableStateOf("") }
   var isMuted by remember { mutableStateOf(false) }
 
-  // Map channels grouped by Xtream category dynamically with complete coverage
+  // Map channels grouped by Xtream category dynamically with complete O(N) coverage
   val channelsByCategory: Map<XtreamCategory, List<XtreamChannel>> = remember(allChannels, xtreamCategories) {
     if (allChannels.isEmpty()) {
       emptyMap()
     } else {
       val map = mutableMapOf<XtreamCategory, List<XtreamChannel>>()
       
-      // Add standard categories
+      // Fast O(N) grouping by categoryId
+      val channelsByCatId = allChannels.groupBy { it.categoryId ?: "" }
+
+      // Map standard categories
       xtreamCategories.forEach { category ->
         if (category.categoryId != "ALL") {
-          val catChannels = allChannels.filter { 
-            it.categoryId == category.categoryId || 
-            it.categoryId.equals(category.categoryName, ignoreCase = true)
-          }
-          if (catChannels.isNotEmpty()) {
-            map[category] = catChannels
+          val list = channelsByCatId[category.categoryId]
+            ?: channelsByCatId[category.categoryName]
+            ?: emptyList()
+          if (list.isNotEmpty()) {
+            map[category] = list
           }
         }
       }
 
-      // If no categories matched, group dynamically
+      // If no categories matched or categories empty, group dynamically
       if (map.isEmpty()) {
-        val groupMap = allChannels.groupBy { it.categoryId ?: "القنوات الرئيسية" }
-        groupMap.forEach { (catName, list) ->
-          map[XtreamCategory(catName, catName, list.size)] = list
+        channelsByCatId.forEach { (catKey, list) ->
+          val label = catKey.ifBlank { "القنوات الرئيسية" }
+          map[XtreamCategory(label, label, list.size)] = list
         }
       }
 
@@ -139,21 +141,20 @@ fun TodHomeScreen(
     }
   }
 
-  // Channels for current selected view
+  // Channels for current selected view with efficient slicing for huge channel lists
   val currentFilteredChannels = remember(allChannels, selectedCategoryId, searchQuery) {
-    var list = if (selectedCategoryId == null || selectedCategoryId == "ALL") {
+    val baseList = if (selectedCategoryId == null || selectedCategoryId == "ALL") {
       allChannels
     } else {
-      allChannels.filter { 
-        it.categoryId == selectedCategoryId || 
-        xtreamCategories.any { cat -> cat.categoryId == selectedCategoryId && it.categoryId.equals(cat.categoryName, ignoreCase = true) }
-      }
+      allChannels.filter { it.categoryId == selectedCategoryId }
     }
 
     if (searchQuery.isNotBlank()) {
-      list = list.filter { it.name.contains(searchQuery, ignoreCase = true) }
+      val query = searchQuery.trim()
+      baseList.filter { it.name.contains(query, ignoreCase = true) }
+    } else {
+      baseList
     }
-    list
   }
 
   // Dynamic Hero Carousel items

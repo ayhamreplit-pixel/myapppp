@@ -131,18 +131,27 @@ fun TodUrlStreamInputCard(
     if (urlText.isBlank()) return
     focusManager.clearFocus()
     val finalTitle = if (streamTitle.isNotBlank()) streamTitle.trim() else "Custom Broadcast"
+    val rawUrl = urlText.trim()
+    val parsed = com.example.model.StreamUrlParser.parse(rawUrl, finalTitle)
     val stream = BroadcastStream(
       id = "custom_${System.currentTimeMillis()}",
       title = finalTitle,
-      subtitle = if (isLiveStream) "Live Broadcast Feed (${selectedFormat.extensionBadge})" else "VOD Playback (${selectedFormat.extensionBadge})",
+      subtitle = if (isLiveStream) "Live Broadcast Feed (${(if (selectedFormat != StreamFormat.AUTO) selectedFormat else parsed.format).extensionBadge})" else "VOD Playback (${(if (selectedFormat != StreamFormat.AUTO) selectedFormat else parsed.format).extensionBadge})",
       category = "Custom Stream",
-      streamUrl = urlText.trim(),
-      format = selectedFormat,
+      streamUrl = parsed.cleanUrl.ifBlank { rawUrl },
+      format = if (selectedFormat != StreamFormat.AUTO) selectedFormat else parsed.format,
       isLive = isLiveStream,
       channelNumber = "CUSTOM",
       tournamentOrLeague = "Custom Stream",
       resolutionLabel = "Direct Stream",
-      description = "Playing user-provided URL stream directly with ExoPlayer hardware decoder."
+      description = "Playing user-provided URL stream directly with ExoPlayer hardware decoder.",
+      origin = parsed.origin,
+      referer = parsed.referer,
+      cookie = parsed.cookie,
+      userAgent = parsed.userAgent,
+      drmScheme = parsed.drmScheme,
+      drmKey = parsed.drmLicense,
+      extraHeaders = parsed.extraHeaders
     )
     onPlayStream(stream)
   }

@@ -57,6 +57,8 @@ data class TodPlayerState(
   val playbackSpeed: Float = 1.0f,
   val aspectRatioMode: AspectRatioMode = AspectRatioMode.FIT,
   val audioBoostPercent: Int = 0,
+  val isVoiceEnhancerEnabled: Boolean = false,
+  val isDataSaverMode: Boolean = false,
   val isControlsLocked: Boolean = false,
   val showStatsHud: Boolean = false,
   val stats: BroadcastStats = BroadcastStats(),
