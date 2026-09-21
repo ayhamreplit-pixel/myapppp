@@ -55,7 +55,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.example.model.BroadcastStream
@@ -107,11 +109,31 @@ fun TodDualPlayerView(
   var isBuf3 by remember { mutableStateOf(true) }
   var isBuf4 by remember { mutableStateOf(true) }
 
+  // Helper to create high-compatibility ExoPlayer instances
+  fun createUniversalPlayer(): ExoPlayer {
+    val renderers = DefaultRenderersFactory(context)
+      .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+      .setEnableDecoderFallback(true)
+      .setAllowedVideoJoiningTimeMs(5000)
+    val selector = DefaultTrackSelector(context).apply {
+      setParameters(
+        buildUponParameters()
+          .setExceedRendererCapabilitiesIfNecessary(true)
+          .setAllowAudioMixedMimeTypeAdaptiveness(true)
+          .setAllowAudioNonSeamlessAdaptiveness(true)
+      )
+    }
+    return ExoPlayer.Builder(context, renderers)
+      .setTrackSelector(selector)
+      .build().apply {
+        repeatMode = Player.REPEAT_MODE_OFF
+        playWhenReady = true
+      }
+  }
+
   // Player instances
   val exo1 = remember {
-    ExoPlayer.Builder(context).build().apply {
-      repeatMode = Player.REPEAT_MODE_OFF
-      playWhenReady = true
+    createUniversalPlayer().apply {
       volume = 1.0f
       addListener(object : Player.Listener {
         override fun onPlaybackStateChanged(st: Int) {
@@ -122,9 +144,7 @@ fun TodDualPlayerView(
   }
 
   val exo2 = remember {
-    ExoPlayer.Builder(context).build().apply {
-      repeatMode = Player.REPEAT_MODE_OFF
-      playWhenReady = true
+    createUniversalPlayer().apply {
       volume = 0.0f
       addListener(object : Player.Listener {
         override fun onPlaybackStateChanged(st: Int) {
@@ -135,9 +155,7 @@ fun TodDualPlayerView(
   }
 
   val exo3 = remember {
-    ExoPlayer.Builder(context).build().apply {
-      repeatMode = Player.REPEAT_MODE_OFF
-      playWhenReady = true
+    createUniversalPlayer().apply {
       volume = 0.0f
       addListener(object : Player.Listener {
         override fun onPlaybackStateChanged(st: Int) {
@@ -148,9 +166,7 @@ fun TodDualPlayerView(
   }
 
   val exo4 = remember {
-    ExoPlayer.Builder(context).build().apply {
-      repeatMode = Player.REPEAT_MODE_OFF
-      playWhenReady = true
+    createUniversalPlayer().apply {
       volume = 0.0f
       addListener(object : Player.Listener {
         override fun onPlaybackStateChanged(st: Int) {

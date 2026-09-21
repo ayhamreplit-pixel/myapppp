@@ -339,36 +339,6 @@ fun TodControlsOverlay(
               }
             }
           }
-
-          // Auto-Failover or Stream Status Notification Banner
-          if (playerState.autoFailoverMessage != null) {
-            Box(
-              modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 60.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xE6101926))
-                .border(1.dp, Color(0xFF00E5FF), RoundedCornerShape(8.dp))
-                .padding(horizontal = 14.dp, vertical = 6.dp)
-            ) {
-              Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-              ) {
-                CircularProgressIndicator(
-                  color = Color(0xFF00E5FF),
-                  strokeWidth = 2.dp,
-                  modifier = Modifier.size(14.dp)
-                )
-                Text(
-                  text = playerState.autoFailoverMessage,
-                  color = Color.White,
-                  fontSize = 12.sp,
-                  fontWeight = FontWeight.Bold
-                )
-              }
-            }
-          }
         }
 
         // ==========================================

@@ -23,12 +23,15 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.dash.DashMediaSource
+import androidx.media3.exoplayer.hls.DefaultHlsExtractorFactory
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.smoothstreaming.SsMediaSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+import androidx.media3.extractor.DefaultExtractorsFactory
+import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
 import com.example.model.AspectRatioMode
 import com.example.model.AudioTrackOption
 import com.example.model.BroadcastStats
@@ -81,14 +84,35 @@ class TodExoPlayerManager(
   // Hardware Audio Loudness Enhancer for true +200% volume boost
   private var loudnessEnhancer: LoudnessEnhancer? = null
 
-  // Active channel context for Auto-Failover
+  // Active channel context
   private var activeChannelList: List<BroadcastStream> = emptyList()
+
+  // High-performance Universal Extractors for MP2, AAC-LATM, AC3, EAC3, DTS, Opus, FLAC
+  private val universalExtractorsFactory = DefaultExtractorsFactory()
+    .setConstantBitrateSeekingEnabled(true)
+    .setTsExtractorFlags(
+      DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES or
+      DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS or
+      DefaultTsPayloadReaderFactory.FLAG_IGNORE_SPLICE_INFO_STREAM or
+      DefaultTsPayloadReaderFactory.FLAG_ENABLE_HDMV_DTS_AUDIO_STREAMS
+    )
+    .setTsExtractorTimestampSearchBytes(1500 * 188)
+
+  // Dedicated HLS Extractor factory to parse all audio formats from TS chunks
+  private val universalHlsExtractorFactory = DefaultHlsExtractorFactory(
+    DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES or
+    DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS or
+    DefaultTsPayloadReaderFactory.FLAG_IGNORE_SPLICE_INFO_STREAM or
+    DefaultTsPayloadReaderFactory.FLAG_ENABLE_HDMV_DTS_AUDIO_STREAMS,
+    /* exposeCea608WhenMissingDeclarations = */ true
+  )
 
   val exoPlayer: ExoPlayer by lazy {
     // Universal RenderersFactory supporting software decoders fallback for AC-3, E-AC-3, AAC-LATM, MP2, DTS
     val renderersFactory = DefaultRenderersFactory(context)
       .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
       .setEnableDecoderFallback(true)
+      .setAllowedVideoJoiningTimeMs(5000)
 
     // LoadControl with ultra-fast startup and buffer management
     val loadControl = DefaultLoadControl.Builder()
@@ -125,7 +149,6 @@ class TodExoPlayerManager(
     if (!isRetry) {
       retryCount = 0
       currentUaIndex = 0
-      _playerState.update { it.copy(autoFailoverMessage = null) }
     }
     currentStream = stream
     val rawUrl = stream.streamUrl.trim()
@@ -222,15 +245,12 @@ class TodExoPlayerManager(
   }
 
   /**
-   * Smart Auto-Failover:
-   * 1. Tries alternate container format (.ts <-> .m3u8).
-   * 2. Tries alternate User-Agent.
-   * 3. Automatically finds matching backup channel in the same playlist (e.g. 720p / SD / Backup).
+   * Silent playback retry with alternate format / user agent if needed, without unsolicited jumping.
    */
   private fun handlePlaybackRetry(errorMsg: String) {
     val stream = currentStream ?: return
 
-    if (retryCount < 3) {
+    if (retryCount < 2) {
       retryCount++
       currentUaIndex = (currentUaIndex + 1) % userAgents.size
       
@@ -239,42 +259,12 @@ class TodExoPlayerManager(
         StreamFormat.PROGRESSIVE -> StreamFormat.HLS
         else -> StreamFormat.AUTO
       }
-      
-      var newUrl = stream.streamUrl
-      if (newUrl.endsWith(".ts", ignoreCase = true)) {
-        newUrl = newUrl.substringBeforeLast(".ts") + ".m3u8"
-      } else if (newUrl.endsWith(".m3u8", ignoreCase = true)) {
-        newUrl = newUrl.substringBeforeLast(".m3u8") + ".ts"
-      }
 
-      val failoverMsg = "جاري التحويل التلقائي للبث البديل (#$retryCount)..."
-      _playerState.update { it.copy(autoFailoverMessage = failoverMsg) }
-
-      Log.i("TodExoPlayerManager", "AI Auto-Failover #$retryCount with UA: ${userAgents[currentUaIndex]} and format: $altFormat")
-      playStream(stream.copy(streamUrl = newUrl, format = altFormat), isRetry = true)
+      Log.i("TodExoPlayerManager", "Silent retry #$retryCount with format: $altFormat and UA: ${userAgents[currentUaIndex]}")
+      playStream(stream.copy(format = altFormat), isRetry = true)
       return
     }
 
-    // Step 2: Search for backup stream in the channel list (e.g. 720p, Backup, SD, or same name)
-    val channelTitle = stream.title.lowercase()
-    val backupCandidate = activeChannelList.find { ch ->
-      ch.streamUrl != stream.streamUrl &&
-      (ch.title.contains(channelTitle.take(6), ignoreCase = true) ||
-       channelTitle.contains(ch.title.take(6), ignoreCase = true) ||
-       ch.title.contains("backup", ignoreCase = true) ||
-       ch.title.contains("720", ignoreCase = true) ||
-       ch.title.contains("sd", ignoreCase = true))
-    }
-
-    if (backupCandidate != null) {
-      retryCount = 0
-      val backupMsg = "تم التحويل تلقائياً للبث الاحتياطي: ${backupCandidate.title}"
-      _playerState.update { it.copy(autoFailoverMessage = backupMsg) }
-      playStream(backupCandidate, isRetry = true)
-      return
-    }
-
-    // Otherwise show friendly error message
     _playerState.update {
       it.copy(
         isBuffering = false,
@@ -348,7 +338,8 @@ class TodExoPlayerManager(
     return when (format) {
       StreamFormat.HLS -> {
         HlsMediaSource.Factory(dataSourceFactory)
-          .setAllowChunklessPreparation(true)
+          .setExtractorFactory(universalHlsExtractorFactory)
+          .setAllowChunklessPreparation(false) // Deep packet audio extraction for MP2, AC-3, E-AC-3, DTS
           .createMediaSource(mediaItemBuilder.setMimeType(MimeTypes.APPLICATION_M3U8).build())
       }
       StreamFormat.DASH -> {
@@ -360,24 +351,31 @@ class TodExoPlayerManager(
           .createMediaSource(mediaItemBuilder.setMimeType(MimeTypes.APPLICATION_SS).build())
       }
       StreamFormat.PROGRESSIVE -> {
-        ProgressiveMediaSource.Factory(dataSourceFactory)
+        ProgressiveMediaSource.Factory(dataSourceFactory, universalExtractorsFactory)
           .createMediaSource(mediaItemBuilder.build())
       }
       StreamFormat.AUTO -> {
-        DefaultMediaSourceFactory(dataSourceFactory)
+        DefaultMediaSourceFactory(dataSourceFactory, universalExtractorsFactory)
           .createMediaSource(mediaItemBuilder.build())
       }
     }
   }
 
   private fun detectFormat(url: String): StreamFormat {
-    val lower = url.lowercase()
+    val cleanUrl = url.trim()
+    val pathWithoutQuery = cleanUrl.substringBefore('?').lowercase()
+    val lower = cleanUrl.lowercase()
     return when {
-      lower.contains(".mpd") || lower.contains("format=mpd") || lower.contains("manifest.mpd") -> StreamFormat.DASH
-      lower.contains(".ism") || lower.contains("/manifest") -> StreamFormat.SMOOTH_STREAMING
-      lower.contains(".mp4") || lower.contains(".mkv") || lower.contains(".flv") || lower.contains(".avi") || lower.contains(".webm") -> StreamFormat.PROGRESSIVE
-      lower.contains(".ts") || lower.contains("output=ts") -> StreamFormat.PROGRESSIVE
-      lower.contains(".m3u8") || lower.contains(".m3u") || lower.contains("output=m3u8") || lower.contains("/live/") || lower.contains(".php") || lower.contains(".json") || lower.contains(".css") || lower.contains(".js") || lower.contains("token=") -> StreamFormat.HLS
+      pathWithoutQuery.endsWith(".mpd") || lower.contains("format=mpd") || lower.contains("manifest.mpd") -> StreamFormat.DASH
+      pathWithoutQuery.endsWith(".ism") || lower.contains("/manifest") -> StreamFormat.SMOOTH_STREAMING
+      pathWithoutQuery.endsWith(".mp4") || pathWithoutQuery.endsWith(".mkv") || pathWithoutQuery.endsWith(".flv") ||
+      pathWithoutQuery.endsWith(".avi") || pathWithoutQuery.endsWith(".webm") || pathWithoutQuery.endsWith(".mov") ||
+      pathWithoutQuery.endsWith(".mp3") || pathWithoutQuery.endsWith(".aac") || pathWithoutQuery.endsWith(".ogg") -> StreamFormat.PROGRESSIVE
+      pathWithoutQuery.endsWith(".ts") || lower.contains("output=ts") -> StreamFormat.PROGRESSIVE
+      pathWithoutQuery.endsWith(".m3u8") || pathWithoutQuery.endsWith(".m3u") || lower.contains("output=m3u8") ||
+      pathWithoutQuery.endsWith(".php") || pathWithoutQuery.endsWith(".json") || pathWithoutQuery.endsWith(".css") ||
+      pathWithoutQuery.endsWith(".js") || pathWithoutQuery.endsWith(".html") || pathWithoutQuery.endsWith(".htm") ||
+      lower.contains("/live/") || lower.contains("/play/") || lower.contains("/stream/") || lower.contains("token=") -> StreamFormat.HLS
       else -> StreamFormat.HLS
     }
   }
