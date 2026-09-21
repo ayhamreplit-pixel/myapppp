@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.LiveTv
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -281,8 +282,6 @@ fun TodModernHubScreen(
       modifier = Modifier
         .fillMaxSize()
         .statusBarsPadding()
-        .navigationBarsPadding()
-        .imePadding()
     ) {
       // ========================================================
       // MAIN SCREEN SWITCHER
@@ -294,6 +293,7 @@ fun TodModernHubScreen(
             modifier = Modifier
               .fillMaxSize()
               .background(DarkBg)
+              .navigationBarsPadding()
               .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
@@ -458,10 +458,11 @@ fun TodModernHubScreen(
               }
             }
 
-            // TOD Official Bottom Navigation Bar (Screenshots 3, 4, 5, 7)
+            // TOD High-End Corporate Bottom Navigation Bar
             TodBottomNavBar(
               currentTab = activeNavTab,
-              onTabSelected = { activeNavTab = it }
+              onTabSelected = { activeNavTab = it },
+              modifier = Modifier.navigationBarsPadding()
             )
           }
         }
@@ -484,11 +485,11 @@ fun TodModernHubScreen(
           // Xtream Codes Settings Screen (TOD Dark & Gold Styled)
           val activeConfig = playlistConfig ?: XtreamPlaylistConfig()
 
-          var nameInput by remember { mutableStateOf(activeConfig.playlistName.ifBlank { "سيرفر Xtream 1" }) }
-          var userInput by remember { mutableStateOf(activeConfig.username) }
-          var passInput by remember { mutableStateOf(activeConfig.password) }
-          var serverInput by remember { mutableStateOf(activeConfig.serverUrl) }
-          var streamFormat by remember { mutableStateOf(activeConfig.streamFormat) }
+          var nameInput by remember(activeConfig) { mutableStateOf(activeConfig.playlistName.ifBlank { "سيرفر Xtream 1" }) }
+          var userInput by remember(activeConfig) { mutableStateOf(activeConfig.username) }
+          var passInput by remember(activeConfig) { mutableStateOf(activeConfig.password) }
+          var serverInput by remember(activeConfig) { mutableStateOf(activeConfig.serverUrl) }
+          var streamFormat by remember(activeConfig) { mutableStateOf(activeConfig.streamFormat) }
 
           Column(
             modifier = Modifier
@@ -666,7 +667,7 @@ fun TodModernHubScreen(
                   ) {
                     Icon(Icons.Default.Check, contentDescription = null, tint = Color.Black)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("اتصال ومزامنة القنوات ⚡", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text("اتصال ومزامنة القنوات", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                   }
                 }
               }
@@ -782,7 +783,7 @@ fun TodModernHubScreen(
               ) {
                 Icon(Icons.Default.Check, contentDescription = null, tint = Color.Black)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("اتصال وتحميل القنوات ⚡", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text("اتصال وتحميل القنوات", fontWeight = FontWeight.Bold, fontSize = 15.sp)
               }
             }
           }
@@ -800,7 +801,7 @@ fun TodModernHubScreen(
             val ch = allChannels.firstOrNull { it.name.contains("beIN", ignoreCase = true) }
               ?: allChannels.firstOrNull()
             if (ch != null) {
-              val (stream, streams) = buildOptimizedPlaybackList(ch, allChannels, "TOD Match")
+              val (stream, streams) = buildOptimizedPlaybackList(ch, allChannels, "Jawwy Match")
               onPlayStream(stream, streams)
             }
             activeMatchDetail = null
@@ -808,7 +809,7 @@ fun TodModernHubScreen(
           onPlayCatchup = {
             val ch = allChannels.firstOrNull()
             if (ch != null) {
-              val (stream, streams) = buildOptimizedPlaybackList(ch, allChannels, "TOD Catchup")
+              val (stream, streams) = buildOptimizedPlaybackList(ch, allChannels, "Jawwy Catchup")
               onPlayStream(stream, streams)
             }
             activeMatchDetail = null
@@ -818,7 +819,7 @@ fun TodModernHubScreen(
               val s1 = BroadcastStream(
                 id = allChannels[0].streamId,
                 title = allChannels[0].name,
-                subtitle = "TOD Multi 1",
+                subtitle = "Jawwy Multi 1",
                 category = "Live",
                 streamUrl = allChannels[0].playUrl,
                 isLive = true
@@ -826,7 +827,7 @@ fun TodModernHubScreen(
               val s2 = BroadcastStream(
                 id = allChannels[1].streamId,
                 title = allChannels[1].name,
-                subtitle = "TOD Multi 2",
+                subtitle = "Jawwy Multi 2",
                 category = "Live",
                 streamUrl = allChannels[1].playUrl,
                 isLive = true
@@ -903,6 +904,7 @@ fun TodModernHubScreen(
                       )
                       .clickable {
                         playlistConfig = pl
+                        xtreamRepo.setActivePlaylist(pl)
                         loadPlaylistData(pl)
                         showPlaylistsManagerModal = false
                       }
@@ -1017,7 +1019,7 @@ fun TodModernHubScreen(
               }
 
               Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("تشغيل رابط بث مباشر ⚡", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("تشغيل رابط بث مباشر", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 Icon(Icons.Default.Bolt, contentDescription = null, tint = TodGold)
               }
             }
@@ -1107,7 +1109,9 @@ fun TodModernHubScreen(
                 disabledContainerColor = Color(0xFF2E2E38)
               )
             ) {
-              Text("تشغيل البث الآن ▶", fontSize = 15.sp, fontWeight = FontWeight.Black)
+              Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.Black)
+              Spacer(modifier = Modifier.width(6.dp))
+              Text("تشغيل البث الآن", fontSize = 15.sp, fontWeight = FontWeight.Black)
             }
           }
         }

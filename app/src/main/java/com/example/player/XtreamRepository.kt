@@ -589,6 +589,14 @@ class XtreamRepository(context: Context) {
     }
   }
 
+  fun setActivePlaylist(config: XtreamPlaylistConfig) {
+    val key = if (config.isM3u) config.m3uUrl else "${config.serverUrl}_${config.username}"
+    prefs.edit().putString("active_playlist_key", key).apply()
+    if (!config.isM3u) {
+      saveCredentials(config.serverUrl, config.username, config.password)
+    }
+  }
+
   fun getActivePlaylistConfig(): XtreamPlaylistConfig? {
     val all = getAllPlaylists()
     if (all.isEmpty()) {

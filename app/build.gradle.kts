@@ -51,8 +51,12 @@ android {
       } else {
         signingConfig = signingConfigs.getByName("debugConfig")
       }
+      matchingFallbacks += listOf("release")
     }
-    debug { signingConfig = signingConfigs.getByName("debugConfig") }
+    debug {
+      signingConfig = signingConfigs.getByName("debugConfig")
+      matchingFallbacks += listOf("release")
+    }
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11

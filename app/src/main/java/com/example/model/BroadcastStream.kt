@@ -36,7 +36,7 @@ data class BroadcastStream(
   val isLive: Boolean = false,
   val channelNumber: String? = null,
   val thumbnailColor: Long = 0xFF10141E,
-  val tournamentOrLeague: String = "TOD Broadcast",
+  val tournamentOrLeague: String = "Jawwy Broadcast",
   val score: String? = null,
   val matchTime: String? = null,
   val moments: List<MatchMoment> = emptyList(),

@@ -2,6 +2,7 @@ package com.example.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -509,8 +510,7 @@ fun TodArrowBackRtl(
 }
 
 /**
- * Custom TOD Dolphin Crest Watermark Badge.
- * As seen on the right edge in TOD player screenshots.
+ * Custom Jawwy TV Watermark Badge in Yellow Gold.
  */
 @Composable
 fun TodWatermarkBadge(
@@ -520,43 +520,23 @@ fun TodWatermarkBadge(
   Box(
     modifier = modifier
       .size(size)
-      .clip(CircleShape)
-      .background(Color(0x33001824)),
+      .clip(RoundedCornerShape(size * 0.25f))
+      .background(Color(0x33FDB913))
+      .border(0.8.dp, Color(0x66FDB913), RoundedCornerShape(size * 0.25f)),
     contentAlignment = Alignment.Center
   ) {
-    Canvas(modifier = Modifier.size(size * 0.75f)) {
-      val center = Offset(size.toPx() * 0.375f, size.toPx() * 0.375f)
-      val r = size.toPx() * 0.34f
-      // Draw outer subtle blue-tinted ring
-      drawCircle(
-        color = Color(0x6600E5FF),
-        radius = r,
-        center = center,
-        style = Stroke(width = size.toPx() * 0.04f)
-      )
-      // Dolphin-like curved silhouette
-      val path = Path().apply {
-        moveTo(center.x - r * 0.6f, center.y + r * 0.2f)
-        cubicTo(
-          center.x - r * 0.3f, center.y - r * 0.7f,
-          center.x + r * 0.4f, center.y - r * 0.6f,
-          center.x + r * 0.7f, center.y + r * 0.1f
-        )
-        cubicTo(
-          center.x + r * 0.3f, center.y + r * 0.6f,
-          center.x - r * 0.2f, center.y + r * 0.5f,
-          center.x - r * 0.6f, center.y + r * 0.2f
-        )
-        close()
-      }
-      drawPath(path = path, color = Color(0x8840C4FF), style = Fill)
-    }
+    Text(
+      text = "جوي",
+      color = Color(0xFFFDB913),
+      fontSize = (size.value * 0.45f).sp,
+      fontWeight = FontWeight.Black
+    )
   }
 }
 
 /**
- * Custom TOD Icon: Stream Reload / Replay curved circular arrow.
- * Sleek and pixel-perfect matching TOD.
+ * Custom TOD Icon: Stream Reload / Retry curved circular arrow.
+ * Sleek, elegant, and pixel-perfect matching official TOD player.
  */
 @Composable
 fun TodReloadIcon(
@@ -565,11 +545,12 @@ fun TodReloadIcon(
   size: Dp = 22.dp
 ) {
   Canvas(modifier = modifier.size(size)) {
-    val center = Offset(size.toPx() / 2f, size.toPx() / 2f)
-    val radius = size.toPx() * 0.40f
-    val strokeWidth = size.toPx() * 0.085f
+    val total = size.toPx()
+    val center = Offset(total / 2f, total / 2f)
+    val radius = total * 0.38f
+    val strokeWidth = total * 0.10f
 
-    // Draw circular arc (~300 degrees)
+    // Draw smooth 290 deg circular arc
     val path = Path().apply {
       arcTo(
         rect = androidx.compose.ui.geometry.Rect(
@@ -578,8 +559,8 @@ fun TodReloadIcon(
           center.x + radius,
           center.y + radius
         ),
-        startAngleDegrees = -70f,
-        sweepAngleDegrees = 300f,
+        startAngleDegrees = -60f,
+        sweepAngleDegrees = 285f,
         forceMoveTo = false
       )
     }
@@ -589,13 +570,15 @@ fun TodReloadIcon(
       style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
     )
 
-    // Draw Arrow tip at the top
-    val arrowAngle = -70f * (PI / 180f).toFloat()
-    val arrowTip = Offset(center.x + radius * cos(arrowAngle), center.y + radius * sin(arrowAngle))
+    // Sleek arrow head at the end of arc
+    val tipAngle = (-60f + 285f) * (PI / 180f).toFloat()
+    val tipCenter = Offset(center.x + radius * cos(tipAngle), center.y + radius * sin(tipAngle))
+    val tipLength = total * 0.22f
+
     val arrowPath = Path().apply {
-      moveTo(arrowTip.x + size.toPx() * 0.04f, arrowTip.y - size.toPx() * 0.12f)
-      lineTo(arrowTip.x - size.toPx() * 0.14f, arrowTip.y - size.toPx() * 0.02f)
-      lineTo(arrowTip.x - size.toPx() * 0.02f, arrowTip.y + size.toPx() * 0.12f)
+      moveTo(tipCenter.x + tipLength * 0.55f, tipCenter.y - tipLength * 0.25f)
+      lineTo(tipCenter.x, tipCenter.y + tipLength * 0.70f)
+      lineTo(tipCenter.x - tipLength * 0.55f, tipCenter.y - tipLength * 0.25f)
       close()
     }
     drawPath(path = arrowPath, color = tint, style = Fill)

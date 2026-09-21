@@ -1,8 +1,14 @@
 package com.example.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -31,6 +37,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -46,10 +53,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -58,8 +69,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.R
 import com.example.model.BroadcastStream
 import com.example.model.XtreamChannel
+import com.example.ui.theme.AppFontFamily
 import com.example.ui.theme.DarkBg
 import com.example.ui.theme.DarkSurfaceBorder
 import com.example.ui.theme.DarkTextPrimary
@@ -67,48 +80,77 @@ import com.example.ui.theme.DarkTextSecondary
 import com.example.ui.theme.DarkTextTertiary
 import com.example.ui.theme.TodButtonGrey
 import com.example.ui.theme.TodGold
+import com.example.ui.theme.TodGoldGlow
 import com.example.ui.theme.TodGradients
 import com.example.ui.theme.TodLiveRed
 import kotlinx.coroutines.delay
 
 /**
- * Official TOD Logo with "by beIN" subtext
- * Matches TOD official identity (Screenshots 7)
+ * Official Jawwy TV Logo with Icon Emblem and Gold Styling
  */
 @Composable
 fun TodLogo(
   modifier: Modifier = Modifier,
-  fontSize: Int = 26,
+  fontSize: Int = 22,
   showSubtext: Boolean = true
 ) {
-  Column(
+  Row(
     modifier = modifier,
-    horizontalAlignment = Alignment.CenterHorizontally,
-    verticalArrangement = Arrangement.Center
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.Center
   ) {
-    Text(
-      text = "TOD",
-      color = TodGold,
-      fontSize = fontSize.sp,
-      fontWeight = FontWeight.Black,
-      letterSpacing = 2.sp,
-      fontFamily = FontFamily.SansSerif
-    )
-    if (showSubtext) {
+    // Elegant Logo Icon Emblem
+    Box(
+      modifier = Modifier
+        .size((fontSize + 12).dp)
+        .clip(RoundedCornerShape(8.dp))
+        .background(
+          Brush.linearGradient(
+            listOf(TodGold, Color(0xFFFF9800))
+          )
+        )
+        .border(1.dp, TodGoldGlow.copy(alpha = 0.8f), RoundedCornerShape(8.dp))
+        .padding(2.dp),
+      contentAlignment = Alignment.Center
+    ) {
+      Image(
+        painter = painterResource(id = R.drawable.jawwy_icon),
+        contentDescription = "Jawwy TV Logo",
+        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)),
+        contentScale = ContentScale.Crop
+      )
+    }
+
+    Spacer(modifier = Modifier.width(8.dp))
+
+    // Jawwy TV Text
+    Row(
+      verticalAlignment = Alignment.CenterVertically
+    ) {
       Text(
-        text = "by beIN",
-        color = TodGold.copy(alpha = 0.85f),
-        fontSize = (fontSize * 0.36f).sp,
-        fontWeight = FontWeight.SemiBold,
-        letterSpacing = 0.5.sp
+        text = "Jawwy",
+        color = TodGold,
+        fontSize = fontSize.sp,
+        fontWeight = FontWeight.Black,
+        letterSpacing = 0.5.sp,
+        fontFamily = AppFontFamily
+      )
+      Spacer(modifier = Modifier.width(4.dp))
+      Text(
+        text = "TV",
+        color = Color.White,
+        fontSize = fontSize.sp,
+        fontWeight = FontWeight.Black,
+        letterSpacing = 0.5.sp,
+        fontFamily = AppFontFamily
       )
     }
   }
 }
 
 /**
- * TOD Bottom Navigation Bar (Screenshots 3, 4, 5, 7)
- * 3 Tabs: الرئيسية (Home), بحث (Search), المزيد (More)
+ * High-End Corporate Grade TOD Bottom Navigation Bar
+ * Features Frosted Glass Gradient, Dynamic Glow, Active Pill Indicators, and Fluid Spring Animations
  */
 enum class TodNavTab {
   HOME,
@@ -122,100 +164,172 @@ fun TodBottomNavBar(
   onTabSelected: (TodNavTab) -> Unit,
   modifier: Modifier = Modifier
 ) {
-  Surface(
+  Box(
     modifier = modifier
       .fillMaxWidth()
-      .height(64.dp),
-    color = Color(0xFF09090C),
-    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF1B1B20))
+      .background(
+        Brush.verticalGradient(
+          colors = listOf(
+            Color(0xFF14141C).copy(alpha = 0.98f),
+            Color(0xFF0A0A0E).copy(alpha = 1.0f)
+          )
+        )
+      )
   ) {
+    // Top glowing gradient accent line
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .height(1.5.dp)
+        .align(Alignment.TopCenter)
+        .background(
+          Brush.horizontalGradient(
+            colors = listOf(
+              Color.Transparent,
+              TodGold.copy(alpha = 0.2f),
+              TodGold.copy(alpha = 0.85f),
+              Color(0xFFBA68C8).copy(alpha = 0.7f),
+              TodGold.copy(alpha = 0.2f),
+              Color.Transparent
+            )
+          )
+        )
+    )
+
     Row(
       modifier = Modifier
-        .fillMaxSize()
-        .padding(horizontal = 24.dp),
+        .fillMaxWidth()
+        .height(68.dp)
+        .padding(horizontal = 16.dp, vertical = 6.dp),
       verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.SpaceAround
+      horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-      // 1. More / Profile Tab (المزيد)
-      val isMore = currentTab == TodNavTab.MORE
-      Column(
-        modifier = Modifier
-          .clip(RoundedCornerShape(8.dp))
-          .clickable { onTabSelected(TodNavTab.MORE) }
-          .padding(horizontal = 16.dp, vertical = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-      ) {
-        Box(
-          modifier = Modifier
-            .size(24.dp)
-            .clip(RoundedCornerShape(6.dp))
-            .background(if (isMore) TodGold else Color(0xFF26262D)),
-          contentAlignment = Alignment.Center
-        ) {
-          Icon(
-            imageVector = Icons.Default.Person,
-            contentDescription = "المزيد",
-            tint = if (isMore) Color.Black else Color(0xFFB0B0BC),
-            modifier = Modifier.size(16.dp)
-          )
-        }
-        Spacer(modifier = Modifier.height(3.dp))
-        Text(
-          text = "المزيد",
-          color = if (isMore) TodGold else DarkTextSecondary,
-          fontSize = 11.sp,
-          fontWeight = if (isMore) FontWeight.Bold else FontWeight.Normal
-        )
-      }
+      // 1. More / Account Tab (المزيد)
+      TodCorporateNavTabItem(
+        title = "المزيد",
+        icon = Icons.Default.Person,
+        isSelected = currentTab == TodNavTab.MORE,
+        onClick = { onTabSelected(TodNavTab.MORE) },
+        accentColor = TodGold
+      )
 
       // 2. Search Tab (بحث)
-      val isSearch = currentTab == TodNavTab.SEARCH
-      Column(
-        modifier = Modifier
-          .clip(RoundedCornerShape(8.dp))
-          .clickable { onTabSelected(TodNavTab.SEARCH) }
-          .padding(horizontal = 16.dp, vertical = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-      ) {
+      TodCorporateNavTabItem(
+        title = "بحث وتصفح",
+        icon = Icons.Default.Search,
+        isSelected = currentTab == TodNavTab.SEARCH,
+        onClick = { onTabSelected(TodNavTab.SEARCH) },
+        accentColor = TodGold
+      )
+
+      // 3. Home Tab (الرئيسية)
+      TodCorporateNavTabItem(
+        title = "الرئيسية",
+        icon = Icons.Default.Home,
+        isSelected = currentTab == TodNavTab.HOME,
+        onClick = { onTabSelected(TodNavTab.HOME) },
+        accentColor = TodGold
+      )
+    }
+  }
+}
+
+@Composable
+private fun TodCorporateNavTabItem(
+  title: String,
+  icon: ImageVector,
+  isSelected: Boolean,
+  onClick: () -> Unit,
+  accentColor: Color
+) {
+  val scale by animateFloatAsState(
+    targetValue = if (isSelected) 1.08f else 1.0f,
+    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+    label = "navScale"
+  )
+
+  val iconColor by animateColorAsState(
+    targetValue = if (isSelected) accentColor else Color(0xFF8E8E9F),
+    animationSpec = tween(durationMillis = 220),
+    label = "iconColor"
+  )
+
+  val textColor by animateColorAsState(
+    targetValue = if (isSelected) Color.White else Color(0xFF7E7E90),
+    animationSpec = tween(durationMillis = 220),
+    label = "textColor"
+  )
+
+  Box(
+    modifier = Modifier
+      .scale(scale)
+      .clip(RoundedCornerShape(16.dp))
+      .background(
+        if (isSelected) {
+          Brush.verticalGradient(
+            colors = listOf(
+              accentColor.copy(alpha = 0.18f),
+              Color(0xFF1E1E28).copy(alpha = 0.35f)
+            )
+          )
+        } else {
+          Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
+        }
+      )
+      .border(
+        width = 1.dp,
+        brush = if (isSelected) {
+          Brush.verticalGradient(
+            listOf(accentColor.copy(alpha = 0.45f), Color(0x00000000))
+          )
+        } else {
+          Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
+        },
+        shape = RoundedCornerShape(16.dp)
+      )
+      .clickable(onClick = onClick)
+      .padding(horizontal = 18.dp, vertical = 6.dp),
+    contentAlignment = Alignment.Center
+  ) {
+    Column(
+      horizontalAlignment = Alignment.CenterHorizontally,
+      verticalArrangement = Arrangement.Center
+    ) {
+      Box(contentAlignment = Alignment.Center) {
+        // Glow backdrop for active tab icon
+        if (isSelected) {
+          Box(
+            modifier = Modifier
+              .size(24.dp)
+              .background(accentColor.copy(alpha = 0.25f), CircleShape)
+          )
+        }
         Icon(
-          imageVector = Icons.Default.Search,
-          contentDescription = "بحث",
-          tint = if (isSearch) TodGold else DarkTextSecondary,
-          modifier = Modifier.size(24.dp)
-        )
-        Spacer(modifier = Modifier.height(3.dp))
-        Text(
-          text = "بحث",
-          color = if (isSearch) TodGold else DarkTextSecondary,
-          fontSize = 11.sp,
-          fontWeight = if (isSearch) FontWeight.Bold else FontWeight.Normal
+          imageVector = icon,
+          contentDescription = title,
+          tint = iconColor,
+          modifier = Modifier.size(22.dp)
         )
       }
 
-      // 3. Home Tab (الرئيسية)
-      val isHome = currentTab == TodNavTab.HOME
-      Column(
-        modifier = Modifier
-          .clip(RoundedCornerShape(8.dp))
-          .clickable { onTabSelected(TodNavTab.HOME) }
-          .padding(horizontal = 16.dp, vertical = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-      ) {
-        Icon(
-          imageVector = Icons.Default.Home,
-          contentDescription = "الرئيسية",
-          tint = if (isHome) TodGold else DarkTextSecondary,
-          modifier = Modifier.size(24.dp)
-        )
-        Spacer(modifier = Modifier.height(3.dp))
-        Text(
-          text = "الرئيسية",
-          color = if (isHome) TodGold else DarkTextSecondary,
-          fontSize = 11.sp,
-          fontWeight = if (isHome) FontWeight.Bold else FontWeight.Normal
+      Spacer(modifier = Modifier.height(2.dp))
+
+      Text(
+        text = title,
+        color = textColor,
+        fontSize = if (isSelected) 11.5.sp else 11.sp,
+        fontWeight = if (isSelected) FontWeight.Black else FontWeight.Medium,
+        maxLines = 1
+      )
+
+      // Glowing dot indicator below selected title
+      if (isSelected) {
+        Spacer(modifier = Modifier.height(2.dp))
+        Box(
+          modifier = Modifier
+            .size(4.dp)
+            .clip(CircleShape)
+            .background(accentColor)
         )
       }
     }
@@ -429,7 +543,12 @@ fun TodMatchDetailSheet(
                   modifier = Modifier.size(48.dp)
                 )
               } else {
-                Text("⚽", fontSize = 28.sp)
+                Icon(
+                  Icons.Default.Tv,
+                  contentDescription = null,
+                  tint = TodGold,
+                  modifier = Modifier.size(28.dp)
+                )
               }
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -470,7 +589,12 @@ fun TodMatchDetailSheet(
                   modifier = Modifier.size(48.dp)
                 )
               } else {
-                Text("⚽", fontSize = 28.sp)
+                Icon(
+                  Icons.Default.Tv,
+                  contentDescription = null,
+                  tint = TodGold,
+                  modifier = Modifier.size(28.dp)
+                )
               }
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -577,7 +701,7 @@ fun TodMatchDetailSheet(
               )
             } else {
               Text(
-                text = if (isSavedToMyTod) "تمت الإضافة إلى My TOD ✓" else "+ My TOD",
+                text = if (isSavedToMyTod) "تمت الإضافة إلى My TOD" else "+ My TOD",
                 color = Color.Black,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Black

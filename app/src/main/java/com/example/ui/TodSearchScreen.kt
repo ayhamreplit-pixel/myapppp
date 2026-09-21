@@ -64,11 +64,11 @@ fun TodSearchScreen(
 ) {
   val context = LocalContext.current
   var searchQuery by remember { mutableStateOf("") }
-  var selectedCategoryId by remember { mutableStateOf<String?>("ALL") }
+  var selectedCategoryId by remember { mutableStateOf<String?>(null) }
 
   val searchResults = remember(allChannels, searchQuery, selectedCategoryId) {
     var list = allChannels
-    if (selectedCategoryId != null && selectedCategoryId != "ALL") {
+    if (selectedCategoryId != null) {
       list = list.filter { it.categoryId == selectedCategoryId }
     }
     if (searchQuery.isNotBlank()) {
@@ -120,33 +120,24 @@ fun TodSearchScreen(
           .horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
       ) {
-        val isAllSelected = selectedCategoryId == "ALL"
-        Box(
-          modifier = Modifier
-            .clip(RoundedCornerShape(18.dp))
-            .background(if (isAllSelected) TodGold else Color(0xFF1C1C24))
-            .clickable { selectedCategoryId = "ALL" }
-            .padding(horizontal = 14.dp, vertical = 6.dp)
-        ) {
-          Text(
-            text = "الكل",
-            color = if (isAllSelected) Color.Black else Color.White,
-            fontSize = 12.sp,
-            fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Medium
-          )
-        }
-
         xtreamCategories.forEach { category ->
           val isSelected = selectedCategoryId == category.categoryId
           Box(
             modifier = Modifier
               .clip(RoundedCornerShape(18.dp))
               .background(if (isSelected) TodGold else Color(0xFF1C1C24))
-              .clickable { selectedCategoryId = category.categoryId }
+              .border(
+                1.dp,
+                if (isSelected) TodGold else Color(0xFF282834),
+                RoundedCornerShape(18.dp)
+              )
+              .clickable { 
+                selectedCategoryId = if (isSelected) null else category.categoryId
+              }
               .padding(horizontal = 14.dp, vertical = 6.dp)
           ) {
             Text(
-              text = category.categoryName,
+              text = if (category.channelCount > 0) "${category.categoryName} (${category.channelCount})" else category.categoryName,
               color = if (isSelected) Color.Black else Color.White,
               fontSize = 12.sp,
               fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium

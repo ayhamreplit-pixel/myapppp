@@ -83,7 +83,7 @@ import com.example.ui.theme.TodCyan
  * Top Right: Title + Subtitle + Back Arrow (→).
  * Center: Replay 10 (↺ 10), Pause Bars (||) or Play Triangle (▶).
  * Right: Vertical Brightness Slider with Sun Icon & TOD Watermark.
- * Bottom: Time, Amber Yellow Seekbar, "مباشر 🔴", Fullscreen arrows.
+ * Bottom: Time, Amber Yellow Seekbar, Live indicator, Fullscreen arrows.
  */
 @Composable
 fun TodControlsOverlay(
@@ -104,10 +104,7 @@ fun TodControlsOverlay(
   onToggleFullscreen: () -> Unit,
   onNavigateBack: () -> Unit,
   onSelectMoment: (MatchMoment) -> Unit,
-  onTakeSnapshot: () -> Unit = {},
   onCycleAspectRatio: () -> Unit = {},
-  onSetSleepTimer: (Int) -> Unit = {},
-  onCancelSleepTimer: () -> Unit = {},
   onNextChannel: (() -> Unit)? = null,
   onPreviousChannel: (() -> Unit)? = null,
   onReloadStream: () -> Unit = {},
@@ -657,7 +654,7 @@ fun TodControlsOverlay(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Right: Mute + "🔴 مباشر" Live badge + Fullscreen toggle icon
+            // Right: Mute + Live badge + Fullscreen toggle icon
             Row(
               verticalAlignment = Alignment.CenterVertically,
               horizontalArrangement = Arrangement.spacedBy(14.dp)

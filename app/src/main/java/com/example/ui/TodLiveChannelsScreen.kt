@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -68,12 +69,14 @@ fun TodLiveChannelsScreen(
   modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
-  var selectedCategoryId by remember { mutableStateOf<String?>("ALL") }
+  var selectedCategoryId by remember(categories) {
+    mutableStateOf(categories.firstOrNull()?.categoryId)
+  }
   var searchQuery by remember { mutableStateOf("") }
 
   val filteredChannels = remember(channels, selectedCategoryId, searchQuery) {
     var list = channels
-    if (selectedCategoryId != null && selectedCategoryId != "ALL") {
+    if (selectedCategoryId != null) {
       list = list.filter { it.categoryId == selectedCategoryId }
     }
     if (searchQuery.isNotBlank()) {
@@ -134,7 +137,7 @@ fun TodLiveChannelsScreen(
       )
     )
 
-    // Category Chips Bar (قنوات الرياضة, قنوات الجزيرة, قنوات المسلسلات, إلخ)
+    // Category Chips Bar (Xtream Categories Only)
     if (categories.isNotEmpty()) {
       Row(
         modifier = Modifier
@@ -143,24 +146,7 @@ fun TodLiveChannelsScreen(
           .padding(horizontal = 12.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
       ) {
-        // "الكل" Chip
-        val isAllSelected = selectedCategoryId == "ALL"
-        Box(
-          modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(if (isAllSelected) TodGold else Color(0xFF1C1C22))
-            .clickable { selectedCategoryId = "ALL" }
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-        ) {
-          Text(
-            text = "جميع القنوات (${channels.size})",
-            color = if (isAllSelected) Color.Black else Color.White,
-            fontSize = 12.sp,
-            fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Medium
-          )
-        }
-
-        categories.filter { it.categoryId != "ALL" }.forEach { cat ->
+        categories.forEach { cat ->
           val isSelected = selectedCategoryId == cat.categoryId
           Box(
             modifier = Modifier
@@ -237,7 +223,12 @@ fun TodLiveChannelsScreen(
                     .background(Color(0xFF1E1E26)),
                   contentAlignment = Alignment.Center
                 ) {
-                  Text("📺", fontSize = 24.sp)
+                  Icon(
+                    Icons.Default.Tv,
+                    contentDescription = null,
+                    tint = TodGold,
+                    modifier = Modifier.size(26.dp)
+                  )
                 }
               }
 

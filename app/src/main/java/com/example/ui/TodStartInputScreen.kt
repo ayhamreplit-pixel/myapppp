@@ -205,7 +205,7 @@ fun TodStartInputScreen(
               )
               Spacer(modifier = Modifier.width(6.dp))
               Text(
-                text = "قنوات TOD",
+                text = "قنوات Jawwy TV",
                 color = Color.White,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold
@@ -384,7 +384,7 @@ fun TodStartInputScreen(
 
         // 4. ENTER HLS LIVE SAMPLE (bonus for live sport testing)
         SamplePresetButton(
-          label = "ENTER HLS LIVE (TOD SPORTS)",
+          label = "ENTER HLS LIVE (JAWWY SPORTS)",
           onClick = {
             title = "جوهور دار التعظيم ضد بوريراك يونايتد"
             url = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"

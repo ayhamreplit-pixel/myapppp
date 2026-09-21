@@ -648,7 +648,7 @@ class TodExoPlayerManager(
             val format = group.getTrackFormat(i)
             val lang = format.language ?: "und"
             val label = when (lang.lowercase()) {
-              "ar", "ara" -> "تعليق عربي (TOD Arabic)"
+              "ar", "ara" -> "تعليق عربي (Jawwy Arabic)"
               "en", "eng" -> "تعليق إنجليزي (English)"
               "fr", "fra" -> "تعليق فرنسي (French)"
               "es", "spa" -> "تعليق إسباني (Spanish)"

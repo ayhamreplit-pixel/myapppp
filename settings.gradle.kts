@@ -16,6 +16,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "TOD Player"
+rootProject.name = "Jawwy IPTV"
 
 include(":app")

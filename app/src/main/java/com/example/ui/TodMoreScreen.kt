@@ -217,7 +217,7 @@ fun TodMoreScreen(
 
     Spacer(modifier = Modifier.height(28.dp))
 
-    // 2. Direct Stream Quick Play Button (تشغيل رابط مباشر فوراً ⚡)
+    // 2. Direct Stream Quick Play Button (تشغيل رابط مباشر فوراً)
     Box(
       modifier = Modifier
         .fillMaxWidth()

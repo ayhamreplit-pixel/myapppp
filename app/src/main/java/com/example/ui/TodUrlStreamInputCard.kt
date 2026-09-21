@@ -223,7 +223,7 @@ fun TodUrlStreamInputCard(
                   .padding(horizontal = 6.dp, vertical = 2.dp)
               ) {
                 Text(
-                  text = "TOD DIRECT",
+                  text = "JAWWY DIRECT",
                   color = TodCyan,
                   fontSize = 9.sp,
                   fontWeight = FontWeight.ExtraBold

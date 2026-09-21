@@ -1,18 +1,10 @@
 package com.example.ui
 
 import android.app.Activity
-import android.content.ContentValues
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Rect
 import android.media.AudioManager
 import android.os.Build
-import android.os.Environment
-import android.os.Handler
-import android.os.Looper
-import android.provider.MediaStore
 import android.util.Log
-import android.view.PixelCopy
 import android.view.ViewGroup
 import android.view.WindowManager
 import androidx.annotation.OptIn
@@ -129,75 +121,7 @@ fun TodPlayerView(
 
   var showDoubleTapFeedback by remember { mutableStateOf<String?>(null) }
 
-  // Snapshot Capture States
-  var capturedSnapshot by remember { mutableStateOf<Bitmap?>(null) }
-  var showSnapshotFlash by remember { mutableStateOf(false) }
-  var snapshotMessage by remember { mutableStateOf<String?>(null) }
-  var showSnapshotPreview by remember { mutableStateOf(false) }
-
   val coroutineScope = rememberCoroutineScope()
-
-  val takeSnapshot: () -> Unit = {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && activity != null) {
-      val window = activity.window
-      val view = window.decorView
-      if (view.width > 0 && view.height > 0) {
-        val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
-        val locationOfViewInWindow = IntArray(2)
-        view.getLocationInWindow(locationOfViewInWindow)
-        try {
-          PixelCopy.request(
-            window,
-            Rect(
-              locationOfViewInWindow[0],
-              locationOfViewInWindow[1],
-              locationOfViewInWindow[0] + view.width,
-              locationOfViewInWindow[1] + view.height
-            ),
-            bitmap,
-            { copyResult ->
-              if (copyResult == PixelCopy.SUCCESS) {
-                capturedSnapshot = bitmap
-                showSnapshotFlash = true
-                showSnapshotPreview = true
-                snapshotMessage = "تم حفظ لقطة الشاشة في ألبوم الصور بنجاح! 📸"
-
-                // Auto-save to Pictures/TOD_Live
-                try {
-                  val resolver = context.contentResolver
-                  val contentValues = ContentValues().apply {
-                    put(MediaStore.MediaColumns.DISPLAY_NAME, "TOD_Snapshot_${System.currentTimeMillis()}.jpg")
-                    put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                      put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/TOD_Live")
-                    }
-                  }
-                  val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-                  if (uri != null) {
-                    resolver.openOutputStream(uri)?.use { stream ->
-                      bitmap.compress(Bitmap.CompressFormat.JPEG, 95, stream)
-                    }
-                  }
-                } catch (e: Exception) {
-                  Log.e("TodPlayerView", "Error saving snapshot", e)
-                }
-
-                coroutineScope.launch {
-                  delay(450)
-                  showSnapshotFlash = false
-                  delay(4000)
-                  showSnapshotPreview = false
-                }
-              }
-            },
-            Handler(Looper.getMainLooper())
-          )
-        } catch (e: Exception) {
-          Log.e("TodPlayerView", "PixelCopy failed", e)
-        }
-      }
-    }
-  }
 
   // Auto-hide controls timer
   LaunchedEffect(controlsVisible, playerState.isPlaying, lastUserInteraction) {
@@ -501,10 +425,7 @@ fun TodPlayerView(
         playerManager.seekTo(moment.timeSeconds * 1000)
         lastUserInteraction = System.currentTimeMillis().toFloat()
       },
-      onTakeSnapshot = { takeSnapshot() },
       onCycleAspectRatio = { playerManager.cycleAspectRatio() },
-      onSetSleepTimer = { mins -> playerManager.setSleepTimer(mins) },
-      onCancelSleepTimer = { playerManager.cancelSleepTimer() },
       onNextChannel = onNextChannel,
       onPreviousChannel = onPreviousChannel,
       onReloadStream = { playerManager.reloadStream() },
@@ -529,84 +450,6 @@ fun TodPlayerView(
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, targetVol, 0)
       }
     )
-
-    // Snapshot Camera Flash Animation
-    AnimatedVisibility(
-      visible = showSnapshotFlash,
-      enter = fadeIn(tween(50)),
-      exit = fadeOut(tween(350)),
-      modifier = Modifier.fillMaxSize()
-    ) {
-      Box(
-        modifier = Modifier
-          .fillMaxSize()
-          .background(Color.White.copy(alpha = 0.85f))
-      )
-    }
-
-    // Snapshot Saved Floating Capsule Banner
-    AnimatedVisibility(
-      visible = showSnapshotPreview,
-      enter = fadeIn() + slideInVertically { -it },
-      exit = fadeOut() + slideOutVertically { -it },
-      modifier = Modifier
-        .align(Alignment.TopCenter)
-        .padding(top = 24.dp)
-    ) {
-      Box(
-        modifier = Modifier
-          .clip(RoundedCornerShape(16.dp))
-          .background(Color(0xE6101524))
-          .border(1.dp, TodAmberYellow.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
-          .padding(horizontal = 16.dp, vertical = 10.dp)
-      ) {
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-          capturedSnapshot?.let { bmp ->
-            Image(
-              bitmap = bmp.asImageBitmap(),
-              contentDescription = "Snapshot Thumbnail",
-              modifier = Modifier
-                .size(44.dp, 30.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
-            )
-          }
-
-          Icon(
-            imageVector = Icons.Default.CheckCircle,
-            contentDescription = null,
-            tint = TodAmberYellow,
-            modifier = Modifier.size(20.dp)
-          )
-
-          Column {
-            Text(
-              text = "تم التقاط لقطة الشاشة 📸",
-              color = Color.White,
-              fontWeight = FontWeight.Bold,
-              fontSize = 13.sp
-            )
-            Text(
-              text = "تم حفظ الصورة عالية الدقة في ألبوم الصور",
-              color = Color(0xFFB0B0B0),
-              fontSize = 11.sp
-            )
-          }
-
-          Icon(
-            imageVector = Icons.Default.Close,
-            contentDescription = "Close",
-            tint = Color.White.copy(alpha = 0.7f),
-            modifier = Modifier
-              .size(18.dp)
-              .clickable { showSnapshotPreview = false }
-          )
-        }
-      }
-    }
 
     // Stats for Nerds Telemetry HUD
     if (playerState.showStatsHud) {
@@ -680,12 +523,18 @@ fun TodPlayerView(
                 .clickable { playerManager.retryStream() }
                 .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-              Text(
-                text = "إعادة المحاولة",
-                color = Color.Black,
-                fontWeight = FontWeight.Bold,
-                fontSize = 13.sp
-              )
+              Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+              ) {
+                TodReloadIcon(size = 18.dp, tint = Color.Black)
+                Text(
+                  text = "إعادة المحاولة",
+                  color = Color.Black,
+                  fontWeight = FontWeight.Bold,
+                  fontSize = 13.sp
+                )
+              }
             }
           }
         }
