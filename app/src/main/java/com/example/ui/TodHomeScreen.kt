@@ -1,9 +1,20 @@
 package com.example.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -54,6 +65,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -69,6 +82,7 @@ import com.example.ui.theme.DarkBg
 import com.example.ui.theme.DarkTextSecondary
 import com.example.ui.theme.TodButtonGrey
 import com.example.ui.theme.TodGold
+import com.example.ui.theme.TodGoldGlow
 import com.example.ui.theme.TodGradients
 import com.example.ui.theme.TodLiveRed
 import kotlinx.coroutines.delay
@@ -232,7 +246,7 @@ fun TodHomeScreen(
   Column(
     modifier = modifier
       .fillMaxSize()
-      .background(DarkBg)
+      .background(TodGradients.ObsidianCanvas)
   ) {
     // 1. Top Header: TOD Logo + User Xtream Categories
     Column(
@@ -284,25 +298,32 @@ fun TodHomeScreen(
         // Real Xtream Categories Chips
         xtreamCategories.filter { it.categoryId != "ALL" }.forEach { category ->
           val isSelected = selectedCategoryId == category.categoryId
+          val chipScale by animateFloatAsState(
+            targetValue = if (isSelected) 1.05f else 1.0f,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+            label = "chipScale_${category.categoryId}"
+          )
+
           Box(
             modifier = Modifier
+              .scale(chipScale)
               .clip(RoundedCornerShape(20.dp))
               .background(
                 if (isSelected) {
-                  Brush.horizontalGradient(listOf(TodGold, Color(0xFFFFB300)))
+                  TodGradients.LiquidGold
                 } else {
-                  Brush.horizontalGradient(listOf(Color(0xFF181820), Color(0xFF181820)))
+                  Brush.horizontalGradient(listOf(Color(0xFF161622), Color(0xFF101018)))
                 }
               )
               .border(
                 1.dp,
-                if (isSelected) TodGold else Color(0xFF282834),
+                if (isSelected) Color(0xFFFFD54F) else Color(0xFF28283A),
                 RoundedCornerShape(20.dp)
               )
               .clickable { 
                 selectedCategoryId = if (isSelected) null else category.categoryId
               }
-              .padding(horizontal = 14.dp, vertical = 7.dp)
+              .padding(horizontal = 15.dp, vertical = 7.dp)
           ) {
             Text(
               text = if (category.channelCount > 0) "${category.categoryName} (${category.channelCount})" else category.categoryName,
@@ -461,84 +482,91 @@ fun TodHomeScreen(
               .padding(horizontal = 16.dp, vertical = 10.dp),
             horizontalAlignment = Alignment.End
           ) {
-            // Badges / Tags row
-            if (activeHero.tags.isNotEmpty()) {
-              Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
-              ) {
-                activeHero.tags.forEach { tag ->
-                  Box(
-                    modifier = Modifier
-                      .clip(RoundedCornerShape(4.dp))
-                      .background(Color(0xFF222228))
-                      .border(1.dp, Color(0xFF383842), RoundedCornerShape(4.dp))
-                      .padding(horizontal = 8.dp, vertical = 3.dp)
-                  ) {
-                    Text(tag, color = Color.White, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
-                  }
-                }
-              }
-              Spacer(modifier = Modifier.height(4.dp))
-            }
-
-            // Live Pill
-            if (activeHero.isLive) {
-              Box(
-                modifier = Modifier
-                  .clip(RoundedCornerShape(4.dp))
-                  .background(TodLiveRed)
-                  .padding(horizontal = 9.dp, vertical = 3.dp)
-              ) {
-                Text("مباشر", color = Color.White, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
-              }
-              Spacer(modifier = Modifier.height(4.dp))
-            }
-
-            // Hero Title + Channel Logo Row
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.End
-            ) {
+            // Animated Hero Content with Cross-fade
+            AnimatedContent(
+              targetState = activeHero,
+              transitionSpec = {
+                fadeIn(animationSpec = tween(450)) togetherWith fadeOut(animationSpec = tween(350))
+              },
+              label = "heroCrossfade"
+            ) { hero ->
               Column(
-                horizontalAlignment = Alignment.End,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.End
               ) {
-                Text(
-                  text = activeHero.title,
-                  color = Color.White,
-                  fontSize = 20.sp,
-                  fontWeight = FontWeight.Black,
-                  textAlign = TextAlign.End,
-                  maxLines = 2,
-                  overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                  text = activeHero.subtitle,
-                  color = DarkTextSecondary,
-                  fontSize = 11.5.sp,
-                  textAlign = TextAlign.End
-                )
-              }
+                // Badges / Tags row
+                if (hero.tags.isNotEmpty()) {
+                  Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                  ) {
+                    hero.tags.forEach { tag ->
+                      Box(
+                        modifier = Modifier
+                          .clip(RoundedCornerShape(4.dp))
+                          .background(Color(0xFF222228))
+                          .border(1.dp, Color(0xFF383842), RoundedCornerShape(4.dp))
+                          .padding(horizontal = 8.dp, vertical = 3.dp)
+                      ) {
+                        Text(tag, color = Color.White, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+                      }
+                    }
+                  }
+                  Spacer(modifier = Modifier.height(4.dp))
+                }
 
-              if (!activeHero.channel?.iconUrl.isNullOrBlank()) {
-                Spacer(modifier = Modifier.width(12.dp))
-                Box(
-                  modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0x99181824))
-                    .border(1.dp, TodGold.copy(alpha = 0.7f), RoundedCornerShape(10.dp))
-                    .padding(4.dp),
-                  contentAlignment = Alignment.Center
+                // Pulsing Live Beacon Pill
+                if (hero.isLive) {
+                  PulsingLiveBadge()
+                  Spacer(modifier = Modifier.height(6.dp))
+                }
+
+                // Hero Title + Channel Logo Row
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.End
                 ) {
-                  AsyncImage(
-                    model = activeHero.channel?.iconUrl,
-                    contentDescription = activeHero.title,
-                    modifier = Modifier.size(38.dp),
-                    contentScale = ContentScale.Fit
-                  )
+                  Column(
+                    horizontalAlignment = Alignment.End,
+                    modifier = Modifier.weight(1f)
+                  ) {
+                    Text(
+                      text = hero.title,
+                      color = Color.White,
+                      fontSize = 20.sp,
+                      fontWeight = FontWeight.Black,
+                      textAlign = TextAlign.End,
+                      maxLines = 2,
+                      overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                      text = hero.subtitle,
+                      color = DarkTextSecondary,
+                      fontSize = 11.5.sp,
+                      textAlign = TextAlign.End
+                    )
+                  }
+
+                  if (!hero.channel?.iconUrl.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Box(
+                      modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0x99181824))
+                        .border(1.dp, TodGold.copy(alpha = 0.7f), RoundedCornerShape(10.dp))
+                        .padding(4.dp),
+                      contentAlignment = Alignment.Center
+                    ) {
+                      AsyncImage(
+                        model = hero.channel?.iconUrl,
+                        contentDescription = hero.title,
+                        modifier = Modifier.size(38.dp),
+                        contentScale = ContentScale.Fit
+                      )
+                    }
+                  }
                 }
               }
             }
@@ -577,20 +605,22 @@ fun TodHomeScreen(
                 Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
               }
 
-              // Big Wide Yellow Button: "تابع الآن ▶"
-              Button(
-                onClick = {
-                  if (activeHero.channel != null) {
-                    onPlayChannel(activeHero.channel, allChannels, "TOD Hero")
-                  } else {
-                    onOpenProfile()
-                  }
-                },
+              // Big Wide Liquid Gold Button: "تابع الآن ▶"
+              Box(
                 modifier = Modifier
                   .weight(1f)
-                  .height(42.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = TodGold),
-                shape = RoundedCornerShape(10.dp)
+                  .height(44.dp)
+                  .clip(RoundedCornerShape(11.dp))
+                  .background(TodGradients.LiquidGold)
+                  .border(1.dp, Color(0x66FFFFFF), RoundedCornerShape(11.dp))
+                  .clickable {
+                    if (activeHero.channel != null) {
+                      onPlayChannel(activeHero.channel, allChannels, "TOD Hero")
+                    } else {
+                      onOpenProfile()
+                    }
+                  },
+                contentAlignment = Alignment.Center
               ) {
                 Row(
                   verticalAlignment = Alignment.CenterVertically,
@@ -599,7 +629,7 @@ fun TodHomeScreen(
                   Text(
                     text = activeHero.primaryButtonLabel,
                     color = Color.Black,
-                    fontSize = 14.sp,
+                    fontSize = 14.5.sp,
                     fontWeight = FontWeight.Black
                   )
                   Spacer(modifier = Modifier.width(6.dp))
@@ -698,13 +728,14 @@ fun TodHomeScreen(
           Spacer(modifier = Modifier.height(18.dp))
         }
 
-        // 5. Dynamic Xtream Category Rails
-        channelsByCategory.forEach { (category, catChannels) ->
+        // 5. Dynamic Xtream Category Rails (Show top 15 rails on home feed for buttery-smooth scrolling)
+        val homeRails = channelsByCategory.entries.take(15)
+        homeRails.forEach { (category, catChannels) ->
           if (catChannels.isNotEmpty()) {
             DynamicChannelRail(
               sectionTitle = category.categoryName,
               actionLabel = "عرض الكل (${catChannels.size})",
-              channels = catChannels.take(25),
+              channels = catChannels.take(20),
               allChannels = allChannels,
               onActionClick = {
                 selectedCategoryId = category.categoryId
@@ -735,7 +766,7 @@ fun TodHomeScreen(
 }
 
 /**
- * Modern Corporate Card for Grid View
+ * Modern Corporate Card for Grid View with Spring Bounce & Specular Glow Border
  */
 @Composable
 fun CorporateChannelGridCard(
@@ -744,18 +775,30 @@ fun CorporateChannelGridCard(
   categoryName: String,
   onPlayChannel: (XtreamChannel, List<XtreamChannel>, String) -> Unit
 ) {
+  val interactionSource = remember { MutableInteractionSource() }
+  val isPressed by interactionSource.collectIsPressedAsState()
+  val scale by animateFloatAsState(
+    targetValue = if (isPressed) 0.94f else 1.0f,
+    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+    label = "gridCardScale"
+  )
+
+  val qualityLabel = if (channel.name.contains("4K", ignoreCase = true)) "4K UHD" 
+                     else if (channel.name.contains("FHD", ignoreCase = true)) "1080p FHD" 
+                     else "HD"
+
   Box(
     modifier = Modifier
+      .scale(scale)
       .fillMaxWidth()
-      .height(125.dp)
+      .height(128.dp)
       .clip(RoundedCornerShape(14.dp))
-      .background(
-        Brush.verticalGradient(
-          colors = listOf(Color(0xFF161620), Color(0xFF0E0E14))
-        )
-      )
-      .border(1.dp, Color(0xFF262634), RoundedCornerShape(14.dp))
-      .clickable { onPlayChannel(channel, allChannels, categoryName) }
+      .background(TodGradients.CardGlass)
+      .border(1.dp, TodGradients.SpecularCardBorder, RoundedCornerShape(14.dp))
+      .clickable(
+        interactionSource = interactionSource,
+        indication = null
+      ) { onPlayChannel(channel, allChannels, categoryName) }
       .padding(10.dp)
   ) {
     // Channel Icon / Placeholder
@@ -764,7 +807,7 @@ fun CorporateChannelGridCard(
         model = channel.iconUrl,
         contentDescription = null,
         modifier = Modifier
-          .size(36.dp)
+          .size(38.dp)
           .align(Alignment.TopStart)
           .clip(RoundedCornerShape(8.dp)),
         contentScale = ContentScale.Fit
@@ -772,9 +815,9 @@ fun CorporateChannelGridCard(
     } else {
       Box(
         modifier = Modifier
-          .size(32.dp)
+          .size(34.dp)
           .clip(RoundedCornerShape(8.dp))
-          .background(Color(0xFF22222E))
+          .background(Color(0xFF1E1E28))
           .align(Alignment.TopStart),
         contentAlignment = Alignment.Center
       ) {
@@ -782,16 +825,10 @@ fun CorporateChannelGridCard(
       }
     }
 
-    // Live Badge
-    Box(
-      modifier = Modifier
-        .align(Alignment.TopEnd)
-        .clip(RoundedCornerShape(4.dp))
-        .background(TodLiveRed)
-        .padding(horizontal = 7.dp, vertical = 2.dp)
-    ) {
-      Text("مباشر", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black)
-    }
+    // Live Pulsing Beacon
+    PulsingLiveBadge(
+      modifier = Modifier.align(Alignment.TopEnd)
+    )
 
     // Channel Name & Info at bottom
     Column(
@@ -809,27 +846,8 @@ fun CorporateChannelGridCard(
         overflow = TextOverflow.Ellipsis,
         textAlign = TextAlign.End
       )
-      Spacer(modifier = Modifier.height(2.dp))
-      Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-      ) {
-        Box(
-          modifier = Modifier
-            .clip(RoundedCornerShape(3.dp))
-            .background(Color(0xFF20202A))
-            .padding(horizontal = 4.dp, vertical = 1.dp)
-        ) {
-          Text(
-            text = if (channel.name.contains("4K", ignoreCase = true)) "4K" 
-                   else if (channel.name.contains("FHD", ignoreCase = true)) "FHD" 
-                   else "HD",
-            color = TodGold,
-            fontSize = 9.sp,
-            fontWeight = FontWeight.Bold
-          )
-        }
-      }
+      Spacer(modifier = Modifier.height(3.dp))
+      VideoQualityBadge(qualityText = qualityLabel)
     }
   }
 }
@@ -875,17 +893,31 @@ fun DynamicChannelRail(
       contentPadding = PaddingValues(horizontal = 16.dp),
       horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-      items(channels) { channel ->
+      items(channels, key = { it.streamId }) { channel ->
+        val interactionSource = remember { MutableInteractionSource() }
+        val isPressed by interactionSource.collectIsPressedAsState()
+        val scale by animateFloatAsState(
+          targetValue = if (isPressed) 0.94f else 1.0f,
+          animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+          label = "railCardScale"
+        )
+
+        val qualityLabel = if (channel.name.contains("4K", ignoreCase = true)) "4K UHD" 
+                           else if (channel.name.contains("FHD", ignoreCase = true)) "1080p FHD" 
+                           else "HD"
+
         Box(
           modifier = Modifier
-            .width(165.dp)
-            .height(115.dp)
+            .scale(scale)
+            .width(168.dp)
+            .height(118.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(
-              Brush.verticalGradient(listOf(Color(0xFF15151E), Color(0xFF0C0C12)))
-            )
-            .border(1.dp, Color(0xFF242432), RoundedCornerShape(12.dp))
-            .clickable { onPlayChannel(channel, allChannels, sectionTitle) }
+            .background(TodGradients.CardGlass)
+            .border(1.dp, TodGradients.SpecularCardBorder, RoundedCornerShape(12.dp))
+            .clickable(
+              interactionSource = interactionSource,
+              indication = null
+            ) { onPlayChannel(channel, allChannels, sectionTitle) }
             .padding(10.dp)
         ) {
           // Channel Icon if available
@@ -904,7 +936,7 @@ fun DynamicChannelRail(
               modifier = Modifier
                 .size(30.dp)
                 .clip(RoundedCornerShape(6.dp))
-                .background(Color(0xFF22222E))
+                .background(Color(0xFF1E1E28))
                 .align(Alignment.TopStart),
               contentAlignment = Alignment.Center
             ) {
@@ -912,16 +944,10 @@ fun DynamicChannelRail(
             }
           }
 
-          // Live Red Badge
-          Box(
-            modifier = Modifier
-              .align(Alignment.TopEnd)
-              .clip(RoundedCornerShape(4.dp))
-              .background(TodLiveRed)
-              .padding(horizontal = 6.dp, vertical = 2.dp)
-          ) {
-            Text("مباشر", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black)
-          }
+          // Live Red Pulsing Badge
+          PulsingLiveBadge(
+            modifier = Modifier.align(Alignment.TopEnd)
+          )
 
           // Channel Name & Info at bottom
           Column(
@@ -940,11 +966,7 @@ fun DynamicChannelRail(
               textAlign = TextAlign.End
             )
             Spacer(modifier = Modifier.height(2.dp))
-            Text(
-              text = if (channel.name.contains("4K", ignoreCase = true)) "4K Ultra HD" else "1080p FHD",
-              color = DarkTextSecondary,
-              fontSize = 9.5.sp
-            )
+            VideoQualityBadge(qualityText = qualityLabel)
           }
         }
       }

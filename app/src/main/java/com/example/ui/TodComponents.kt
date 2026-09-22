@@ -12,6 +12,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -383,7 +385,8 @@ private fun CountdownBox(value: String, label: String) {
   Row(
     modifier = Modifier
       .clip(RoundedCornerShape(8.dp))
-      .background(Color(0xFF232328))
+      .background(TodGradients.CardGlass)
+      .border(1.dp, TodGradients.SpecularCardBorder, RoundedCornerShape(8.dp))
       .padding(horizontal = 10.dp, vertical = 6.dp),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -670,16 +673,29 @@ fun TodMatchDetailSheet(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // 3. Primary Button: Big Wide Yellow Button (Screenshot 1 & 2)
-        Button(
-          onClick = {
-            if (match.isLive) onPlayNow() else isSavedToMyTod = !isSavedToMyTod
-          },
+        // 3. Primary Button: Big Wide Yellow Button with Liquid Gold Gradient & Spring Physics
+        val matchPrimaryInteraction = remember { MutableInteractionSource() }
+        val isMatchPrimaryPressed by matchPrimaryInteraction.collectIsPressedAsState()
+        val matchPrimaryScale by animateFloatAsState(
+          targetValue = if (isMatchPrimaryPressed) 0.95f else 1.0f,
+          animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+          label = "matchPrimaryScale"
+        )
+
+        Box(
           modifier = Modifier
+            .scale(matchPrimaryScale)
             .fillMaxWidth()
-            .height(52.dp),
-          colors = ButtonDefaults.buttonColors(containerColor = TodGold),
-          shape = RoundedCornerShape(12.dp)
+            .height(52.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(TodGradients.LiquidGold)
+            .clickable(
+              interactionSource = matchPrimaryInteraction,
+              indication = null
+            ) {
+              if (match.isLive) onPlayNow() else isSavedToMyTod = !isSavedToMyTod
+            },
+          contentAlignment = Alignment.Center
         ) {
           Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -719,8 +735,9 @@ fun TodMatchDetailSheet(
             onClick = onPlayCatchup,
             modifier = Modifier
               .fillMaxWidth()
-              .height(48.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = TodButtonGrey),
+              .height(48.dp)
+              .border(1.dp, TodGradients.SpecularCardBorder, RoundedCornerShape(12.dp)),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B1B26)),
             shape = RoundedCornerShape(12.dp)
           ) {
             Row(
@@ -750,8 +767,9 @@ fun TodMatchDetailSheet(
             onClick = onPlayMultiView,
             modifier = Modifier
               .fillMaxWidth()
-              .height(48.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = TodButtonGrey),
+              .height(48.dp)
+              .border(1.dp, TodGradients.SpecularCardBorder, RoundedCornerShape(12.dp)),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B1B26)),
             shape = RoundedCornerShape(12.dp)
           ) {
             Row(

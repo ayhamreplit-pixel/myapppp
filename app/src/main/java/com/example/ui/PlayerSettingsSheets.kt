@@ -20,7 +20,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Subtitles
+import androidx.compose.material.icons.filled.VideoSettings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -66,76 +69,63 @@ fun VideoQualitySheet(
   ModalBottomSheet(
     onDismissRequest = onDismiss,
     sheetState = sheetState,
-    containerColor = DarkSurface,
-    tonalElevation = 8.dp
+    containerColor = Color(0xFF14141E),
+    dragHandle = { IosGrabber() },
+    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
   ) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
-        .padding(horizontal = 20.dp, vertical = 8.dp)
-        .padding(bottom = 32.dp)
+        .padding(horizontal = 18.dp)
+        .padding(bottom = 34.dp)
     ) {
       Text(
-        text = "Broadcast Video Quality",
-        color = DarkTextPrimary,
-        fontSize = 18.sp,
+        text = "جودة ودقة الفيديو (Video Quality)",
+        color = Color.White,
+        fontSize = 17.sp,
         fontWeight = FontWeight.Bold
       )
       Text(
-        text = "Select preferred resolution or let TOD adaptive stream optimize",
-        color = DarkTextSecondary,
-        fontSize = 13.sp,
+        text = "اختر الدقة المفضلة أو دع البث التكيفي يحدد الجودة المثلى لشبكتك",
+        color = Color(0xFF8E8E93),
+        fontSize = 12.5.sp,
         modifier = Modifier.padding(top = 2.dp, bottom = 16.dp)
       )
 
-      LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(qualities) { quality ->
+      IosListGroup {
+        qualities.forEachIndexed { index, quality ->
           val isSelected = (selectedQuality == null && quality.isAuto) ||
             (selectedQuality?.id == quality.id)
 
-          Row(
-            modifier = Modifier
-              .fillMaxWidth()
-              .clip(RoundedCornerShape(12.dp))
-              .background(if (isSelected) TodAmberYellow.copy(alpha = 0.18f) else DarkSurfaceElevated)
-              .clickable {
-                onSelect(quality)
-                onDismiss()
-              }
-              .padding(horizontal = 16.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Column {
-              Text(
-                text = quality.label,
-                color = if (isSelected) TodAmberYellow else DarkTextPrimary,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                fontSize = 15.sp
+          IosListRow(
+            title = quality.label,
+            subtitle = if (quality.isAuto) "تعديل ديناميكي تلقائي يمنع التقطيع"
+            else if (quality.bitrate > 0) "${quality.bitrate / 1000} Kbps معدل البث"
+            else null,
+            iconBadge = {
+              IosIconBadge(
+                icon = Icons.Default.VideoSettings,
+                background = if (isSelected) IosBadgeColors.Gold else IosBadgeColors.Slate,
+                tint = if (isSelected) Color.Black else Color.White
               )
-              if (quality.isAuto) {
-                Text(
-                  text = "Dynamically adjusts to your network speed",
-                  color = DarkTextSecondary,
-                  fontSize = 12.sp
-                )
-              } else if (quality.bitrate > 0) {
-                Text(
-                  text = "${quality.bitrate / 1000} Kbps",
-                  color = DarkTextSecondary,
-                  fontSize = 12.sp
+            },
+            trailing = if (isSelected) {
+              {
+                Icon(
+                  imageVector = Icons.Default.Check,
+                  contentDescription = "Selected",
+                  tint = TodGold,
+                  modifier = Modifier.size(20.dp)
                 )
               }
+            } else null,
+            showChevron = false,
+            showDivider = index < qualities.size - 1,
+            onClick = {
+              onSelect(quality)
+              onDismiss()
             }
-            if (isSelected) {
-              Icon(
-                imageVector = Icons.Default.Check,
-                contentDescription = "Selected",
-                tint = TodAmberYellow,
-                modifier = Modifier.size(20.dp)
-              )
-            }
-          }
+          )
         }
       }
     }
@@ -154,92 +144,69 @@ fun AudioTrackSheet(
   ModalBottomSheet(
     onDismissRequest = onDismiss,
     sheetState = sheetState,
-    containerColor = DarkSurface
+    containerColor = Color(0xFF14141E),
+    dragHandle = { IosGrabber() },
+    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
   ) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
-        .padding(horizontal = 20.dp, vertical = 8.dp)
-        .padding(bottom = 32.dp)
+        .padding(horizontal = 18.dp)
+        .padding(bottom = 34.dp)
     ) {
       Text(
-        text = "Commentary & Audio Language",
-        color = DarkTextPrimary,
-        fontSize = 18.sp,
+        text = "المسار الصوتي والتعليق (Audio Tracks)",
+        color = Color.White,
+        fontSize = 17.sp,
         fontWeight = FontWeight.Bold
       )
       Text(
-        text = "Select commentary broadcast or stadium sound channel",
-        color = DarkTextSecondary,
-        fontSize = 13.sp,
+        text = "اختر القناة الصوتية المفضلة (صوت المعلق الأول / الثاني أو صوت الملعب)",
+        color = Color(0xFF8E8E93),
+        fontSize = 12.5.sp,
         modifier = Modifier.padding(top = 2.dp, bottom = 16.dp)
       )
 
       if (audioTracks.isEmpty()) {
-        Box(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 24.dp),
-          contentAlignment = Alignment.Center
-        ) {
-          Text("Standard Stereo Commentary (Default)", color = DarkTextSecondary)
+        IosListGroup {
+          IosListRow(
+            title = "المسار الافتراضي (Standard Stereo)",
+            subtitle = "القناة الصوتية المضمنة للبث",
+            iconBadge = {
+              IosIconBadge(icon = Icons.AutoMirrored.Filled.VolumeUp, background = IosBadgeColors.Blue)
+            },
+            trailing = {
+              Icon(Icons.Default.Check, contentDescription = null, tint = TodGold, modifier = Modifier.size(20.dp))
+            },
+            showChevron = false,
+            showDivider = false
+          )
         }
       } else {
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-          items(audioTracks) { track ->
+        IosListGroup {
+          audioTracks.forEachIndexed { index, track ->
             val isSelected = selectedTrack?.id == track.id || (selectedTrack == null && track.isSelected)
-
-            Row(
-              modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(if (isSelected) TodAmberYellow.copy(alpha = 0.18f) else DarkSurfaceElevated)
-                .clickable {
-                  onSelect(track)
-                  onDismiss()
-                }
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                  modifier = Modifier
-                    .size(36.dp)
-                    .background(if (isSelected) TodAmberYellow.copy(alpha = 0.25f) else Color(0xFF1E2638), CircleShape),
-                  contentAlignment = Alignment.Center
-                ) {
-                  Icon(
-                    imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                    contentDescription = null,
-                    tint = if (isSelected) TodAmberYellow else DarkTextSecondary,
-                    modifier = Modifier.size(18.dp)
-                  )
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                  Text(
-                    text = track.label,
-                    color = if (isSelected) TodAmberYellow else DarkTextPrimary,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    fontSize = 15.sp
-                  )
-                  Text(
-                    text = "${if (track.channels > 2) "Dolby 5.1 / Surround" else "Stereo"} • ${track.language.uppercase()}",
-                    color = DarkTextSecondary,
-                    fontSize = 12.sp
-                  )
-                }
-              }
-              if (isSelected) {
-                Icon(
-                  imageVector = Icons.Default.Check,
-                  contentDescription = "Selected",
-                  tint = TodAmberYellow,
-                  modifier = Modifier.size(20.dp)
+            IosListRow(
+              title = track.label,
+              subtitle = "${if (track.channels > 2) "Dolby 5.1 المحيطي" else "Stereo"} • ${track.language.uppercase()}",
+              iconBadge = {
+                IosIconBadge(
+                  icon = Icons.AutoMirrored.Filled.VolumeUp,
+                  background = if (isSelected) IosBadgeColors.Indigo else IosBadgeColors.Slate
                 )
+              },
+              trailing = if (isSelected) {
+                {
+                  Icon(Icons.Default.Check, contentDescription = "Selected", tint = TodGold, modifier = Modifier.size(20.dp))
+                }
+              } else null,
+              showChevron = false,
+              showDivider = index < audioTracks.size - 1,
+              onClick = {
+                onSelect(track)
+                onDismiss()
               }
-            }
+            )
           }
         }
       }
@@ -259,82 +226,67 @@ fun SubtitleTrackSheet(
   ModalBottomSheet(
     onDismissRequest = onDismiss,
     sheetState = sheetState,
-    containerColor = DarkSurface
+    containerColor = Color(0xFF14141E),
+    dragHandle = { IosGrabber() },
+    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
   ) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
-        .padding(horizontal = 20.dp, vertical = 8.dp)
-        .padding(bottom = 32.dp)
+        .padding(horizontal = 18.dp)
+        .padding(bottom = 34.dp)
     ) {
       Text(
-        text = "Subtitles & Captions",
-        color = DarkTextPrimary,
-        fontSize = 18.sp,
+        text = "الترجمة والنصوص (Subtitles)",
+        color = Color.White,
+        fontSize = 17.sp,
         fontWeight = FontWeight.Bold
       )
       Text(
-        text = "Closed captions for live commentary and dialogues",
-        color = DarkTextSecondary,
-        fontSize = 13.sp,
+        text = "نصوص الترجمة المصاحبة والتعليق النصي",
+        color = Color(0xFF8E8E93),
+        fontSize = 12.5.sp,
         modifier = Modifier.padding(top = 2.dp, bottom = 16.dp)
       )
 
-      // Option: Off
       val isOff = selectedSubtitle == null
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(12.dp))
-          .background(if (isOff) TodAmberYellow.copy(alpha = 0.18f) else DarkSurfaceElevated)
-          .clickable {
+      IosListGroup {
+        // Option: Off
+        IosListRow(
+          title = "إيقاف الترجمة (Off)",
+          subtitle = "عدم عرض أي نصوص على الشاشة",
+          iconBadge = {
+            IosIconBadge(icon = Icons.Default.Subtitles, background = if (isOff) IosBadgeColors.Red else IosBadgeColors.Slate)
+          },
+          trailing = if (isOff) {
+            { Icon(Icons.Default.Check, contentDescription = "Selected", tint = TodGold, modifier = Modifier.size(20.dp)) }
+          } else null,
+          showChevron = false,
+          showDivider = subtitles.isNotEmpty(),
+          onClick = {
             onSelect(null)
             onDismiss()
           }
-          .padding(horizontal = 16.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Text(
-          text = "Off",
-          color = if (isOff) TodAmberYellow else DarkTextPrimary,
-          fontWeight = if (isOff) FontWeight.Bold else FontWeight.Medium,
-          fontSize = 15.sp
         )
-        if (isOff) {
-          Icon(Icons.Default.Check, "Selected", tint = TodAmberYellow, modifier = Modifier.size(20.dp))
-        }
-      }
 
-      Spacer(modifier = Modifier.height(8.dp))
-
-      LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(subtitles) { sub ->
+        subtitles.forEachIndexed { index, sub ->
           val isSelected = selectedSubtitle?.id == sub.id
-
-          Row(
-            modifier = Modifier
-              .fillMaxWidth()
-              .clip(RoundedCornerShape(12.dp))
-              .background(if (isSelected) TodAmberYellow.copy(alpha = 0.18f) else DarkSurfaceElevated)
-              .clickable {
-                onSelect(sub)
-                onDismiss()
-              }
-              .padding(horizontal = 16.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Text(
-              text = sub.label,
-              color = if (isSelected) TodAmberYellow else DarkTextPrimary,
-              fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-              fontSize = 15.sp
-            )
-            if (isSelected) {
-              Icon(Icons.Default.Check, "Selected", tint = TodAmberYellow, modifier = Modifier.size(20.dp))
+          IosListRow(
+            title = sub.label,
+            subtitle = sub.language.uppercase(),
+            iconBadge = {
+              IosIconBadge(icon = Icons.Default.Subtitles, background = if (isSelected) IosBadgeColors.Gold else IosBadgeColors.Slate)
+            },
+            trailing = if (isSelected) {
+              { Icon(Icons.Default.Check, contentDescription = "Selected", tint = TodGold, modifier = Modifier.size(20.dp)) }
+            } else null,
+            showChevron = false,
+            showDivider = index < subtitles.size - 1,
+            onClick = {
+              onSelect(sub)
+              onDismiss()
             }
-          }
+          )
         }
       }
     }
@@ -354,123 +306,98 @@ fun PlaybackSettingsSheet(
 ) {
   val sheetState = rememberModalBottomSheetState()
   val speeds = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
+  val speedLabels = listOf("0.5x", "0.75x", "عادي 1x", "1.25x", "1.5x", "2.0x")
+  val currentSpeedIndex = speeds.indexOf(currentSpeed).takeIf { it >= 0 } ?: 2
 
   ModalBottomSheet(
     onDismissRequest = onDismiss,
     sheetState = sheetState,
-    containerColor = DarkSurface
+    containerColor = Color(0xFF14141E),
+    dragHandle = { IosGrabber() },
+    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
   ) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
-        .padding(horizontal = 20.dp, vertical = 8.dp)
+        .padding(horizontal = 18.dp)
         .padding(bottom = 36.dp)
     ) {
       Text(
-        text = "Player Settings",
-        color = DarkTextPrimary,
-        fontSize = 18.sp,
+        text = "إعدادات المشغل (Player Controls)",
+        color = Color.White,
+        fontSize = 17.sp,
         fontWeight = FontWeight.Bold
       )
-
-      Spacer(modifier = Modifier.height(16.dp))
-
-      // Playback speed
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.Default.Speed, contentDescription = null, tint = TodAmberYellow, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.width(8.dp))
-        Text("Playback Speed", color = DarkTextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-      }
-      Spacer(modifier = Modifier.height(8.dp))
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-      ) {
-        speeds.forEach { speed ->
-          val isSelected = currentSpeed == speed
-          Box(
-            modifier = Modifier
-              .clip(RoundedCornerShape(8.dp))
-              .background(if (isSelected) TodAmberYellow else DarkSurfaceElevated)
-              .clickable { onSpeedChange(speed) }
-              .padding(horizontal = 10.dp, vertical = 8.dp),
-            contentAlignment = Alignment.Center
-          ) {
-            Text(
-              text = if (speed == 1.0f) "Normal" else "${speed}x",
-              color = if (isSelected) Color.Black else DarkTextPrimary,
-              fontWeight = if (isSelected) FontWeight.Black else FontWeight.Normal,
-              fontSize = 12.sp
-            )
-          }
-        }
-      }
-
-      Spacer(modifier = Modifier.height(20.dp))
-
-      // Aspect Ratio Mode
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.Default.AspectRatio, contentDescription = null, tint = TodAmberYellow, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.width(8.dp))
-        Text("Aspect Ratio / Resize Mode", color = DarkTextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-      }
-      Spacer(modifier = Modifier.height(8.dp))
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-      ) {
-        AspectRatioMode.values().forEach { mode ->
-          val isSelected = currentAspect == mode
-          Box(
-            modifier = Modifier
-              .weight(1f)
-              .clip(RoundedCornerShape(8.dp))
-              .background(if (isSelected) TodAmberYellow else DarkSurfaceElevated)
-              .clickable { onAspectChange(mode) }
-              .padding(vertical = 8.dp),
-            contentAlignment = Alignment.Center
-          ) {
-            Text(
-              text = mode.label,
-              color = if (isSelected) Color.Black else DarkTextPrimary,
-              fontWeight = if (isSelected) FontWeight.Black else FontWeight.Normal,
-              fontSize = 11.sp,
-              maxLines = 1
-            )
-          }
-        }
-      }
-
-      Spacer(modifier = Modifier.height(20.dp))
-
-      // Audio Boost
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null, tint = TodCyan, modifier = Modifier.size(20.dp))
-          Spacer(modifier = Modifier.width(8.dp))
-          Text("Audio Boost (Loudness Enhancer)", color = DarkTextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-        }
-        Text(
-          text = "+${audioBoostPercent}%",
-          color = TodCyan,
-          fontWeight = FontWeight.Bold,
-          fontSize = 13.sp
-        )
-      }
-      Slider(
-        value = audioBoostPercent.toFloat(),
-        onValueChange = { onAudioBoostChange(it.toInt()) },
-        valueRange = 0f..100f,
-        colors = SliderDefaults.colors(
-          thumbColor = TodCyan,
-          activeTrackColor = TodCyan,
-          inactiveTrackColor = DarkSurfaceElevated
-        )
+      Text(
+        text = "تخصيص سرعة التشغيل، أبعاد الشاشة ومضخم الصوت",
+        color = Color(0xFF8E8E93),
+        fontSize = 12.5.sp,
+        modifier = Modifier.padding(top = 2.dp, bottom = 18.dp)
       )
+
+      // 1. Playback Speed Section with iOS Segmented Control
+      IosSectionHeader(title = "سرعة التشغيل (Playback Speed)")
+      IosSegmentedControl(
+        items = speedLabels,
+        selectedIndex = currentSpeedIndex,
+        onSelect = { index -> onSpeedChange(speeds[index]) }
+      )
+
+      Spacer(modifier = Modifier.height(20.dp))
+
+      // 2. Aspect Ratio Section with iOS Group
+      val aspectModes = AspectRatioMode.values()
+      val aspectLabels = aspectModes.map { it.label }
+      val currentAspectIndex = aspectModes.indexOf(currentAspect).takeIf { it >= 0 } ?: 0
+
+      IosSectionHeader(title = "أبعاد الشاشة (Aspect Ratio Mode)")
+      IosSegmentedControl(
+        items = aspectLabels,
+        selectedIndex = currentAspectIndex,
+        onSelect = { index -> onAspectChange(aspectModes[index]) }
+      )
+
+      Spacer(modifier = Modifier.height(20.dp))
+
+      // 3. Audio Boost with iOS Group
+      IosSectionHeader(title = "مضخم الصوت وموازنة التعليق")
+      IosListGroup {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+              IosIconBadge(
+                icon = Icons.Default.GraphicEq,
+                background = IosBadgeColors.Teal,
+                modifier = Modifier.size(28.dp)
+              )
+              Text("مضخم الصوت (Loudness Boost)", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            }
+            Text(
+              text = "+${audioBoostPercent}%",
+              color = TodGold,
+              fontSize = 14.sp,
+              fontWeight = FontWeight.Bold
+            )
+          }
+
+          Spacer(modifier = Modifier.height(8.dp))
+
+          Slider(
+            value = audioBoostPercent.toFloat(),
+            onValueChange = { onAudioBoostChange(it.toInt()) },
+            valueRange = 0f..100f,
+            colors = SliderDefaults.colors(
+              thumbColor = TodGold,
+              activeTrackColor = TodGold,
+              inactiveTrackColor = Color(0x33FFFFFF)
+            )
+          )
+        }
+      }
     }
   }
 }

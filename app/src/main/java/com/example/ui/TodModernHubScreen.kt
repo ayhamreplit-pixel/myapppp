@@ -154,10 +154,39 @@ fun TodModernHubScreen(
 
   var serverPingMs by remember { mutableStateOf<Long?>(null) }
 
-  // Helper: Reload playlist data with high-speed parallel fetching and ping
+  // Helper: Reload playlist data with instant cache restore + high-speed background sync
   val loadPlaylistData: (XtreamPlaylistConfig, Boolean) -> Unit = { config, forceRefresh ->
     scope.launch {
-      isXtreamLoading = true
+      val cleanServer = xtreamRepo.cleanServerUrl(config.serverUrl)
+      val cleanUser = config.username.trim()
+      val cacheKey = "$cleanServer|$cleanUser"
+
+      // 1. Instant 0ms local cache display
+      if (!config.isM3u) {
+        val cachedDiskChannels = xtreamRepo.getCachedStreams(cacheKey)
+        val cachedDiskCategories = xtreamRepo.getCachedCategories(cacheKey)
+        if (cachedDiskChannels.isNotEmpty()) {
+          allChannels.clear()
+          allChannels.addAll(cachedDiskChannels)
+
+          xtreamCategories.clear()
+          xtreamCategories.add(XtreamCategory("ALL", "جميع القنوات", cachedDiskChannels.size))
+          if (cachedDiskCategories.isNotEmpty()) {
+            xtreamCategories.addAll(cachedDiskCategories)
+          } else {
+            val groupMap = cachedDiskChannels.groupBy { it.categoryId ?: "عام" }
+            groupMap.forEach { (groupId, list) ->
+              xtreamCategories.add(XtreamCategory(groupId, groupId, list.size))
+            }
+          }
+          isXtreamLoading = false
+        } else {
+          isXtreamLoading = true
+        }
+      } else {
+        isXtreamLoading = true
+      }
+
       xtreamError = null
 
       if (config.isM3u) {
@@ -240,8 +269,8 @@ fun TodModernHubScreen(
             }
           }
           xtreamRepo.updatePlaylistTimestampAndCount(config, streams.size)
-        } else {
-          // If streams failed, report specific reason or guidance
+        } else if (allChannels.isEmpty()) {
+          // If streams failed and no cache was loaded, report specific reason or guidance
           val reason = streamsRes.exceptionOrNull()?.localizedMessage
             ?: loginRes.exceptionOrNull()?.localizedMessage
             ?: "تعذر جلب قنوات السيرفر. يرجى التحقق من صحة الرابط واسم المستخدم وكلمة المرور"

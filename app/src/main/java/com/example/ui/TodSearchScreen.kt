@@ -1,9 +1,14 @@
 package com.example.ui
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,6 +42,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -50,6 +57,7 @@ import com.example.model.XtreamChannel
 import com.example.ui.theme.DarkBg
 import com.example.ui.theme.DarkTextSecondary
 import com.example.ui.theme.TodGold
+import com.example.ui.theme.TodGradients
 import com.example.ui.theme.TodLiveRed
 
 /**
@@ -80,7 +88,7 @@ fun TodSearchScreen(
   Column(
     modifier = modifier
       .fillMaxSize()
-      .background(DarkBg)
+      .background(TodGradients.ObsidianCanvas)
       .padding(horizontal = 16.dp, vertical = 12.dp)
   ) {
     // 1. Search Text Field
@@ -122,13 +130,20 @@ fun TodSearchScreen(
       ) {
         xtreamCategories.forEach { category ->
           val isSelected = selectedCategoryId == category.categoryId
+          val chipScale by animateFloatAsState(
+            targetValue = if (isSelected) 1.05f else 1.0f,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+            label = "searchChipScale"
+          )
+
           Box(
             modifier = Modifier
+              .scale(chipScale)
               .clip(RoundedCornerShape(18.dp))
-              .background(if (isSelected) TodGold else Color(0xFF1C1C24))
+              .background(if (isSelected) TodGradients.LiquidGold else Brush.horizontalGradient(listOf(Color(0xFF1C1C28), Color(0xFF14141E))))
               .border(
                 1.dp,
-                if (isSelected) TodGold else Color(0xFF282834),
+                if (isSelected) Color(0xFFFFD54F) else Color(0xFF28283A),
                 RoundedCornerShape(18.dp)
               )
               .clickable { 
@@ -190,13 +205,29 @@ fun TodSearchScreen(
         contentPadding = PaddingValues(bottom = 32.dp)
       ) {
         items(searchResults) { channel ->
+          val interactionSource = remember { MutableInteractionSource() }
+          val isPressed by interactionSource.collectIsPressedAsState()
+          val cardScale by animateFloatAsState(
+            targetValue = if (isPressed) 0.96f else 1.0f,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+            label = "searchCardScale"
+          )
+
+          val qualityLabel = if (channel.name.contains("4K", ignoreCase = true)) "4K" 
+                             else if (channel.name.contains("FHD", ignoreCase = true)) "FHD" 
+                             else "HD"
+
           Box(
             modifier = Modifier
+              .scale(cardScale)
               .fillMaxWidth()
-              .clip(RoundedCornerShape(12.dp))
-              .background(Color(0xFF13131A))
-              .border(1.dp, Color(0xFF22222E), RoundedCornerShape(12.dp))
-              .clickable { onPlayChannel(channel, searchResults, "Search Results") }
+              .clip(RoundedCornerShape(14.dp))
+              .background(TodGradients.CardGlass)
+              .border(1.dp, TodGradients.SpecularCardBorder, RoundedCornerShape(14.dp))
+              .clickable(
+                interactionSource = interactionSource,
+                indication = null
+              ) { onPlayChannel(channel, searchResults, "Search Results") }
               .padding(12.dp)
           ) {
             Row(
@@ -207,9 +238,9 @@ fun TodSearchScreen(
               // Left Play Icon
               Box(
                 modifier = Modifier
-                  .size(36.dp)
+                  .size(38.dp)
                   .clip(RoundedCornerShape(8.dp))
-                  .background(Color(0xFF20202C)),
+                  .background(Color(0xFF1E1E28)),
                 contentAlignment = Alignment.Center
               ) {
                 Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = TodGold, modifier = Modifier.size(20.dp))
@@ -235,6 +266,9 @@ fun TodSearchScreen(
                   horizontalArrangement = Arrangement.spacedBy(6.dp),
                   verticalAlignment = Alignment.CenterVertically
                 ) {
+                  // Quality badge
+                  VideoQualityBadge(qualityText = qualityLabel)
+
                   // Category tag if found
                   val catName = xtreamCategories.firstOrNull { it.categoryId == channel.categoryId }?.categoryName
                   if (!catName.isNullOrBlank()) {
@@ -248,15 +282,8 @@ fun TodSearchScreen(
                     }
                   }
 
-                  // Live tag
-                  Box(
-                    modifier = Modifier
-                      .clip(RoundedCornerShape(4.dp))
-                      .background(TodLiveRed)
-                      .padding(horizontal = 6.dp, vertical = 2.dp)
-                  ) {
-                    Text("مباشر", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                  }
+                  // Live pulsing tag
+                  PulsingLiveBadge()
                 }
               }
 
@@ -277,7 +304,7 @@ fun TodSearchScreen(
                   modifier = Modifier
                     .size(44.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFF252535)),
+                    .background(Color(0xFF1E1E28)),
                   contentAlignment = Alignment.Center
                 ) {
                   Text(

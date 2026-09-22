@@ -2,9 +2,12 @@ package com.example.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -13,6 +16,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +32,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.ui.draw.scale
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.AspectRatio
@@ -380,11 +385,29 @@ fun TodControlsOverlay(
             TodReplay10(size = 46.dp, tint = Color.White)
           }
 
-          // Center Pause Bars (||) or Play Triangle (▶)
+          // Center Pause Bars (||) or Play Triangle (▶) with Spring Bounce and Radial Glow Halo
+          val playInteractionSource = remember { MutableInteractionSource() }
+          val isPlayPressed by playInteractionSource.collectIsPressedAsState()
+          val playScale by animateFloatAsState(
+            targetValue = if (isPlayPressed) 0.88f else 1.0f,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+            label = "playBtnScale"
+          )
+
           Box(
             modifier = Modifier
-              .size(72.dp)
-              .clickable { onTogglePlayPause() },
+              .scale(playScale)
+              .size(76.dp)
+              .clip(CircleShape)
+              .background(
+                Brush.radialGradient(
+                  colors = listOf(Color(0x33FDB913), Color(0x11000000), Color.Transparent)
+                )
+              )
+              .clickable(
+                interactionSource = playInteractionSource,
+                indication = null
+              ) { onTogglePlayPause() },
             contentAlignment = Alignment.Center
           ) {
             if (playerState.isBuffering) {
@@ -399,13 +422,13 @@ fun TodControlsOverlay(
                 width = 11.dp,
                 height = 54.dp,
                 gap = 14.dp,
-                tint = Color.White.copy(alpha = 0.88f)
+                tint = Color.White.copy(alpha = 0.92f)
               )
             } else {
               // Sleek play triangle
               TodPlayTriangle(
                 size = 52.dp,
-                tint = Color.White.copy(alpha = 0.88f)
+                tint = Color.White.copy(alpha = 0.92f)
               )
             }
           }
@@ -597,16 +620,20 @@ fun TodControlsOverlay(
                   .fillMaxWidth()
                   .height(4.dp)
                   .clip(RoundedCornerShape(2.dp))
-                  .background(Color(0x55555555))
+                  .background(Color(0x44444455))
               )
 
-              // Active track: Solid TOD Amber Yellow bar
+              // Active track: Glowing Liquid Gold Gradient bar
               Box(
                 modifier = Modifier
                   .fillMaxWidth(displayProgress)
                   .height(4.dp)
                   .clip(RoundedCornerShape(2.dp))
-                  .background(TodAmberYellow)
+                  .background(
+                    Brush.horizontalGradient(
+                      listOf(Color(0xFFFFD54F), TodAmberYellow)
+                    )
+                  )
               )
 
               // Smooth circular glow thumb at the end of progress
@@ -617,10 +644,10 @@ fun TodControlsOverlay(
                 Box(
                   modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .size(12.dp)
+                    .size(14.dp)
                     .clip(CircleShape)
                     .background(TodAmberYellow)
-                    .border(1.5.dp, Color.White, CircleShape)
+                    .border(2.dp, Color.White, CircleShape)
                 )
               }
             }
@@ -647,27 +674,15 @@ fun TodControlsOverlay(
                 )
               }
 
-              // Live Badge: Red circle with "مباشر" Arabic text
-              Row(
-                verticalAlignment = Alignment.CenterVertically,
+              // Live Badge: Pulsing live beacon with Arabic text
+              Box(
                 modifier = Modifier
                   .clickable { onSyncToLive() }
-                  .padding(horizontal = 4.dp, vertical = 2.dp)
               ) {
-                // Red circle dot
-                Box(
-                  modifier = Modifier
-                    .size(10.dp)
-                    .clip(CircleShape)
-                    .border(1.5.dp, Color.White.copy(alpha = 0.8f), CircleShape)
-                    .background(Color(0xFFFF2A55).copy(alpha = liveDotAlpha))
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                  text = "مباشر",
-                  color = Color.White,
-                  fontSize = 14.sp,
-                  fontWeight = FontWeight.Bold
+                PulsingLiveBadge(
+                  fontSize = 12.sp,
+                  paddingHorizontal = 9.dp,
+                  paddingVertical = 4.dp
                 )
               }
 

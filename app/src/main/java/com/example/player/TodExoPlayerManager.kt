@@ -5,6 +5,7 @@ import android.media.audiofx.LoudnessEnhancer
 import android.net.Uri
 import android.util.Log
 import androidx.annotation.OptIn
+import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
@@ -114,21 +115,29 @@ class TodExoPlayerManager(
       .setEnableDecoderFallback(true)
       .setAllowedVideoJoiningTimeMs(5000)
 
-    // LoadControl with ultra-fast startup and buffer management
+    // High-capacity LoadControl for smooth, buffer-drop-free continuous live playback
     val loadControl = DefaultLoadControl.Builder()
       .setBufferDurationsMs(
-        /* minBufferMs = */ 1_500,
-        /* maxBufferMs = */ 10_000,
-        /* bufferForPlaybackMs = */ 200,
-        /* bufferForPlaybackAfterRebufferMs = */ 400
+        /* minBufferMs = */ 15_000,
+        /* maxBufferMs = */ 60_000,
+        /* bufferForPlaybackMs = */ 500,
+        /* bufferForPlaybackAfterRebufferMs = */ 1_000
       )
-      .setBackBuffer(8_000, true)
+      .setBackBuffer(15_000, true)
       .setPrioritizeTimeOverSizeThresholds(true)
+      .build()
+
+    val audioAttributes = AudioAttributes.Builder()
+      .setUsage(C.USAGE_MEDIA)
+      .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
       .build()
 
     ExoPlayer.Builder(context, renderersFactory)
       .setTrackSelector(trackSelector)
       .setLoadControl(loadControl)
+      .setAudioAttributes(audioAttributes, /* handleAudioFocus = */ true)
+      .setWakeMode(C.WAKE_MODE_NETWORK)
+      .setHandleAudioBecomingNoisy(true)
       .build().apply {
         playWhenReady = true
         addListener(playerListener)
@@ -140,12 +149,14 @@ class TodExoPlayerManager(
   private var sleepTimerJob: Job? = null
   private var currentStream: BroadcastStream? = null
   private var retryCount = 0
+  private var retryJob: Job? = null
 
   fun setChannelListContext(channels: List<BroadcastStream>) {
     activeChannelList = channels
   }
 
   fun playStream(stream: BroadcastStream, isRetry: Boolean = false) {
+    retryJob?.cancel()
     if (!isRetry) {
       retryCount = 0
       currentUaIndex = 0
@@ -261,7 +272,11 @@ class TodExoPlayerManager(
       }
 
       Log.i("TodExoPlayerManager", "Silent retry #$retryCount with format: $altFormat and UA: ${userAgents[currentUaIndex]}")
-      playStream(stream.copy(format = altFormat), isRetry = true)
+      retryJob?.cancel()
+      retryJob = coroutineScope.launch {
+        delay(1000)
+        playStream(stream.copy(format = altFormat), isRetry = true)
+      }
       return
     }
 
@@ -283,8 +298,8 @@ class TodExoPlayerManager(
       .setUserAgent(chosenUserAgent)
       .setAllowCrossProtocolRedirects(true)
       .setKeepPostFor302Redirects(true)
-      .setConnectTimeoutMs(15_000)
-      .setReadTimeoutMs(20_000)
+      .setConnectTimeoutMs(25_000)
+      .setReadTimeoutMs(30_000)
       .apply {
         val headers = mutableMapOf<String, String>()
         headers["Accept"] = "*/*"
@@ -339,7 +354,6 @@ class TodExoPlayerManager(
       StreamFormat.HLS -> {
         HlsMediaSource.Factory(dataSourceFactory)
           .setExtractorFactory(universalHlsExtractorFactory)
-          .setAllowChunklessPreparation(false) // Deep packet audio extraction for MP2, AC-3, E-AC-3, DTS
           .createMediaSource(mediaItemBuilder.setMimeType(MimeTypes.APPLICATION_M3U8).build())
       }
       StreamFormat.DASH -> {

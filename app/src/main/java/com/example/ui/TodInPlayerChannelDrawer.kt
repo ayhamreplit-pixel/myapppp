@@ -90,19 +90,19 @@ fun TodInPlayerChannelDrawer(
         .background(Color(0x99000000))
         .clickable(onClick = onClose)
     ) {
-      Box(
+        Box(
         modifier = Modifier
           .align(Alignment.CenterEnd)
           .fillMaxHeight()
           .width(360.dp)
-          .background(DarkSurface)
-          .border(1.dp, DarkSurfaceBorder, RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp))
-          .clip(RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp))
+          .background(Color(0xF412121A))
+          .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp))
+          .clip(RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp))
           .clickable(enabled = false) {}
           .padding(18.dp)
       ) {
         Column(modifier = Modifier.fillMaxSize()) {
-          // Header
+          // iOS Drawer Header
           Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -110,15 +110,27 @@ fun TodInPlayerChannelDrawer(
           ) {
             Row(
               verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.spacedBy(8.dp)
+              horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-              TodGridFour(size = 20.dp, tint = TodGold)
-              Text(
-                text = "قنوات البث (${channels.size})",
-                color = Color.White,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold
+              IosIconBadge(
+                icon = Icons.Default.LiveTv,
+                background = IosBadgeColors.Gold,
+                tint = Color.Black,
+                modifier = Modifier.size(30.dp)
               )
+              Column {
+                Text(
+                  text = "قنوات البث المباشر",
+                  color = Color.White,
+                  fontSize = 15.sp,
+                  fontWeight = FontWeight.Bold
+                )
+                Text(
+                  text = "${channels.size} قناة متاحة",
+                  color = Color(0xFF8E8E93),
+                  fontSize = 11.sp
+                )
+              }
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -126,7 +138,7 @@ fun TodInPlayerChannelDrawer(
                 Icon(
                   imageVector = Icons.Default.ExitToApp,
                   contentDescription = "Exit to Hub",
-                  tint = DarkTextSecondary
+                  tint = Color(0xFF8E8E93)
                 )
               }
               IconButton(onClick = onClose) {
@@ -139,42 +151,45 @@ fun TodInPlayerChannelDrawer(
             }
           }
 
-          Spacer(modifier = Modifier.height(10.dp))
+          Spacer(modifier = Modifier.height(14.dp))
 
-          // Search in drawer
+          // iOS Style Search Field
           OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
-            placeholder = { Text("بحث عن قناة...", fontSize = 12.sp) },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = DarkTextSecondary, modifier = Modifier.size(18.dp)) },
+            placeholder = { Text("بحث في القنوات...", fontSize = 13.sp, color = Color(0xFF8E8E93)) },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color(0xFF8E8E93), modifier = Modifier.size(18.dp)) },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+              .fillMaxWidth()
+              .background(Color(0x1AFFFFFF), RoundedCornerShape(12.dp)),
             colors = OutlinedTextFieldDefaults.colors(
               focusedBorderColor = TodGold,
-              unfocusedBorderColor = DarkSurfaceBorder,
+              unfocusedBorderColor = Color.Transparent,
               focusedTextColor = Color.White,
-              unfocusedTextColor = Color.White
+              unfocusedTextColor = Color.White,
+              cursorColor = TodGold
             ),
-            shape = RoundedCornerShape(10.dp)
+            shape = RoundedCornerShape(12.dp)
           )
 
-          Spacer(modifier = Modifier.height(10.dp))
+          Spacer(modifier = Modifier.height(14.dp))
 
-          // Channel List
+          // Channel List in iOS Inset Rows
           if (filteredChannels.isEmpty()) {
             Box(
               modifier = Modifier.fillMaxSize(),
               contentAlignment = Alignment.Center
             ) {
               Text(
-                text = if (channels.isEmpty()) "لا توجد قائمة قنوات متاحة" else "لم يتم العثور على قنوات",
+                text = if (channels.isEmpty()) "لا توجد قائمة قنوات متاحة" else "لم يتم العثور على قنوات تطابق البحث",
                 color = DarkTextSecondary,
                 fontSize = 13.sp
               )
             }
           } else {
             LazyColumn(
-              verticalArrangement = Arrangement.spacedBy(8.dp),
+              verticalArrangement = Arrangement.spacedBy(6.dp),
               contentPadding = PaddingValues(bottom = 16.dp)
             ) {
               items(filteredChannels) { stream ->
@@ -184,26 +199,18 @@ fun TodInPlayerChannelDrawer(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
                     .background(
-                      if (isPlaying) {
-                        Brush.horizontalGradient(
-                          listOf(Color(0x33F5A623), Color(0x15F5A623))
-                        )
-                      } else {
-                        Brush.horizontalGradient(
-                          listOf(DarkSurfaceElevated, DarkSurface)
-                        )
-                      }
+                      if (isPlaying) Color(0x33F5A623) else Color(0x14FFFFFF)
                     )
                     .border(
                       1.dp,
-                      if (isPlaying) TodGold else DarkSurfaceBorder,
+                      if (isPlaying) TodGold else Color(0x12FFFFFF),
                       RoundedCornerShape(12.dp)
                     )
                     .clickable {
                       onSelectChannel(stream)
                       onClose()
                     }
-                    .padding(10.dp),
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
                   verticalAlignment = Alignment.CenterVertically,
                   horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -215,15 +222,14 @@ fun TodInPlayerChannelDrawer(
                     Box(
                       modifier = Modifier
                         .size(36.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (isPlaying) Color(0x44F5A623) else DarkSurfaceHigh)
-                        .border(1.dp, if (isPlaying) TodGold.copy(alpha = 0.5f) else Color(0x1AFFFFFF), RoundedCornerShape(8.dp)),
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isPlaying) TodGradients.LiquidGold else Brush.linearGradient(listOf(Color(0xFF2A2A38), Color(0xFF1E1E28)))),
                       contentAlignment = Alignment.Center
                     ) {
                       Icon(
                         imageVector = Icons.Default.LiveTv,
                         contentDescription = null,
-                        tint = if (isPlaying) TodGold else Color.White,
+                        tint = if (isPlaying) Color.Black else Color.White,
                         modifier = Modifier.size(18.dp)
                       )
                     }
@@ -240,8 +246,8 @@ fun TodInPlayerChannelDrawer(
                       if (stream.subtitle.isNotEmpty()) {
                         Text(
                           text = stream.subtitle,
-                          color = DarkTextSecondary,
-                          fontSize = 10.sp,
+                          color = Color(0xFF8E8E93),
+                          fontSize = 10.5.sp,
                           maxLines = 1
                         )
                       }
@@ -252,14 +258,14 @@ fun TodInPlayerChannelDrawer(
                     Box(
                       modifier = Modifier
                         .clip(CircleShape)
-                        .background(TodGradients.GoldAccent)
+                        .background(TodGradients.LiquidGold)
                         .padding(5.dp)
                     ) {
                       Icon(
                         imageVector = Icons.Default.PlayArrow,
                         contentDescription = "Playing",
                         tint = Color.Black,
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(13.dp)
                       )
                     }
                   }

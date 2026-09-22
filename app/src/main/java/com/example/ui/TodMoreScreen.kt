@@ -1,9 +1,14 @@
 package com.example.ui
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,19 +31,33 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.ManageAccounts
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Subscriptions
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Tv
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -52,6 +71,7 @@ import com.example.ui.theme.DarkTextSecondary
 import com.example.ui.theme.TodButtonGrey
 import com.example.ui.theme.TodCyan
 import com.example.ui.theme.TodGold
+import com.example.ui.theme.TodGradients
 import com.example.ui.theme.TodGreen
 import com.example.ui.theme.TodPink
 import com.example.ui.theme.TodViolet
@@ -86,7 +106,7 @@ fun TodMoreScreen(
   Column(
     modifier = modifier
       .fillMaxSize()
-      .background(DarkBg)
+      .background(TodGradients.ObsidianCanvas)
       .verticalScroll(rememberScrollState())
       .padding(horizontal = 20.dp, vertical = 24.dp),
     horizontalAlignment = Alignment.CenterHorizontally
@@ -119,15 +139,28 @@ fun TodMoreScreen(
       verticalAlignment = Alignment.CenterVertically
     ) {
       // Add Profile Button (+)
+      val addInteraction = remember { MutableInteractionSource() }
+      val isAddPressed by addInteraction.collectIsPressedAsState()
+      val addScale by animateFloatAsState(
+        targetValue = if (isAddPressed) 0.92f else 1.0f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "addProfileScale"
+      )
+
       Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable { onOpenXtreamForm() }
+        modifier = Modifier
+          .scale(addScale)
+          .clickable(
+            interactionSource = addInteraction,
+            indication = null
+          ) { onOpenXtreamForm() }
       ) {
         Box(
           modifier = Modifier
             .size(76.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(Color(0xFF15151C))
+            .background(Color(0xFF151522))
             .border(1.5.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(14.dp)),
           contentAlignment = Alignment.Center
         ) {
@@ -154,9 +187,22 @@ fun TodMoreScreen(
             activeConfig?.playlistName == config.playlistName
         val color = avatarColors[index % avatarColors.size]
 
+        val profileInteraction = remember { MutableInteractionSource() }
+        val isProfilePressed by profileInteraction.collectIsPressedAsState()
+        val profileScale by animateFloatAsState(
+          targetValue = if (isProfilePressed) 0.92f else 1.0f,
+          animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+          label = "profileScale_$index"
+        )
+
         Column(
           horizontalAlignment = Alignment.CenterHorizontally,
-          modifier = Modifier.clickable { onSelectPlaylist(config) }
+          modifier = Modifier
+            .scale(profileScale)
+            .clickable(
+              interactionSource = profileInteraction,
+              indication = null
+            ) { onSelectPlaylist(config) }
         ) {
           Box(
             modifier = Modifier
@@ -202,232 +248,186 @@ fun TodMoreScreen(
       }
     }
 
-    Spacer(modifier = Modifier.height(24.dp))
-
-    // Manage Profiles Button
-    Button(
-      onClick = { onSwitchPlaylist() },
-      modifier = Modifier
-        .fillMaxWidth()
-        .height(46.dp),
-      colors = ButtonDefaults.buttonColors(containerColor = TodButtonGrey),
-      shape = RoundedCornerShape(10.dp)
-    ) {
-      Text("إدارة الاشتراكات والملفات الشخصية", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-    }
-
     Spacer(modifier = Modifier.height(28.dp))
 
-    // 2. Direct Stream Quick Play Button (تشغيل رابط مباشر فوراً)
-    Box(
-      modifier = Modifier
-        .fillMaxWidth()
-        .clip(RoundedCornerShape(14.dp))
-        .background(Color(0xFF16161C))
-        .border(1.dp, TodGold.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
-        .clickable { onOpenDirectLink() }
-        .padding(16.dp)
-    ) {
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-      ) {
-        Icon(
-          imageVector = Icons.Default.KeyboardArrowLeft,
-          contentDescription = null,
-          tint = TodGold,
-          modifier = Modifier.size(24.dp)
-        )
+    // Switch states for iOS Preferences
+    var hwDecodeEnabled by remember { mutableStateOf(true) }
+    var spatialAudioEnabled by remember { mutableStateOf(true) }
+    var adaptiveBitrateEnabled by remember { mutableStateOf(true) }
 
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-          Column(horizontalAlignment = Alignment.End) {
-            Text(
-              text = "تشغيل رابط مباشر فوراً (M3U8 / TS)",
-              color = Color.White,
-              fontSize = 14.sp,
-              fontWeight = FontWeight.Bold
-            )
-            Text(
-              text = "قم بلصق أي رابط HLS, DASH, TS أو رابط ويب وتشغيله بلمسة واحدة",
-              color = DarkTextSecondary,
-              fontSize = 11.sp
-            )
-          }
-
-          Box(
-            modifier = Modifier
-              .size(40.dp)
-              .clip(RoundedCornerShape(10.dp))
-              .background(TodGold.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center
-          ) {
-            Icon(Icons.Default.Bolt, contentDescription = null, tint = TodGold, modifier = Modifier.size(22.dp))
-          }
-        }
-      }
+    // SECTION 1: الحساب والاشتراكات (Account & Subscriptions)
+    IosSectionHeader(title = "الحساب والاشتراكات")
+    IosListGroup {
+      IosListRow(
+        title = "إدارة الملفات والاشتراكات",
+        subtitle = "التبديل بين السيرفرات وإدارة الحسابات المسجلة (${savedPlaylists.size})",
+        iconBadge = {
+          IosIconBadge(icon = Icons.Default.ManageAccounts, background = IosBadgeColors.Blue)
+        },
+        value = "${savedPlaylists.size} متاح",
+        onClick = { onSwitchPlaylist() }
+      )
+      IosListRow(
+        title = "إضافة اشتراك Xtream Codes",
+        subtitle = "إضافة سيرفر جديد عبر الرابط واسم المستخدم وكلمة السر",
+        iconBadge = {
+          IosIconBadge(icon = Icons.Default.Bolt, background = IosBadgeColors.Gold, tint = Color.Black)
+        },
+        onClick = { onOpenXtreamForm() }
+      )
+      IosListRow(
+        title = "إضافة قائمة قنوات M3U",
+        subtitle = "تحميل ملف أو رابط M3U / M3U_PLUS المباشر",
+        iconBadge = {
+          IosIconBadge(icon = Icons.Default.Subscriptions, background = IosBadgeColors.Purple)
+        },
+        showDivider = false,
+        onClick = { onOpenM3uForm() }
+      )
     }
 
-    Spacer(modifier = Modifier.height(20.dp))
+    Spacer(modifier = Modifier.height(24.dp))
 
-    // 3. Active Xtream Account Details Card
+    // SECTION 2: تفاصيل السيرفر النشط (Active Server Details)
     if (activeConfig != null) {
-      Box(
-        modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(14.dp))
-          .background(Color(0xFF14141A))
-          .border(1.dp, Color(0xFF242432), RoundedCornerShape(14.dp))
-          .padding(18.dp)
-      ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            // Ping / Server Status Indicator
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-              Box(
-                modifier = Modifier
-                  .size(8.dp)
-                  .clip(CircleShape)
-                  .background(if (serverPingMs != null && serverPingMs > 0) TodGreen else Color(0xFFFF5252))
-              )
-              Text(
-                text = if (serverPingMs != null && serverPingMs > 0) "${serverPingMs}ms • متصل" else "متصل",
-                color = if (serverPingMs != null && serverPingMs > 0) TodGreen else DarkTextSecondary,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
-              )
-            }
-
-            Text(
-              text = "تفاصيل الاشتراك النشط",
-              color = Color.White,
-              fontSize = 15.sp,
-              fontWeight = FontWeight.Bold
-            )
-          }
-
-          Spacer(modifier = Modifier.height(14.dp))
-
-          // Profile Name
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-          ) {
-            Text(activeConfig.playlistName, color = TodGold, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            Text("اسم الملف:", color = DarkTextSecondary, fontSize = 13.sp)
-          }
-
-          Spacer(modifier = Modifier.height(8.dp))
-
-          // Server URL
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-          ) {
-            Text(
-              text = activeConfig.serverUrl.takeIf { it.isNotBlank() } ?: activeConfig.m3uUrl,
-              color = Color.White,
-              fontSize = 12.sp,
-              maxLines = 1,
-              overflow = TextOverflow.Ellipsis,
-              modifier = Modifier.weight(1f, fill = false)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("السيرفر:", color = DarkTextSecondary, fontSize = 13.sp)
-          }
-
-          if (accountInfo?.expDate != null) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-              Text(accountInfo.expDate, color = TodGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-              Text("تاريخ الانتهاء:", color = DarkTextSecondary, fontSize = 13.sp)
-            }
-          }
-
-          Spacer(modifier = Modifier.height(8.dp))
-
-          // Update Interval
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-          ) {
-            Text(activeConfig.updateInterval.ifBlank { "عند بدء التطبيق" }, color = TodGold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Text("معدل التحديث:", color = DarkTextSecondary, fontSize = 13.sp)
-          }
-
-          if (activeConfig.totalChannelCount > 0) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-              Text("${activeConfig.totalChannelCount} قناة", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-              Text("إجمالي القنوات:", color = DarkTextSecondary, fontSize = 13.sp)
-            }
-          }
-
-          Spacer(modifier = Modifier.height(14.dp))
-
-          // Instant Sync / Refresh Button
-          Button(
-            onClick = { onRefreshPlaylist(activeConfig) },
-            modifier = Modifier
-              .fillMaxWidth()
-              .height(42.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF22222E)),
-            shape = RoundedCornerShape(10.dp)
-          ) {
-            Row(
-              verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-              Icon(Icons.Default.Refresh, contentDescription = null, tint = TodGold, modifier = Modifier.size(18.dp))
-              Text("تحديث ومزامنة القنوات الآن", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            }
-          }
+      IosSectionHeader(title = "تفاصيل الاشتراك النشط")
+      IosListGroup {
+        IosListRow(
+          title = "اسم الملف والاشتراك",
+          value = activeConfig.playlistName,
+          valueColor = TodGold,
+          iconBadge = {
+            IosIconBadge(icon = Icons.Default.Person, background = IosBadgeColors.Orange)
+          },
+          showChevron = false
+        )
+        IosListRow(
+          title = "عنوان السيرفر",
+          value = activeConfig.serverUrl.takeIf { it.isNotBlank() } ?: activeConfig.m3uUrl,
+          iconBadge = {
+            IosIconBadge(icon = Icons.Default.Dns, background = IosBadgeColors.Indigo)
+          },
+          showChevron = false
+        )
+        IosListRow(
+          title = "حالة الاتصال وسرعة الاستجابة",
+          value = if (serverPingMs != null && serverPingMs > 0) "${serverPingMs}ms • متصل" else "متصل",
+          valueColor = if (serverPingMs != null && serverPingMs > 0) TodGreen else Color(0xFF8E8E93),
+          iconBadge = {
+            IosIconBadge(icon = Icons.Default.Wifi, background = IosBadgeColors.Green)
+          },
+          showChevron = false
+        )
+        if (accountInfo?.expDate != null) {
+          IosListRow(
+            title = "تاريخ الانتهاء والاشتراك",
+            value = accountInfo.expDate,
+            valueColor = TodGreen,
+            iconBadge = {
+              IosIconBadge(icon = Icons.Default.Event, background = IosBadgeColors.Pink)
+            },
+            showChevron = false
+          )
         }
+        if (activeConfig.totalChannelCount > 0) {
+          IosListRow(
+            title = "إجمالي القنوات المحملة",
+            value = "${activeConfig.totalChannelCount} قناة",
+            iconBadge = {
+              IosIconBadge(icon = Icons.Default.Tv, background = IosBadgeColors.Teal)
+            },
+            showChevron = false
+          )
+        }
+        IosListRow(
+          title = "تحديث ومزامنة القنوات فوراً",
+          subtitle = "إعادة جلب أحدث قائمة قنوات وفئات من السيرفر",
+          value = "مزامنة الآن",
+          valueColor = TodGold,
+          iconBadge = {
+            IosIconBadge(icon = Icons.Default.Refresh, background = IosBadgeColors.Gold, tint = Color.Black)
+          },
+          showDivider = false,
+          onClick = { onRefreshPlaylist(activeConfig) }
+        )
       }
-      Spacer(modifier = Modifier.height(20.dp))
+      IosSectionFooter(text = "يتم تحديث القنوات تلقائياً وفقاً للجدول الزمني المختار: ${activeConfig.updateInterval.ifBlank { "عند بدء التطبيق" }}")
+      Spacer(modifier = Modifier.height(24.dp))
     }
 
-    // 4. Add Xtream / M3U Quick Buttons
-    Row(
-      modifier = Modifier.fillMaxWidth(),
-      horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-      Button(
-        onClick = onOpenM3uForm,
-        modifier = Modifier
-          .weight(1f)
-          .height(44.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B1B22)),
-        shape = RoundedCornerShape(10.dp)
-      ) {
-        Text("إضافة M3U", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-      }
-
-      Button(
-        onClick = onOpenXtreamForm,
-        modifier = Modifier
-          .weight(1f)
-          .height(44.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = TodGold),
-        shape = RoundedCornerShape(10.dp)
-      ) {
-        Text("إضافة Xtream Codes", color = Color.Black, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-      }
+    // SECTION 3: التشغيل والبث المباشر (Playback & Live Streaming)
+    IosSectionHeader(title = "التشغيل والروابط السريعة")
+    IosListGroup {
+      IosListRow(
+        title = "تشغيل رابط مباشر (M3U8 / TS / HLS)",
+        subtitle = "قم بلصق أي رابط ويب وتشغيله بلمسة واحدة",
+        iconBadge = {
+          IosIconBadge(icon = Icons.Default.Bolt, background = IosBadgeColors.Red)
+        },
+        onClick = { onOpenDirectLink() }
+      )
     }
+    IosSectionFooter(text = "يدعم المشغل جميع صيغ البث العالمي HLS, DASH, TS, RTMP بدقة تصل إلى 4K.")
 
-    Spacer(modifier = Modifier.height(40.dp))
+    Spacer(modifier = Modifier.height(24.dp))
+
+    // SECTION 4: إعدادات الأداء والعرض (Playback Performance & Preferences)
+    IosSectionHeader(title = "تفضيلات العرض ومحرك الفيديو")
+    IosListGroup {
+      IosListRow(
+        title = "التسريع العتادي الفائق (Hardware)",
+        subtitle = "معالجة تدفقات 4K و FHD بسلاسة 60 إطار/ثانية",
+        iconBadge = {
+          IosIconBadge(icon = Icons.Default.Speed, background = IosBadgeColors.Green)
+        },
+        trailing = {
+          IosSwitch(
+            checked = hwDecodeEnabled,
+            onCheckedChange = { hwDecodeEnabled = it }
+          )
+        },
+        showChevron = false
+      )
+      IosListRow(
+        title = "الصوت المحيطي (Spatial Audio)",
+        subtitle = "تحسين أصوات التعليق الرياضي وصخب الجماهير",
+        iconBadge = {
+          IosIconBadge(icon = Icons.Default.VolumeUp, background = IosBadgeColors.Indigo)
+        },
+        trailing = {
+          IosSwitch(
+            checked = spatialAudioEnabled,
+            onCheckedChange = { spatialAudioEnabled = it }
+          )
+        },
+        showChevron = false
+      )
+      IosListRow(
+        title = "التبديل التلقائي لمعدل البث (ABR)",
+        subtitle = "مواءمة جودة العرض ديناميكياً مع سرعة الشبكة لمنع التقطيع",
+        iconBadge = {
+          IosIconBadge(icon = Icons.Default.Tune, background = IosBadgeColors.Teal)
+        },
+        trailing = {
+          IosSwitch(
+            checked = adaptiveBitrateEnabled,
+            onCheckedChange = { adaptiveBitrateEnabled = it }
+          )
+        },
+        showChevron = false
+      )
+      IosListRow(
+        title = "إصدار التطبيق والواجهة",
+        value = "v2.5.0 iOS Edition",
+        iconBadge = {
+          IosIconBadge(icon = Icons.Default.Info, background = IosBadgeColors.Slate)
+        },
+        showDivider = false,
+        showChevron = false
+      )
+    }
+    IosSectionFooter(text = "تصميم القوائم مستوحى من نظام Apple iOS الحديث لضمان تجربة انسيابية وسهلة الاستخدام.")
+
+    Spacer(modifier = Modifier.height(48.dp))
   }
 }

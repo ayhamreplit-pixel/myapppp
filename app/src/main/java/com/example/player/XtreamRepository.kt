@@ -9,6 +9,8 @@ import com.example.model.XtreamChannel
 import com.example.model.XtreamPlaylistConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.ConnectionPool
+import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
@@ -57,8 +59,14 @@ class XtreamRepository(context: Context) {
     }
   }
 
-  // Tolerant OkHttpClient with universal SSL trust and redirect handling for IPTV servers
+  // Ultra-fast HTTP client with connection pooling, gzip support and lenient SSL
   private val client: OkHttpClient by lazy {
+    val dispatcher = Dispatcher().apply {
+      maxRequests = 64
+      maxRequestsPerHost = 32
+    }
+    val connectionPool = ConnectionPool(32, 5, TimeUnit.MINUTES)
+
     try {
       val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
         override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
@@ -71,18 +79,22 @@ class XtreamRepository(context: Context) {
       }
 
       OkHttpClient.Builder()
+        .dispatcher(dispatcher)
+        .connectionPool(connectionPool)
         .sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
         .hostnameVerifier { _, _ -> true }
-        .connectTimeout(35, TimeUnit.SECONDS)
-        .readTimeout(50, TimeUnit.SECONDS)
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(25, TimeUnit.SECONDS)
         .followRedirects(true)
         .followSslRedirects(true)
         .retryOnConnectionFailure(true)
         .build()
     } catch (e: Exception) {
       OkHttpClient.Builder()
-        .connectTimeout(35, TimeUnit.SECONDS)
-        .readTimeout(50, TimeUnit.SECONDS)
+        .dispatcher(dispatcher)
+        .connectionPool(connectionPool)
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(25, TimeUnit.SECONDS)
         .followRedirects(true)
         .followSslRedirects(true)
         .retryOnConnectionFailure(true)
@@ -236,10 +248,15 @@ class XtreamRepository(context: Context) {
         val cleanPass = password.trim()
         val cacheKey = "$cleanServer|$cleanUser"
 
-        if (!forceRefresh && categoryCache.containsKey(cacheKey)) {
-          val cached = categoryCache[cacheKey]
-          if (!cached.isNullOrEmpty()) {
-            return@withContext Result.success(cached)
+        if (!forceRefresh) {
+          val cachedMem = categoryCache[cacheKey]
+          if (!cachedMem.isNullOrEmpty()) {
+            return@withContext Result.success(cachedMem)
+          }
+          val cachedDisk = getCachedCategories(cacheKey)
+          if (cachedDisk.isNotEmpty()) {
+            categoryCache[cacheKey] = cachedDisk
+            return@withContext Result.success(cachedDisk)
           }
         }
 
@@ -251,49 +268,108 @@ class XtreamRepository(context: Context) {
           .build()
 
         val response = client.newCall(request).execute()
-        val body = response.body?.string()?.trim() ?: return@withContext Result.failure(Exception("فارغ"))
+        val responseBody = response.body ?: return@withContext Result.failure(Exception("فارغ"))
 
-        val list = mutableListOf<XtreamCategory>()
-
-        if (body.startsWith("[")) {
-          // Parse JSONArray
-          val array = JSONArray(body)
-          for (i in 0 until array.length()) {
-            val obj = array.optJSONObject(i) ?: continue
-            val id = if (obj.has("category_id")) {
-              obj.optString("category_id", "").ifEmpty { obj.optInt("category_id", 0).toString() }
-            } else {
-              obj.optString("id", "")
-            }
-            val name = obj.optString("category_name", "").ifEmpty { obj.optString("name", "باقة بدون اسم") }
-            if (id.isNotEmpty() && id != "0") {
-              list.add(XtreamCategory(id, name))
-            }
-          }
-        } else if (body.startsWith("{")) {
-          // Parse JSONObject (map format)
-          val jsonObj = JSONObject(body)
-          val keys = jsonObj.keys()
-          while (keys.hasNext()) {
-            val key = keys.next()
-            val child = jsonObj.optJSONObject(key)
-            if (child != null) {
-              val id = child.optString("category_id", key).ifEmpty { key }
-              val name = child.optString("category_name", child.optString("name", "باقة $key"))
-              list.add(XtreamCategory(id, name))
-            }
-          }
-        }
+        val list = parseCategoriesStreaming(responseBody)
 
         if (list.isNotEmpty()) {
           categoryCache[cacheKey] = list
+          saveCachedCategories(cacheKey, list)
         }
         Result.success(list)
       } catch (e: Exception) {
         Log.e("XtreamRepository", "Fetch categories error", e)
+        val cleanServer = cleanServerUrl(serverUrl)
+        val cleanUser = username.trim()
+        val cacheKey = "$cleanServer|$cleanUser"
+        val diskFallback = getCachedCategories(cacheKey)
+        if (diskFallback.isNotEmpty()) {
+          return@withContext Result.success(diskFallback)
+        }
         Result.failure(e)
       }
     }
+
+  private fun parseCategoriesStreaming(responseBody: okhttp3.ResponseBody): List<XtreamCategory> {
+    val list = ArrayList<XtreamCategory>(128)
+    try {
+      responseBody.byteStream().use { inputStream ->
+        val source = inputStream.source().buffer()
+        val reader = JsonReader.of(source)
+        reader.isLenient = true
+
+        if (reader.peek() == JsonReader.Token.BEGIN_ARRAY) {
+          reader.beginArray()
+          while (reader.hasNext()) {
+            if (reader.peek() == JsonReader.Token.BEGIN_OBJECT) {
+              reader.beginObject()
+              var id = ""
+              var name = ""
+              while (reader.hasNext()) {
+                when (reader.nextName()) {
+                  "category_id", "id" -> {
+                    id = when (reader.peek()) {
+                      JsonReader.Token.STRING, JsonReader.Token.NUMBER -> reader.nextString()
+                      else -> { reader.skipValue(); id }
+                    }
+                  }
+                  "category_name", "name" -> {
+                    name = when (reader.peek()) {
+                      JsonReader.Token.STRING -> reader.nextString()
+                      else -> { reader.skipValue(); name }
+                    }
+                  }
+                  else -> reader.skipValue()
+                }
+              }
+              reader.endObject()
+              if (id.isNotBlank() && id != "0") {
+                list.add(XtreamCategory(id, name.ifBlank { "باقة $id" }))
+              }
+            } else {
+              reader.skipValue()
+            }
+          }
+          reader.endArray()
+        } else if (reader.peek() == JsonReader.Token.BEGIN_OBJECT) {
+          reader.beginObject()
+          while (reader.hasNext()) {
+            val key = reader.nextName()
+            if (reader.peek() == JsonReader.Token.BEGIN_OBJECT) {
+              reader.beginObject()
+              var id = key
+              var name = "باقة $key"
+              while (reader.hasNext()) {
+                when (reader.nextName()) {
+                  "category_id", "id" -> {
+                    id = when (reader.peek()) {
+                      JsonReader.Token.STRING, JsonReader.Token.NUMBER -> reader.nextString()
+                      else -> { reader.skipValue(); id }
+                    }
+                  }
+                  "category_name", "name" -> {
+                    name = when (reader.peek()) {
+                      JsonReader.Token.STRING -> reader.nextString()
+                      else -> { reader.skipValue(); name }
+                    }
+                  }
+                  else -> reader.skipValue()
+                }
+              }
+              reader.endObject()
+              list.add(XtreamCategory(id, name))
+            } else {
+              reader.skipValue()
+            }
+          }
+          reader.endObject()
+        }
+      }
+    } catch (e: Exception) {
+      Log.e("XtreamRepository", "Streaming categories parse error", e)
+    }
+    return list
+  }
 
   suspend fun fetchStreams(
     serverUrl: String,
@@ -309,10 +385,15 @@ class XtreamRepository(context: Context) {
       val cleanPass = password.trim()
       val cacheKey = "$cleanServer|$cleanUser|${categoryId ?: "ALL"}"
 
-      if (!forceRefresh && streamCache.containsKey(cacheKey)) {
+      if (!forceRefresh) {
         val cached = streamCache[cacheKey]
         if (!cached.isNullOrEmpty()) {
           return@withContext Result.success(cached)
+        }
+        val cachedDisk = getCachedStreams(cacheKey)
+        if (cachedDisk.isNotEmpty()) {
+          streamCache[cacheKey] = cachedDisk
+          return@withContext Result.success(cachedDisk)
         }
       }
 
@@ -365,13 +446,19 @@ class XtreamRepository(context: Context) {
 
       if (list.isNotEmpty()) {
         streamCache[cacheKey] = list
+        saveCachedStreams(cacheKey, list)
       }
       Result.success(list)
     } catch (e: Exception) {
       Log.e("XtreamRepository", "Fetch streams error, trying m3u fallback", e)
+      val cleanServer = cleanServerUrl(serverUrl)
+      val cleanUser = username.trim()
+      val cacheKey = "$cleanServer|$cleanUser|${categoryId ?: "ALL"}"
+      val diskFallback = getCachedStreams(cacheKey)
+      if (diskFallback.isNotEmpty()) {
+        return@withContext Result.success(diskFallback)
+      }
       try {
-        val cleanServer = cleanServerUrl(serverUrl)
-        val cleanUser = username.trim()
         val cleanPass = password.trim()
         val m3uUrl = "$cleanServer/get.php?username=$cleanUser&password=$cleanPass&type=m3u_plus&output=ts"
         val m3uRes = parseM3uPlaylist(m3uUrl)
