@@ -109,9 +109,9 @@ class TodExoPlayerManager(
   )
 
   val exoPlayer: ExoPlayer by lazy {
-    // Universal RenderersFactory supporting software decoders fallback for AC-3, E-AC-3, AAC-LATM, MP2, DTS
+    // Universal RenderersFactory with software decoder fallback and safe component querying
     val renderersFactory = DefaultRenderersFactory(context)
-      .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+      .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
       .setEnableDecoderFallback(true)
       .setAllowedVideoJoiningTimeMs(5000)
 

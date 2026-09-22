@@ -1,5 +1,6 @@
 package com.example.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -104,6 +105,8 @@ fun TodQuickLinkScreen(
   val context = LocalContext.current
   val clipboardManager = LocalClipboardManager.current
   val xtreamRepo = remember { XtreamRepository(context) }
+
+  BackHandler { onBack() }
 
   var titleInput by remember { mutableStateOf("") }
   var urlInput by remember { mutableStateOf("") }

@@ -77,17 +77,61 @@ enum class AppThemePreset(
   }
 }
 
+enum class AppFontPreset(
+  val id: String,
+  val titleAr: String,
+  val descriptionAr: String,
+  val fontFamily: androidx.compose.ui.text.font.FontFamily
+) {
+  CAIRO(
+    id = "cairo",
+    titleAr = "خط كايرو (Cairo)",
+    descriptionAr = "واضح جداً، مريح للعين، متزن ومثالي للبث الرياضي",
+    fontFamily = CairoFontFamily
+  ),
+  ALMARAI(
+    id = "almarai",
+    titleAr = "خط المراعي (Almarai)",
+    descriptionAr = "تصميم أنيق وعصري شبيه بأسلوب Apple",
+    fontFamily = AlmaraiFontFamily
+  ),
+  TAJAWAL(
+    id = "tajawal",
+    titleAr = "خط تجوال (Tajawal)",
+    descriptionAr = "هندسي مستدير وواضح",
+    fontFamily = TajawalFontFamily
+  ),
+  IBM_PLEX(
+    id = "ibm_plex",
+    titleAr = "خط ثمانية (IBM Plex)",
+    descriptionAr = "خط صحفي وثائقي راقي",
+    fontFamily = ThmanyahFontFamily
+  );
+
+  companion object {
+    fun fromId(id: String): AppFontPreset {
+      return entries.find { it.id.equals(id, ignoreCase = true) } ?: CAIRO
+    }
+  }
+}
+
 object ThemeStateHolder {
   var currentTheme by mutableStateOf(AppThemePreset.GOLD)
 }
 
+object FontStateHolder {
+  var currentFont by mutableStateOf(AppFontPreset.CAIRO)
+}
+
 val LocalAppTheme = compositionLocalOf { AppThemePreset.GOLD }
+val LocalAppFont = compositionLocalOf { AppFontPreset.CAIRO }
 
 @Composable
 fun MyApplicationTheme(
   darkTheme: Boolean = true,
   dynamicColor: Boolean = false,
   appTheme: AppThemePreset = ThemeStateHolder.currentTheme,
+  appFont: AppFontPreset = FontStateHolder.currentFont,
   content: @Composable () -> Unit,
 ) {
   val currentScheme = darkColorScheme(
@@ -113,12 +157,13 @@ fun MyApplicationTheme(
 
   MaterialTheme(
     colorScheme = currentScheme,
-    typography = Typography,
+    typography = getTypography(appFont.fontFamily),
   ) {
     CompositionLocalProvider(
       LocalAppTheme provides appTheme,
+      LocalAppFont provides appFont,
       LocalTextStyle provides TextStyle(
-        fontFamily = AppFontFamily,
+        fontFamily = appFont.fontFamily,
         color = DarkTextPrimary
       ),
       content = content

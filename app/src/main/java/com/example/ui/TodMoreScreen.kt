@@ -39,10 +39,13 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Subscriptions
+import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Wifi
+import com.example.ui.theme.AppFontPreset
+import com.example.ui.theme.FontStateHolder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -371,7 +374,36 @@ fun TodMoreScreen(
 
     Spacer(modifier = Modifier.height(24.dp))
 
-    // SECTION 4: إعدادات الأداء والعرض (Playback Performance & Preferences)
+    // SECTION 4: الخط العربي والمظهر (Arabic Typography & Styling)
+    IosSectionHeader(title = "الخط العربي ووضوح النصوص")
+    IosListGroup {
+      AppFontPreset.entries.forEachIndexed { index, fontPreset ->
+        val isSelected = FontStateHolder.currentFont == fontPreset
+        IosListRow(
+          title = fontPreset.titleAr,
+          subtitle = fontPreset.descriptionAr,
+          value = if (isSelected) "مفعل" else "",
+          valueColor = TodGold,
+          iconBadge = {
+            IosIconBadge(
+              icon = if (isSelected) Icons.Default.Check else Icons.Default.TextFields,
+              background = if (isSelected) IosBadgeColors.Gold else IosBadgeColors.Slate,
+              tint = if (isSelected) Color.Black else Color.White
+            )
+          },
+          showDivider = index < AppFontPreset.entries.size - 1,
+          showChevron = false,
+          onClick = {
+            FontStateHolder.currentFont = fontPreset
+          }
+        )
+      }
+    }
+    IosSectionFooter(text = "خط كايرو (Cairo) هو الخط الافتراضي الواضح والمريح للعين والمصمم خصيصاً للشاشات وواجهات البث التلفزيوني.")
+
+    Spacer(modifier = Modifier.height(24.dp))
+
+    // SECTION 5: إعدادات الأداء والعرض (Playback Performance & Preferences)
     IosSectionHeader(title = "تفضيلات العرض ومحرك الفيديو")
     IosListGroup {
       IosListRow(

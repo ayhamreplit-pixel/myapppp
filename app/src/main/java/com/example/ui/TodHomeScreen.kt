@@ -114,7 +114,6 @@ fun TodHomeScreen(
   isLoading: Boolean,
   onPlayChannel: (XtreamChannel, List<XtreamChannel>, String) -> Unit,
   onOpenMatchDetail: (TodMatchDetail) -> Unit,
-  onOpenLiveChannels: () -> Unit,
   onOpenProfile: () -> Unit,
   onOpenQuickLink: () -> Unit = {},
   modifier: Modifier = Modifier
@@ -753,7 +752,7 @@ fun TodHomeScreen(
             actionLabel = "عرض الكل",
             channels = allChannels.take(15),
             allChannels = allChannels,
-            onActionClick = onOpenLiveChannels,
+            onActionClick = { selectedCategoryId = "ALL" },
             onPlayChannel = onPlayChannel
           )
           Spacer(modifier = Modifier.height(18.dp))
@@ -784,7 +783,7 @@ fun TodHomeScreen(
             actionLabel = "تصفح الكل (${allChannels.size})",
             channels = allChannels.take(30),
             allChannels = allChannels,
-            onActionClick = onOpenLiveChannels,
+            onActionClick = { selectedCategoryId = "ALL" },
             onPlayChannel = onPlayChannel
           )
           Spacer(modifier = Modifier.height(18.dp))

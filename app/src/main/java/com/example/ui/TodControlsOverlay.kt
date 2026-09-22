@@ -572,85 +572,17 @@ fun TodControlsOverlay(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Middle: Horizontal Solid Yellow Seek Bar
-            Box(
-              modifier = Modifier
-                .weight(1f)
-                .height(28.dp)
-                .pointerInput(playerState.durationMs) {
-                  detectTapGestures { offset ->
-                    val w = size.width.toFloat()
-                    if (w > 0 && playerState.durationMs > 0) {
-                      val frac = (offset.x / w).coerceIn(0f, 1f)
-                      onSeekTo((frac * playerState.durationMs).toLong())
-                    }
-                  }
+            // Middle: iOS Liquid Seek Bar (Matching images (5).jpeg)
+            IosLiquidSlider(
+              value = displayProgress,
+              onValueChange = { frac ->
+                if (playerState.durationMs > 0) {
+                  onSeekTo((frac * playerState.durationMs).toLong())
                 }
-                .pointerInput(playerState.durationMs) {
-                  detectHorizontalDragGestures(
-                    onDragStart = { offset ->
-                      val w = size.width.toFloat()
-                      if (w > 0) {
-                        isSeeking = true
-                        seekProgress = (offset.x / w).coerceIn(0f, 1f)
-                      }
-                    },
-                    onDragEnd = {
-                      if (isSeeking && playerState.durationMs > 0) {
-                        onSeekTo((seekProgress * playerState.durationMs).toLong())
-                      }
-                      isSeeking = false
-                    },
-                    onDragCancel = {
-                      isSeeking = false
-                    },
-                    onHorizontalDrag = { _, dragAmount ->
-                      val w = size.width.toFloat()
-                      if (w > 0) {
-                        seekProgress = (seekProgress + dragAmount / w).coerceIn(0f, 1f)
-                      }
-                    }
-                  )
-                },
-              contentAlignment = Alignment.CenterStart
-            ) {
-              // Background track: subtle translucent bar
-              Box(
-                modifier = Modifier
-                  .fillMaxWidth()
-                  .height(4.dp)
-                  .clip(RoundedCornerShape(2.dp))
-                  .background(Color(0x44444455))
-              )
-
-              // Active track: Glowing Liquid Gold Gradient bar
-              Box(
-                modifier = Modifier
-                  .fillMaxWidth(displayProgress)
-                  .height(4.dp)
-                  .clip(RoundedCornerShape(2.dp))
-                  .background(
-                    Brush.horizontalGradient(
-                      listOf(Color(0xFFFFD54F), TodAmberYellow)
-                    )
-                  )
-              )
-
-              // Smooth circular glow thumb at the end of progress
-              Box(
-                modifier = Modifier
-                  .fillMaxWidth(displayProgress)
-              ) {
-                Box(
-                  modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .size(14.dp)
-                    .clip(CircleShape)
-                    .background(TodAmberYellow)
-                    .border(2.dp, Color.White, CircleShape)
-                )
-              }
-            }
+              },
+              progressColor = TodAmberYellow,
+              modifier = Modifier.weight(1f)
+            )
 
             Spacer(modifier = Modifier.width(12.dp))
 

@@ -49,5 +49,6 @@ data class BroadcastStream(
   val userAgent: String? = null,
   val drmKey: String? = null,
   val drmScheme: String? = null,
-  val extraHeaders: Map<String, String> = emptyMap()
+  val extraHeaders: Map<String, String> = emptyMap(),
+  val logoUrl: String? = null
 )

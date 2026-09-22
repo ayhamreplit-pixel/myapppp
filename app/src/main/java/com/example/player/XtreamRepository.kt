@@ -619,45 +619,164 @@ class XtreamRepository(context: Context) {
         var currentName: String? = null
         var currentLogo: String? = null
         var currentGroup: String? = null
+        var currentUa: String? = null
+        var currentReferer: String? = null
+        var currentOrigin: String? = null
+        var currentDrmScheme: String? = null
+        var currentDrmKey: String? = null
+        val customHeaders = mutableMapOf<String, String>()
+
+        val baseUrl = if (urlOrContent.startsWith("http://") || urlOrContent.startsWith("https://")) {
+          urlOrContent.substringBeforeLast("/")
+        } else null
 
         val processLine: (String) -> Unit = { line ->
           val trimmed = line.trim()
-          if (trimmed.startsWith("#EXTINF:")) {
-            currentName = trimmed.substringAfterLast(",").trim()
-            currentLogo = if (trimmed.contains("tvg-logo=\"")) {
-              trimmed.substringAfter("tvg-logo=\"").substringBefore("\"")
-            } else null
-            currentGroup = if (trimmed.contains("group-title=\"")) {
-              trimmed.substringAfter("group-title=\"").substringBefore("\"")
-            } else null
+          if (trimmed.startsWith("#EXTINF:", ignoreCase = true)) {
+            // Extract channel name after the last comma (if any)
+            val nameCandidate = trimmed.substringAfterLast(",").trim()
+            if (nameCandidate.isNotBlank()) {
+              currentName = nameCandidate
+            }
+
+            // Extract tvg-logo or logo
+            if (trimmed.contains("tvg-logo=\"", ignoreCase = true)) {
+              currentLogo = trimmed.substringAfter("tvg-logo=\"", "").substringBefore("\"").takeIf { it.isNotBlank() }
+            } else if (trimmed.contains("logo=\"", ignoreCase = true)) {
+              currentLogo = trimmed.substringAfter("logo=\"", "").substringBefore("\"").takeIf { it.isNotBlank() }
+            }
+
+            // Extract group-title or category
+            if (trimmed.contains("group-title=\"", ignoreCase = true)) {
+              currentGroup = trimmed.substringAfter("group-title=\"", "").substringBefore("\"").takeIf { it.isNotBlank() }
+            } else if (trimmed.contains("group=\"", ignoreCase = true)) {
+              currentGroup = trimmed.substringAfter("group=\"", "").substringBefore("\"").takeIf { it.isNotBlank() }
+            }
+
+            // Extract embedded user-agent / referer inside EXTINF
+            if (trimmed.contains("user-agent=\"", ignoreCase = true)) {
+              currentUa = trimmed.substringAfter("user-agent=\"", "").substringBefore("\"")
+            } else if (trimmed.contains("http-user-agent=\"", ignoreCase = true)) {
+              currentUa = trimmed.substringAfter("http-user-agent=\"", "").substringBefore("\"")
+            }
+            if (trimmed.contains("referer=\"", ignoreCase = true)) {
+              currentReferer = trimmed.substringAfter("referer=\"", "").substringBefore("\"")
+            } else if (trimmed.contains("http-referrer=\"", ignoreCase = true)) {
+              currentReferer = trimmed.substringAfter("http-referrer=\"", "").substringBefore("\"")
+            }
+          } else if (trimmed.startsWith("#EXT-X-STREAM-INF:", ignoreCase = true)) {
+            // HLS variant stream tag
+            if (trimmed.contains("NAME=\"", ignoreCase = true)) {
+              currentName = trimmed.substringAfter("NAME=\"", "").substringBefore("\"")
+            } else if (trimmed.contains("RESOLUTION=", ignoreCase = true)) {
+              val res = trimmed.substringAfter("RESOLUTION=", "").substringBefore(",").substringBefore(" ")
+              currentName = "بث جودة ($res)"
+            }
+          } else if (trimmed.startsWith("#EXT-X-MEDIA:", ignoreCase = true)) {
+            if (trimmed.contains("NAME=\"", ignoreCase = true)) {
+              currentName = trimmed.substringAfter("NAME=\"", "").substringBefore("\"")
+            }
+            if (trimmed.contains("URI=\"", ignoreCase = true)) {
+              val extractedUri = trimmed.substringAfter("URI=\"", "").substringBefore("\"")
+              if (extractedUri.isNotBlank()) {
+                val fullUrl = if (!extractedUri.startsWith("http://") && !extractedUri.startsWith("https://") && baseUrl != null) {
+                  "$baseUrl/$extractedUri"
+                } else extractedUri
+                channels.add(
+                  XtreamChannel(
+                    streamId = (channels.size + 1).toString(),
+                    name = currentName ?: "مسار وسائط ${channels.size + 1}",
+                    iconUrl = currentLogo,
+                    categoryId = currentGroup ?: "وسائط إضافية",
+                    playUrl = fullUrl
+                  )
+                )
+                currentName = null
+                currentLogo = null
+              }
+            }
+          } else if (trimmed.startsWith("#EXTVLCOPT:", ignoreCase = true)) {
+            val opt = trimmed.substringAfter(":").trim()
+            if (opt.startsWith("http-user-agent=", ignoreCase = true)) {
+              currentUa = opt.substringAfter("=")
+            } else if (opt.startsWith("http-referrer=", ignoreCase = true)) {
+              currentReferer = opt.substringAfter("=")
+            }
+          } else if (trimmed.startsWith("#KODIPROP:inputstream.adaptive.license_type", ignoreCase = true)) {
+            currentDrmScheme = trimmed.substringAfter("=").trim()
+          } else if (trimmed.startsWith("#KODIPROP:inputstream.adaptive.license_key", ignoreCase = true)) {
+            currentDrmKey = trimmed.substringAfter("=").trim()
+          } else if (trimmed.startsWith("#EXTHTTP:", ignoreCase = true)) {
+            try {
+              val jsonStr = trimmed.substringAfter(":").trim()
+              val json = JSONObject(jsonStr)
+              json.keys().forEach { k ->
+                customHeaders[k] = json.optString(k, "")
+              }
+            } catch (ignored: Exception) {}
           } else if (trimmed.isNotEmpty() && !trimmed.startsWith("#")) {
-            val playUrl = trimmed
-            val name = currentName ?: "Channel ${channels.size + 1}"
+            // URL line found (can be ts, st, js, php, json, css, mpd, m3u8, mp4, etc.)
+            var playUrl = trimmed
+            // Resolve relative URLs if needed
+            if (!playUrl.startsWith("http://") && !playUrl.startsWith("https://") && !playUrl.startsWith("rtmp://") && !playUrl.startsWith("rtsp://") && baseUrl != null) {
+              playUrl = if (playUrl.startsWith("/")) {
+                val baseDomain = baseUrl.substringBefore("://") + "://" + Uri.parse(baseUrl).authority
+                "$baseDomain$playUrl"
+              } else {
+                "$baseUrl/$playUrl"
+              }
+            }
+
+            // Append pipe headers if available
+            val headersToAppend = mutableListOf<String>()
+            if (!currentUa.isNullOrBlank()) headersToAppend.add("User-Agent=$currentUa")
+            if (!currentReferer.isNullOrBlank()) headersToAppend.add("Referer=$currentReferer")
+            if (!currentOrigin.isNullOrBlank()) headersToAppend.add("Origin=$currentOrigin")
+            if (!currentDrmScheme.isNullOrBlank()) headersToAppend.add("drmScheme=$currentDrmScheme")
+            if (!currentDrmKey.isNullOrBlank()) headersToAppend.add("drmLicense=$currentDrmKey")
+            customHeaders.forEach { (k, v) ->
+              headersToAppend.add("$k=$v")
+            }
+
+            if (headersToAppend.isNotEmpty() && !playUrl.contains("|")) {
+              playUrl = "$playUrl|${headersToAppend.joinToString("&")}"
+            }
+
+            val name = currentName ?: "قناة ${channels.size + 1}"
             channels.add(
               XtreamChannel(
                 streamId = (channels.size + 1).toString(),
                 name = name,
                 iconUrl = currentLogo,
-                categoryId = currentGroup,
+                categoryId = currentGroup ?: "عام",
                 playUrl = playUrl
               )
             )
+
+            // Reset per-stream state
             currentName = null
             currentLogo = null
             currentGroup = null
+            currentUa = null
+            currentReferer = null
+            currentOrigin = null
+            currentDrmScheme = null
+            currentDrmKey = null
+            customHeaders.clear()
           }
         }
 
         if (urlOrContent.startsWith("http://") || urlOrContent.startsWith("https://")) {
           val req = Request.Builder()
             .url(urlOrContent)
-            .header("User-Agent", "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36")
+            .header("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36")
+            .header("Accept", "*/*")
             .build()
           val res = client.newCall(req).execute()
           val body = res.body
           if (body != null) {
             body.byteStream().use { inputStream ->
-              BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8), 16384).useLines { lines ->
+              BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8), 32768).useLines { lines ->
                 for (line in lines) {
                   processLine(line)
                 }

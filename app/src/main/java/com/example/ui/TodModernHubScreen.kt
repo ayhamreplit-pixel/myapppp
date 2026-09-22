@@ -1,5 +1,6 @@
 package com.example.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -96,7 +97,6 @@ import kotlinx.coroutines.launch
 
 enum class HubViewMode {
   CATEGORIES,
-  CHANNELS,
   XTREAM_FORM,
   M3U_FORM,
   ONBOARDING
@@ -145,6 +145,33 @@ fun TodModernHubScreen(
   var showAccountInfoModal by remember { mutableStateOf(false) }
 
   var serverPingMs by remember { mutableStateOf<Long?>(null) }
+
+  // Handle Back Button inside Modern Hub
+  val hasBackOverride = activeMatchDetail != null ||
+      showPlaylistsManagerModal ||
+      showAccountInfoModal ||
+      viewMode == HubViewMode.XTREAM_FORM ||
+      viewMode == HubViewMode.M3U_FORM ||
+      activeNavTab != TodNavTab.HOME
+
+  BackHandler(enabled = hasBackOverride) {
+    if (activeMatchDetail != null) {
+      activeMatchDetail = null
+    } else if (showPlaylistsManagerModal) {
+      showPlaylistsManagerModal = false
+    } else if (showAccountInfoModal) {
+      showAccountInfoModal = false
+    } else if (viewMode == HubViewMode.XTREAM_FORM || viewMode == HubViewMode.M3U_FORM) {
+      if (savedPlaylists.isNotEmpty() || playlistConfig != null) {
+        viewMode = HubViewMode.CATEGORIES
+        activeNavTab = TodNavTab.MORE
+      } else {
+        viewMode = HubViewMode.ONBOARDING
+      }
+    } else if (activeNavTab != TodNavTab.HOME) {
+      activeNavTab = TodNavTab.HOME
+    }
+  }
 
   // Helper: Reload playlist data with instant cache restore + high-speed background sync
   val loadPlaylistData: (XtreamPlaylistConfig, Boolean) -> Unit = { config, forceRefresh ->
@@ -459,9 +486,6 @@ fun TodModernHubScreen(
                     onOpenMatchDetail = { match ->
                       activeMatchDetail = match
                     },
-                    onOpenLiveChannels = {
-                      viewMode = HubViewMode.CHANNELS
-                    },
                     onOpenProfile = {
                       activeNavTab = TodNavTab.MORE
                     },
@@ -528,20 +552,6 @@ fun TodModernHubScreen(
           }
         }
 
-        HubViewMode.CHANNELS -> {
-          // TOD Live Channels Screen (Screenshot 3 style)
-          TodLiveChannelsScreen(
-            categories = xtreamCategories,
-            channels = allChannels,
-            isLoading = isXtreamLoading,
-            onBack = { viewMode = HubViewMode.CATEGORIES },
-            onPlayChannel = { ch, list, cat ->
-              val (stream, streams) = buildOptimizedPlaybackList(ch, list, cat)
-              onPlayStream(stream, streams)
-            }
-          )
-        }
-
         HubViewMode.XTREAM_FORM -> {
           // Apple iOS Modern Glass Xtream Settings Form
           val activeConfig = playlistConfig ?: XtreamPlaylistConfig()
@@ -552,6 +562,7 @@ fun TodModernHubScreen(
           var serverInput by remember(activeConfig) { mutableStateOf(activeConfig.serverUrl) }
           var streamFormat by remember(activeConfig) { mutableStateOf(activeConfig.streamFormat) }
           var updateInterval by remember(activeConfig) { mutableStateOf(activeConfig.updateInterval.ifBlank { "عند بدء التطبيق" }) }
+          var formError by remember { mutableStateOf<String?>(null) }
 
           val intervalOptions = listOf(
             "عند بدء التطبيق",
@@ -563,6 +574,36 @@ fun TodModernHubScreen(
             "يدوياً فقط"
           )
 
+          val submitXtreamForm = {
+            val cleanServer = serverInput.trim()
+            val cleanUser = userInput.trim()
+            val cleanPass = passInput.trim()
+            if (cleanServer.isBlank()) {
+              formError = "يرجى إدخال رابط سيرفر صالح (مثال: http://example.com:8080)"
+            } else if (cleanUser.isBlank()) {
+              formError = "يرجى إدخال اسم المستخدم الخاص بالاشتراك"
+            } else if (cleanPass.isBlank()) {
+              formError = "يرجى إدخال كلمة المرور الخاصة بالاشتراك"
+            } else {
+              formError = null
+              val updated = activeConfig.copy(
+                playlistName = nameInput.ifBlank { cleanUser.ifBlank { "سيرفر Xtream" } },
+                username = cleanUser,
+                password = cleanPass,
+                serverUrl = cleanServer,
+                streamFormat = streamFormat,
+                updateInterval = updateInterval,
+                isM3u = false
+              )
+              xtreamRepo.savePlaylistConfig(updated)
+              savedPlaylists = xtreamRepo.getAllPlaylists()
+              playlistConfig = updated
+              loadPlaylistData(updated, true)
+              viewMode = HubViewMode.CATEGORIES
+              activeNavTab = TodNavTab.MORE
+            }
+          }
+
           Column(
             modifier = Modifier
               .fillMaxSize()
@@ -573,30 +614,19 @@ fun TodModernHubScreen(
               title = "إعدادات سيرفر Xtream",
               subtitle = "ربط ومزامنة القنوات المباشرة",
               onBack = {
-                if (playlistConfig != null) viewMode = HubViewMode.CATEGORIES
-                else viewMode = HubViewMode.ONBOARDING
+                if (savedPlaylists.isNotEmpty() || playlistConfig != null) {
+                  viewMode = HubViewMode.CATEGORIES
+                  activeNavTab = TodNavTab.MORE
+                } else {
+                  viewMode = HubViewMode.ONBOARDING
+                }
               },
               trailing = {
                 Box(
                   modifier = Modifier
                     .clip(RoundedCornerShape(10.dp))
                     .background(Color(0xFF0A84FF))
-                    .clickable {
-                      val updated = activeConfig.copy(
-                        playlistName = nameInput.ifBlank { userInput.ifBlank { "سيرفر Xtream" } },
-                        username = userInput,
-                        password = passInput,
-                        serverUrl = serverInput,
-                        streamFormat = streamFormat,
-                        updateInterval = updateInterval,
-                        isM3u = false
-                      )
-                      xtreamRepo.savePlaylistConfig(updated)
-                      savedPlaylists = xtreamRepo.getAllPlaylists()
-                      playlistConfig = updated
-                      loadPlaylistData(updated, true)
-                      viewMode = HubViewMode.CATEGORIES
-                    }
+                    .clickable { submitXtreamForm() }
                     .padding(horizontal = 14.dp, vertical = 6.dp)
                 ) {
                   Text("حفظ", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
@@ -609,12 +639,33 @@ fun TodModernHubScreen(
               contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
               verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+              if (formError != null) {
+                item {
+                  Box(
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .clip(RoundedCornerShape(12.dp))
+                      .background(Color(0x33FF3B30))
+                      .border(1.dp, Color(0xFFFF3B30), RoundedCornerShape(12.dp))
+                      .padding(14.dp)
+                  ) {
+                    Row(
+                      verticalAlignment = Alignment.CenterVertically,
+                      horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                      Icon(Icons.Default.Clear, contentDescription = null, tint = Color(0xFFFF3B30), modifier = Modifier.size(20.dp))
+                      Text(formError!!, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                  }
+                }
+              }
+
               item {
                 IosSectionHeader(title = "بيانات الاتصال بالسيرفر")
                 IosListGroup {
                   IosTextFieldRow(
                     value = nameInput,
-                    onValueChange = { nameInput = it },
+                    onValueChange = { nameInput = it; formError = null },
                     placeholder = "اسم مخصص للسيرفر...",
                     label = "الاسم",
                     iconBadge = {
@@ -624,6 +675,7 @@ fun TodModernHubScreen(
                   IosTextFieldRow(
                     value = serverInput,
                     onValueChange = { input ->
+                      formError = null
                       serverInput = input
                       val extracted = xtreamRepo.smartExtractXtreamDetails(input)
                       if (extracted != null) {
@@ -640,7 +692,7 @@ fun TodModernHubScreen(
                   )
                   IosTextFieldRow(
                     value = userInput,
-                    onValueChange = { userInput = it },
+                    onValueChange = { userInput = it; formError = null },
                     placeholder = "اسم المستخدم",
                     label = "المستخدم",
                     iconBadge = {
@@ -649,7 +701,7 @@ fun TodModernHubScreen(
                   )
                   IosTextFieldRow(
                     value = passInput,
-                    onValueChange = { passInput = it },
+                    onValueChange = { passInput = it; formError = null },
                     placeholder = "كلمة المرور",
                     label = "كلمة السر",
                     showDivider = false,
@@ -692,22 +744,7 @@ fun TodModernHubScreen(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
                     .background(Color(0xFF0A84FF))
-                    .clickable {
-                      val updated = activeConfig.copy(
-                        playlistName = nameInput.ifBlank { userInput.ifBlank { "سيرفر Xtream" } },
-                        username = userInput.trim(),
-                        password = passInput.trim(),
-                        serverUrl = serverInput.trim(),
-                        streamFormat = streamFormat,
-                        updateInterval = updateInterval,
-                        isM3u = false
-                      )
-                      xtreamRepo.savePlaylistConfig(updated)
-                      savedPlaylists = xtreamRepo.getAllPlaylists()
-                      playlistConfig = updated
-                      loadPlaylistData(updated, true)
-                      viewMode = HubViewMode.CATEGORIES
-                    }
+                    .clickable { submitXtreamForm() }
                     .padding(vertical = 14.dp),
                   contentAlignment = Alignment.Center
                 ) {
@@ -730,6 +767,7 @@ fun TodModernHubScreen(
           var m3uName by remember { mutableStateOf(activeConfig.playlistName.ifBlank { "قائمة M3U" }) }
           var m3uUrlInput by remember { mutableStateOf(activeConfig.m3uUrl) }
           var m3uUpdateInterval by remember { mutableStateOf(activeConfig.updateInterval.ifBlank { "عند بدء التطبيق" }) }
+          var m3uFormError by remember { mutableStateOf<String?>(null) }
 
           val intervalOptions = listOf(
             "عند بدء التطبيق",
@@ -741,6 +779,27 @@ fun TodModernHubScreen(
             "يدوياً فقط"
           )
 
+          val submitM3uForm = {
+            val cleanUrl = m3uUrlInput.trim()
+            if (cleanUrl.isBlank()) {
+              m3uFormError = "يرجى إدخال رابط صالح لقائمة M3U أو لصق محتواها"
+            } else {
+              m3uFormError = null
+              val updated = activeConfig.copy(
+                playlistName = m3uName.ifBlank { "قائمة M3U" },
+                m3uUrl = cleanUrl,
+                updateInterval = m3uUpdateInterval,
+                isM3u = true
+              )
+              xtreamRepo.savePlaylistConfig(updated)
+              savedPlaylists = xtreamRepo.getAllPlaylists()
+              playlistConfig = updated
+              loadPlaylistData(updated, true)
+              viewMode = HubViewMode.CATEGORIES
+              activeNavTab = TodNavTab.MORE
+            }
+          }
+
           Column(
             modifier = Modifier
               .fillMaxSize()
@@ -751,27 +810,19 @@ fun TodModernHubScreen(
               title = "إعدادات قائمة M3U",
               subtitle = "تحميل وتحديث روابط البث",
               onBack = {
-                if (playlistConfig != null) viewMode = HubViewMode.CATEGORIES
-                else viewMode = HubViewMode.ONBOARDING
+                if (savedPlaylists.isNotEmpty() || playlistConfig != null) {
+                  viewMode = HubViewMode.CATEGORIES
+                  activeNavTab = TodNavTab.MORE
+                } else {
+                  viewMode = HubViewMode.ONBOARDING
+                }
               },
               trailing = {
                 Box(
                   modifier = Modifier
                     .clip(RoundedCornerShape(10.dp))
                     .background(Color(0xFF0A84FF))
-                    .clickable {
-                      val updated = activeConfig.copy(
-                        playlistName = m3uName.ifBlank { "قائمة M3U" },
-                        m3uUrl = m3uUrlInput.trim(),
-                        updateInterval = m3uUpdateInterval,
-                        isM3u = true
-                      )
-                      xtreamRepo.savePlaylistConfig(updated)
-                      savedPlaylists = xtreamRepo.getAllPlaylists()
-                      playlistConfig = updated
-                      loadPlaylistData(updated, true)
-                      viewMode = HubViewMode.CATEGORIES
-                    }
+                    .clickable { submitM3uForm() }
                     .padding(horizontal = 14.dp, vertical = 6.dp)
                 ) {
                   Text("حفظ", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
@@ -784,12 +835,33 @@ fun TodModernHubScreen(
               contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
               verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+              if (m3uFormError != null) {
+                item {
+                  Box(
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .clip(RoundedCornerShape(12.dp))
+                      .background(Color(0x33FF3B30))
+                      .border(1.dp, Color(0xFFFF3B30), RoundedCornerShape(12.dp))
+                      .padding(14.dp)
+                  ) {
+                    Row(
+                      verticalAlignment = Alignment.CenterVertically,
+                      horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                      Icon(Icons.Default.Clear, contentDescription = null, tint = Color(0xFFFF3B30), modifier = Modifier.size(20.dp))
+                      Text(m3uFormError!!, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                  }
+                }
+              }
+
               item {
                 IosSectionHeader(title = "بيانات قائمة التشغيل")
                 IosListGroup {
                   IosTextFieldRow(
                     value = m3uName,
-                    onValueChange = { m3uName = it },
+                    onValueChange = { m3uName = it; m3uFormError = null },
                     placeholder = "اسم القائمة...",
                     label = "الاسم",
                     iconBadge = {
@@ -798,7 +870,7 @@ fun TodModernHubScreen(
                   )
                   IosTextFieldRow(
                     value = m3uUrlInput,
-                    onValueChange = { m3uUrlInput = it },
+                    onValueChange = { m3uUrlInput = it; m3uFormError = null },
                     placeholder = "http://example.com/playlist.m3u",
                     label = "رابط M3U",
                     showDivider = false,
@@ -832,19 +904,7 @@ fun TodModernHubScreen(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
                     .background(Color(0xFF0A84FF))
-                    .clickable {
-                      val updated = activeConfig.copy(
-                        playlistName = m3uName.ifBlank { "قائمة M3U" },
-                        m3uUrl = m3uUrlInput.trim(),
-                        updateInterval = m3uUpdateInterval,
-                        isM3u = true
-                      )
-                      xtreamRepo.savePlaylistConfig(updated)
-                      savedPlaylists = xtreamRepo.getAllPlaylists()
-                      playlistConfig = updated
-                      loadPlaylistData(updated, true)
-                      viewMode = HubViewMode.CATEGORIES
-                    }
+                    .clickable { submitM3uForm() }
                     .padding(vertical = 14.dp),
                   contentAlignment = Alignment.Center
                 ) {

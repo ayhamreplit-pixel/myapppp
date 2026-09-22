@@ -50,6 +50,7 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
   var currentStream by remember { mutableStateOf(BroadcastCatalog.placeholderStream) }
   var activeChannelList by remember { mutableStateOf<List<BroadcastStream>>(emptyList()) }
   var screenDestination by remember { mutableStateOf(ScreenDestination.START_INPUT) }
+  var returnDestination by remember { mutableStateOf(ScreenDestination.START_INPUT) }
   var isFullscreen by remember { mutableStateOf(false) }
 
   // Dual player streams
@@ -77,10 +78,11 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
       controller.show(WindowInsetsCompat.Type.systemBars())
       controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
     }
-    screenDestination = ScreenDestination.START_INPUT
+    screenDestination = returnDestination
   }
 
-  val launchPlayerInLandscape: (BroadcastStream, List<BroadcastStream>) -> Unit = { stream, channels ->
+  val launchPlayerInLandscape: (BroadcastStream, List<BroadcastStream>, ScreenDestination) -> Unit = { stream, channels, origin ->
+    returnDestination = origin
     currentStream = stream
     activeChannelList = channels
     playerManager.setChannelListContext(channels)
@@ -113,14 +115,14 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
     }
   }
 
-  // Back handler navigation: close drawer if open, otherwise exit player to home
-  BackHandler(enabled = screenDestination == ScreenDestination.PLAYER || screenDestination == ScreenDestination.QUICK_LINK) {
-    if (screenDestination == ScreenDestination.QUICK_LINK) {
-      screenDestination = ScreenDestination.START_INPUT
-    } else if (showInPlayerChannelDrawer) {
+  // Back handler navigation: close drawer if open, otherwise exit player or quick link screen
+  BackHandler(enabled = screenDestination != ScreenDestination.START_INPUT || showInPlayerChannelDrawer) {
+    if (showInPlayerChannelDrawer) {
       showInPlayerChannelDrawer = false
-    } else {
+    } else if (screenDestination == ScreenDestination.PLAYER || screenDestination == ScreenDestination.DUAL_PLAYER) {
       exitPlayerToHome()
+    } else if (screenDestination == ScreenDestination.QUICK_LINK) {
+      screenDestination = ScreenDestination.START_INPUT
     }
   }
 
@@ -150,12 +152,13 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
         // 1. Redesigned Hub with Xtream Codes & Direct Streams (No Presets)
         TodModernHubScreen(
           onPlayStream = { stream, channels ->
-            launchPlayerInLandscape(stream, channels)
+            launchPlayerInLandscape(stream, channels, ScreenDestination.START_INPUT)
           },
           onPlayDualStream = { s1, s2 ->
             dualStream1 = s1
             dualStream2 = s2
             playerManager.stop()
+            returnDestination = ScreenDestination.START_INPUT
             screenDestination = ScreenDestination.DUAL_PLAYER
             activity?.let { act ->
               act.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
@@ -178,7 +181,7 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
             screenDestination = ScreenDestination.START_INPUT
           },
           onPlayStream = { stream, channels ->
-            launchPlayerInLandscape(stream, channels)
+            launchPlayerInLandscape(stream, channels, ScreenDestination.QUICK_LINK)
           }
         )
       }

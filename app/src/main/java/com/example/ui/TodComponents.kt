@@ -8,14 +8,17 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -50,6 +53,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -57,15 +61,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -151,8 +164,7 @@ fun TodLogo(
 }
 
 /**
- * High-End Corporate Grade TOD Bottom Navigation Bar
- * Features Frosted Glass Gradient, Dynamic Glow, Active Pill Indicators, and Fluid Spring Animations
+ * High-End Corporate Grade TOD Bottom Navigation Bar (Matching TOD iOS Reference)
  */
 enum class TodNavTab {
   HOME,
@@ -161,180 +173,460 @@ enum class TodNavTab {
 }
 
 @Composable
+fun TodHomeNavIcon(
+  isSelected: Boolean,
+  activeColor: Color = Color(0xFFFFB800),
+  inactiveColor: Color = Color(0xFF8E8E93),
+  modifier: Modifier = Modifier
+) {
+  val color = if (isSelected) activeColor else inactiveColor
+  Canvas(modifier = modifier.size(26.dp)) {
+    val w = size.width
+    val h = size.height
+    val strokeWidth = 2.4.dp.toPx()
+
+    val path = Path().apply {
+      moveTo(w * 0.5f, h * 0.08f)
+      lineTo(w * 0.94f, h * 0.44f)
+      lineTo(w * 0.85f, h * 0.86f)
+      quadraticBezierTo(w * 0.85f, h * 0.96f, w * 0.74f, h * 0.96f)
+      lineTo(w * 0.26f, h * 0.96f)
+      quadraticBezierTo(w * 0.15f, h * 0.96f, w * 0.15f, h * 0.86f)
+      lineTo(w * 0.06f, h * 0.44f)
+      close()
+    }
+
+    drawPath(
+      path = path,
+      color = color,
+      style = Stroke(
+        width = strokeWidth,
+        cap = StrokeCap.Round,
+        join = StrokeJoin.Round
+      )
+    )
+
+    val dotSize = w * 0.22f
+    drawRoundRect(
+      color = color,
+      topLeft = Offset((w - dotSize) / 2f, h * 0.52f),
+      size = Size(dotSize, dotSize),
+      cornerRadius = CornerRadius(3.5.dp.toPx())
+    )
+  }
+}
+
+@Composable
+fun TodSearchNavIcon(
+  isSelected: Boolean,
+  activeColor: Color = Color(0xFFFFB800),
+  inactiveColor: Color = Color(0xFF8E8E93),
+  modifier: Modifier = Modifier
+) {
+  val color = if (isSelected) activeColor else inactiveColor
+  Canvas(modifier = modifier.size(26.dp)) {
+    val w = size.width
+    val h = size.height
+    val strokeWidth = 2.3.dp.toPx()
+    val radius = w * 0.32f
+    val center = Offset(w * 0.42f, h * 0.42f)
+
+    drawCircle(
+      color = color,
+      radius = radius,
+      center = center,
+      style = Stroke(width = strokeWidth)
+    )
+
+    val handleStart = Offset(center.x + radius * 0.707f, center.y + radius * 0.707f)
+    val handleEnd = Offset(w * 0.92f, h * 0.92f)
+    drawLine(
+      color = color,
+      start = handleStart,
+      end = handleEnd,
+      strokeWidth = strokeWidth * 1.15f,
+      cap = StrokeCap.Round
+    )
+  }
+}
+
+@Composable
+fun TodMoreNavIcon(
+  isSelected: Boolean,
+  activeColor: Color = Color(0xFFFFB800),
+  inactiveColor: Color = Color(0xFF8E8E93),
+  modifier: Modifier = Modifier
+) {
+  if (isSelected) {
+    Box(
+      modifier = modifier
+        .size(26.dp)
+        .clip(RoundedCornerShape(7.dp))
+        .background(activeColor),
+      contentAlignment = Alignment.Center
+    ) {
+      Canvas(modifier = Modifier.size(17.dp)) {
+        val w = size.width
+        val h = size.height
+        val headRadius = w * 0.24f
+        val strokeW = 1.8.dp.toPx()
+
+        drawCircle(
+          color = Color(0xFF141414),
+          radius = headRadius,
+          center = Offset(w * 0.5f, h * 0.32f),
+          style = Stroke(width = strokeW)
+        )
+        val shoulderPath = Path().apply {
+          moveTo(w * 0.16f, h * 0.88f)
+          quadraticBezierTo(w * 0.16f, h * 0.58f, w * 0.5f, h * 0.58f)
+          quadraticBezierTo(w * 0.84f, h * 0.58f, w * 0.84f, h * 0.88f)
+        }
+        drawPath(
+          path = shoulderPath,
+          color = Color(0xFF141414),
+          style = Stroke(width = strokeW, cap = StrokeCap.Round)
+        )
+      }
+    }
+  } else {
+    Canvas(modifier = modifier.size(26.dp)) {
+      val w = size.width
+      val h = size.height
+      val headRadius = w * 0.24f
+      val strokeW = 2.1.dp.toPx()
+
+      drawCircle(
+        color = inactiveColor,
+        radius = headRadius,
+        center = Offset(w * 0.5f, h * 0.30f),
+        style = Stroke(width = strokeW)
+      )
+      val shoulderPath = Path().apply {
+        moveTo(w * 0.16f, h * 0.88f)
+        quadraticBezierTo(w * 0.16f, h * 0.58f, w * 0.5f, h * 0.58f)
+        quadraticBezierTo(w * 0.84f, h * 0.58f, w * 0.84f, h * 0.88f)
+      }
+      drawPath(
+        path = shoulderPath,
+        color = inactiveColor,
+        style = Stroke(width = strokeW, cap = StrokeCap.Round)
+      )
+    }
+  }
+}
+
+/**
+ * TOD iOS Bottom Navigation Bar
+ */
+@Composable
 fun TodBottomNavBar(
   currentTab: TodNavTab,
   onTabSelected: (TodNavTab) -> Unit,
   modifier: Modifier = Modifier
 ) {
-  Box(
+  Surface(
     modifier = modifier
       .fillMaxWidth()
-      .background(
-        Brush.verticalGradient(
-          colors = listOf(
-            Color(0xFF14141C).copy(alpha = 0.98f),
-            Color(0xFF0A0A0E).copy(alpha = 1.0f)
-          )
-        )
-      )
+      .height(66.dp),
+    color = Color(0xFF0C0C10),
+    border = androidx.compose.foundation.BorderStroke(0.75.dp, Color(0x18FFFFFF))
   ) {
-    // Top glowing gradient accent line
-    Box(
-      modifier = Modifier
-        .fillMaxWidth()
-        .height(1.5.dp)
-        .align(Alignment.TopCenter)
-        .background(
-          Brush.horizontalGradient(
-            colors = listOf(
-              Color.Transparent,
-              TodGold.copy(alpha = 0.2f),
-              TodGold.copy(alpha = 0.85f),
-              Color(0xFFBA68C8).copy(alpha = 0.7f),
-              TodGold.copy(alpha = 0.2f),
-              Color.Transparent
-            )
-          )
-        )
-    )
-
     Row(
       modifier = Modifier
-        .fillMaxWidth()
-        .height(68.dp)
-        .padding(horizontal = 16.dp, vertical = 6.dp),
+        .fillMaxSize()
+        .padding(horizontal = 24.dp, vertical = 6.dp),
       verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.SpaceEvenly
+      horizontalArrangement = Arrangement.SpaceAround
     ) {
-      // 1. More / Account Tab (المزيد)
-      TodCorporateNavTabItem(
+      // Tab 1: المزيد (More / Profile) - Left
+      TodIosTabItem(
         title = "المزيد",
-        icon = Icons.Default.Person,
         isSelected = currentTab == TodNavTab.MORE,
         onClick = { onTabSelected(TodNavTab.MORE) },
-        accentColor = TodGold
+        icon = { isSel ->
+          TodMoreNavIcon(isSelected = isSel)
+        }
       )
 
-      // 2. Search Tab (بحث)
-      TodCorporateNavTabItem(
-        title = "بحث وتصفح",
-        icon = Icons.Default.Search,
+      // Tab 2: بحث (Search) - Center
+      TodIosTabItem(
+        title = "بحث",
         isSelected = currentTab == TodNavTab.SEARCH,
         onClick = { onTabSelected(TodNavTab.SEARCH) },
-        accentColor = TodGold
+        icon = { isSel ->
+          TodSearchNavIcon(isSelected = isSel)
+        }
       )
 
-      // 3. Home Tab (الرئيسية)
-      TodCorporateNavTabItem(
+      // Tab 3: الرئيسية (Home) - Right
+      TodIosTabItem(
         title = "الرئيسية",
-        icon = Icons.Default.Home,
         isSelected = currentTab == TodNavTab.HOME,
         onClick = { onTabSelected(TodNavTab.HOME) },
-        accentColor = TodGold
+        icon = { isSel ->
+          TodHomeNavIcon(isSelected = isSel)
+        }
       )
     }
   }
 }
 
 @Composable
-private fun TodCorporateNavTabItem(
+private fun TodIosTabItem(
   title: String,
-  icon: ImageVector,
   isSelected: Boolean,
   onClick: () -> Unit,
-  accentColor: Color
+  icon: @Composable (Boolean) -> Unit
 ) {
-  val scale by animateFloatAsState(
-    targetValue = if (isSelected) 1.08f else 1.0f,
-    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-    label = "navScale"
-  )
+  val activeColor = Color(0xFFFFB800)
+  val inactiveColor = Color(0xFF9E9E9E)
 
-  val iconColor by animateColorAsState(
-    targetValue = if (isSelected) accentColor else Color(0xFF8E8E9F),
-    animationSpec = tween(durationMillis = 220),
-    label = "iconColor"
-  )
-
-  val textColor by animateColorAsState(
-    targetValue = if (isSelected) Color.White else Color(0xFF7E7E90),
-    animationSpec = tween(durationMillis = 220),
-    label = "textColor"
-  )
-
-  Box(
+  Column(
     modifier = Modifier
-      .scale(scale)
-      .clip(RoundedCornerShape(16.dp))
-      .background(
-        if (isSelected) {
-          Brush.verticalGradient(
-            colors = listOf(
-              accentColor.copy(alpha = 0.18f),
-              Color(0xFF1E1E28).copy(alpha = 0.35f)
-            )
-          )
-        } else {
-          Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
-        }
+      .clickable(
+        interactionSource = remember { MutableInteractionSource() },
+        indication = null,
+        onClick = onClick
       )
-      .border(
-        width = 1.dp,
-        brush = if (isSelected) {
-          Brush.verticalGradient(
-            listOf(accentColor.copy(alpha = 0.45f), Color(0x00000000))
-          )
-        } else {
-          Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
-        },
-        shape = RoundedCornerShape(16.dp)
-      )
-      .clickable(onClick = onClick)
-      .padding(horizontal = 18.dp, vertical = 6.dp),
-    contentAlignment = Alignment.Center
+      .padding(horizontal = 18.dp, vertical = 2.dp),
+    horizontalAlignment = Alignment.CenterHorizontally,
+    verticalArrangement = Arrangement.Center
   ) {
-    Column(
-      horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.Center
+    Box(
+      modifier = Modifier.size(28.dp),
+      contentAlignment = Alignment.Center
     ) {
-      Box(contentAlignment = Alignment.Center) {
-        // Glow backdrop for active tab icon
-        if (isSelected) {
-          Box(
-            modifier = Modifier
-              .size(24.dp)
-              .background(accentColor.copy(alpha = 0.25f), CircleShape)
-          )
-        }
-        Icon(
-          imageVector = icon,
-          contentDescription = title,
-          tint = iconColor,
-          modifier = Modifier.size(22.dp)
-        )
-      }
+      icon(isSelected)
+    }
 
-      Spacer(modifier = Modifier.height(2.dp))
+    Spacer(modifier = Modifier.height(3.dp))
 
-      Text(
-        text = title,
-        color = textColor,
-        fontSize = if (isSelected) 11.5.sp else 11.sp,
-        fontWeight = if (isSelected) FontWeight.Black else FontWeight.Medium,
-        maxLines = 1
-      )
+    Text(
+      text = title,
+      color = if (isSelected) activeColor else inactiveColor,
+      fontSize = 12.sp,
+      fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+      maxLines = 1
+    )
+  }
+}
 
-      // Glowing dot indicator below selected title
-      if (isSelected) {
-        Spacer(modifier = Modifier.height(2.dp))
+/**
+ * iOS Floating Mini-Player Pill (Top pill in images (5).jpeg)
+ * Floats directly above the bottom navigation pill dock with track artwork, title/subtitle, and play/pause/30s controls.
+ */
+@Composable
+fun TodIosFloatingMiniPlayer(
+  stream: BroadcastStream,
+  isPlaying: Boolean,
+  onTogglePlayPause: () -> Unit,
+  onSeekForward30: () -> Unit,
+  onClick: () -> Unit,
+  onClose: (() -> Unit)? = null,
+  modifier: Modifier = Modifier
+) {
+  Surface(
+    modifier = modifier
+      .fillMaxWidth()
+      .padding(horizontal = 16.dp, vertical = 4.dp)
+      .height(60.dp)
+      .shadow(12.dp, shape = RoundedCornerShape(26.dp), spotColor = Color.Black.copy(alpha = 0.5f))
+      .clickable(onClick = onClick),
+    shape = RoundedCornerShape(26.dp),
+    color = Color(0xEC22222E),
+    border = androidx.compose.foundation.BorderStroke(
+      1.dp,
+      Brush.verticalGradient(listOf(Color(0x45FFFFFF), Color(0x12FFFFFF)))
+    )
+  ) {
+    Row(
+      modifier = Modifier
+        .fillMaxSize()
+        .padding(horizontal = 10.dp),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+      // Left: Thumbnail Artwork
+      Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.weight(1f)
+      ) {
         Box(
           modifier = Modifier
-            .size(4.dp)
-            .clip(CircleShape)
-            .background(accentColor)
-        )
+            .size(42.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color(0xFF2C2C38)),
+          contentAlignment = Alignment.Center
+        ) {
+          if (!stream.logoUrl.isNullOrBlank()) {
+            AsyncImage(
+              model = stream.logoUrl,
+              contentDescription = stream.title,
+              contentScale = ContentScale.Crop,
+              modifier = Modifier.fillMaxSize()
+            )
+          } else {
+            Icon(
+              imageVector = Icons.Default.Tv,
+              contentDescription = null,
+              tint = TodGold,
+              modifier = Modifier.size(22.dp)
+            )
+          }
+        }
+
+        Spacer(modifier = Modifier.width(10.dp))
+
+        // Center: Title + Subtitle
+        Column(
+          modifier = Modifier.weight(1f),
+          verticalArrangement = Arrangement.Center
+        ) {
+          Text(
+            text = stream.title.ifBlank { "بث مباشر نشط" },
+            color = Color.White,
+            fontSize = 13.5.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+          )
+          Text(
+            text = stream.subtitle.ifBlank { if (stream.isLive) "بث مباشر الآن" else "جاهز للتشغيل" },
+            color = Color(0xFFAAAAAA),
+            fontSize = 11.5.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+          )
+        }
+      }
+
+      // Right: Play/Pause & Skip 30s Buttons (from images (5).jpeg)
+      Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+      ) {
+        IconButton(
+          onClick = onTogglePlayPause,
+          modifier = Modifier.size(36.dp)
+        ) {
+          Icon(
+            imageVector = if (isPlaying) Icons.Default.Close else Icons.Default.PlayArrow,
+            contentDescription = if (isPlaying) "إيقاف مؤقت" else "تشغيل",
+            tint = Color.White,
+            modifier = Modifier.size(24.dp)
+          )
+        }
+
+        IconButton(
+          onClick = onSeekForward30,
+          modifier = Modifier.size(36.dp)
+        ) {
+          Box(contentAlignment = Alignment.Center) {
+            Icon(
+              imageVector = Icons.Default.Refresh,
+              contentDescription = "تقديم 30 ثانية",
+              tint = Color.White,
+              modifier = Modifier.size(22.dp)
+            )
+            Text(
+              "30",
+              color = Color.White,
+              fontSize = 7.5.sp,
+              fontWeight = FontWeight.Black
+            )
+          }
+        }
       }
     }
+  }
+}
+
+/**
+ * iOS Liquid Slider (Bottom of images (5).jpeg)
+ * Features an authentic liquid smooth pill thumb and dynamic glowing track.
+ */
+@Composable
+fun IosLiquidSlider(
+  value: Float,
+  onValueChange: (Float) -> Unit,
+  modifier: Modifier = Modifier,
+  trackColor: Color = Color(0x35FFFFFF),
+  progressColor: Color = Color(0xFF0A84FF)
+) {
+  var isDragging by remember { mutableStateOf(false) }
+
+  BoxWithConstraints(
+    modifier = modifier
+      .fillMaxWidth()
+      .height(28.dp)
+      .pointerInput(Unit) {
+        detectHorizontalDragGestures(
+          onDragStart = { offset ->
+            isDragging = true
+            val widthPx = size.width.toFloat()
+            if (widthPx > 0f) {
+              val newProgress = (offset.x / widthPx).coerceIn(0f, 1f)
+              onValueChange(newProgress)
+            }
+          },
+          onDragEnd = { isDragging = false },
+          onDragCancel = { isDragging = false },
+          onHorizontalDrag = { change, _ ->
+            change.consume()
+            val widthPx = size.width.toFloat()
+            if (widthPx > 0f) {
+              val newProgress = (change.position.x / widthPx).coerceIn(0f, 1f)
+              onValueChange(newProgress)
+            }
+          }
+        )
+      },
+    contentAlignment = Alignment.CenterStart
+  ) {
+    val totalWidth = maxWidth
+    val currentX = totalWidth * value.coerceIn(0f, 1f)
+
+    // Base Track
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .height(4.5.dp)
+        .clip(RoundedCornerShape(3.dp))
+        .background(trackColor)
+    )
+
+    // Active Filled Track
+    Box(
+      modifier = Modifier
+        .width(currentX)
+        .height(4.5.dp)
+        .clip(RoundedCornerShape(3.dp))
+        .background(
+          Brush.horizontalGradient(
+            listOf(progressColor.copy(alpha = 0.85f), progressColor)
+          )
+        )
+    )
+
+    // Smooth Liquid Pill Thumb (from images (5).jpeg)
+    Box(
+      modifier = Modifier
+        .padding(start = (currentX - 18.dp).coerceAtLeast(0.dp))
+        .width(36.dp)
+        .height(18.dp)
+        .shadow(8.dp, shape = RoundedCornerShape(9.dp), spotColor = progressColor.copy(alpha = 0.5f))
+        .clip(RoundedCornerShape(9.dp))
+        .background(
+          Brush.verticalGradient(
+            listOf(
+              Color(0xFFFFFFFF),
+              Color(0xFFE0E5F0)
+            )
+          )
+        )
+        .border(1.dp, Color(0x60FFFFFF), RoundedCornerShape(9.dp))
+    )
   }
 }
 
