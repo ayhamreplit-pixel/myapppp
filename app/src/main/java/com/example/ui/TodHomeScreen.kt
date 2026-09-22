@@ -40,6 +40,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.GridView
@@ -115,6 +116,7 @@ fun TodHomeScreen(
   onOpenMatchDetail: (TodMatchDetail) -> Unit,
   onOpenLiveChannels: () -> Unit,
   onOpenProfile: () -> Unit,
+  onOpenQuickLink: () -> Unit = {},
   modifier: Modifier = Modifier
 ) {
   var selectedCategoryId by remember { mutableStateOf<String?>("ALL") }
@@ -282,6 +284,35 @@ fun TodHomeScreen(
 
         // Official TOD by beIN Logo
         TodLogo(fontSize = 24, showSubtext = true)
+
+        // Apple iOS Glass Quick Link Action Button
+        Box(
+          modifier = Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color(0x1FFFFFFF))
+            .border(0.5.dp, Color(0x33FFFFFF), RoundedCornerShape(10.dp))
+            .clickable { onOpenQuickLink() }
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+          contentAlignment = Alignment.Center
+        ) {
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+          ) {
+            Icon(
+              imageVector = Icons.Default.Bolt,
+              contentDescription = "رابط سريع",
+              tint = Color(0xFF0A84FF),
+              modifier = Modifier.size(16.dp)
+            )
+            Text(
+              text = "رابط سريع",
+              color = Color.White,
+              fontSize = 11.5.sp,
+              fontWeight = FontWeight.Bold
+            )
+          }
+        }
       }
 
       Spacer(modifier = Modifier.height(6.dp))

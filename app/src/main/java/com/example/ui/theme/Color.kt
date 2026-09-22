@@ -102,6 +102,67 @@ object TodGradients {
   val BorderGold = Brush.linearGradient(
     listOf(Color(0x99FDB913), Color(0x22FDB913))
   )
+
+  // Modern Apple iOS Ultra-Glass Materials & Gradients
+  val IosCanvasBg = Brush.verticalGradient(
+    listOf(Color(0xFF0D0E15), Color(0xFF07080D), Color(0xFF000000))
+  )
+  val IosGlassCard = Brush.verticalGradient(
+    listOf(Color(0x2EFFFFFF), Color(0x14FFFFFF))
+  )
+  val IosGlassCardElevated = Brush.verticalGradient(
+    listOf(Color(0x3DFFFFFF), Color(0x1EFFFFFF))
+  )
+  val IosGlassBorder = Brush.verticalGradient(
+    listOf(Color(0x55FFFFFF), Color(0x1AFFFFFF), Color(0x0AFFFFFF))
+  )
+  val IosAccentGradient = Brush.horizontalGradient(
+    listOf(Color(0xFF0A84FF), Color(0xFF2997FF))
+  )
+  val IosGoldAccentGradient = Brush.horizontalGradient(
+    listOf(Color(0xFFFFD60A), Color(0xFFFF9F0A))
+  )
+  val IosHeroGlow = Brush.radialGradient(
+    listOf(Color(0x350A84FF), Color(0x155E5CE6), Color.Transparent)
+  )
 }
+
+// iOS System Colors (Dark Mode Spec)
+val IosSystemBlue = Color(0xFF0A84FF)
+val IosSystemBlueLight = Color(0xFF2997FF)
+val IosSystemIndigo = Color(0xFF5E5CE6)
+val IosSystemPurple = Color(0xFFBF5AF2)
+val IosSystemPink = Color(0xFFFF375F)
+val IosSystemRed = Color(0xFFFF453A)
+val IosSystemOrange = Color(0xFFFF9F0A)
+val IosSystemYellow = Color(0xFFFFD60A)
+val IosSystemGreen = Color(0xFF30D158)
+val IosSystemMint = Color(0xFF63E6E2)
+val IosSystemTeal = Color(0xFF64D2FF)
+val IosSystemCyan = Color(0xFF70D7FF)
+
+// iOS Dark Mode Materials & Backgrounds
+val IosDarkBackground = Color(0xFF000000)
+val IosDarkSecondaryBackground = Color(0xFF1C1C1E)
+val IosDarkTertiaryBackground = Color(0xFF2C2C2E)
+val IosDarkGroupedBackground = Color(0xFF000000)
+val IosDarkSecondaryGroupedBackground = Color(0xFF1C1C1E)
+val IosDarkTertiaryGroupedBackground = Color(0xFF2C2C2E)
+
+// iOS Glass Materials
+val IosGlassUltraThin = Color(0x14FFFFFF)
+val IosGlassThin = Color(0x24FFFFFF)
+val IosGlassRegular = Color(0x33FFFFFF)
+val IosGlassThick = Color(0x45FFFFFF)
+val IosGlassBorderColor = Color(0x33FFFFFF)
+val IosGlassBorderSubtle = Color(0x1AFFFFFF)
+
+// iOS Labels
+val IosLabelPrimary = Color(0xFFFFFFFF)
+val IosLabelSecondary = Color(0x99EBEBF5)
+val IosLabelTertiary = Color(0x4DEBEBF5)
+val IosLabelQuaternary = Color(0x29EBEBF5)
+val IosSeparator = Color(0x33545458)
+val IosOpaqueSeparator = Color(0xFF38383A)
 
 

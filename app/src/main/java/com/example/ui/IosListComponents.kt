@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -375,6 +376,153 @@ fun IosSectionFooter(
       .fillMaxWidth()
       .padding(horizontal = 16.dp, vertical = 6.dp)
   )
+}
+
+/**
+ * Apple iOS Modern Glass Navigation Bar
+ */
+@Composable
+fun IosNavigationBar(
+  title: String,
+  modifier: Modifier = Modifier,
+  subtitle: String? = null,
+  onBack: (() -> Unit)? = null,
+  trailing: (@Composable () -> Unit)? = null
+) {
+  val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+
+  Box(
+    modifier = modifier
+      .fillMaxWidth()
+      .statusBarsPadding()
+      .padding(horizontal = 16.dp, vertical = 10.dp)
+  ) {
+    Row(
+      modifier = Modifier.fillMaxWidth(),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+      if (onBack != null) {
+        Box(
+          modifier = Modifier
+            .size(36.dp)
+            .clip(CircleShape)
+            .background(Color(0x22FFFFFF))
+            .clickable { onBack() },
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(
+            imageVector = if (isRtl) Icons.AutoMirrored.Filled.KeyboardArrowRight else Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+            contentDescription = "رجوع",
+            tint = Color.White,
+            modifier = Modifier.size(20.dp)
+          )
+        }
+      } else {
+        Spacer(modifier = Modifier.size(36.dp))
+      }
+
+      Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.weight(1f)
+      ) {
+        Text(
+          text = title,
+          color = Color.White,
+          fontSize = 17.sp,
+          fontWeight = FontWeight.Bold,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis
+        )
+        if (!subtitle.isNullOrBlank()) {
+          Text(
+            text = subtitle,
+            color = Color(0xFF8E8E93),
+            fontSize = 11.5.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+          )
+        }
+      }
+
+      if (trailing != null) {
+        trailing()
+      } else {
+        Spacer(modifier = Modifier.size(36.dp))
+      }
+    }
+  }
+}
+
+/**
+ * Apple iOS Inset Grouped Text Field Row
+ */
+@Composable
+fun IosTextFieldRow(
+  value: String,
+  onValueChange: (String) -> Unit,
+  placeholder: String,
+  modifier: Modifier = Modifier,
+  label: String? = null,
+  iconBadge: (@Composable () -> Unit)? = null,
+  showDivider: Boolean = true
+) {
+  Column(modifier = modifier.fillMaxWidth()) {
+    Row(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 16.dp, vertical = 8.dp),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+      iconBadge?.invoke()
+
+      if (!label.isNullOrBlank()) {
+        Text(
+          text = label,
+          color = Color.White,
+          fontSize = 14.sp,
+          fontWeight = FontWeight.SemiBold,
+          modifier = Modifier.width(60.dp)
+        )
+      }
+
+      androidx.compose.foundation.text.BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = true,
+        textStyle = androidx.compose.ui.text.TextStyle(
+          color = Color.White,
+          fontSize = 14.5.sp,
+          fontWeight = FontWeight.Normal
+        ),
+        cursorBrush = androidx.compose.ui.graphics.SolidColor(Color(0xFF0A84FF)),
+        modifier = Modifier
+          .weight(1f)
+          .padding(vertical = 6.dp),
+        decorationBox = { innerTextField ->
+          Box(contentAlignment = Alignment.CenterStart) {
+            if (value.isEmpty()) {
+              Text(
+                text = placeholder,
+                color = Color(0xFF636366),
+                fontSize = 14.5.sp
+              )
+            }
+            innerTextField()
+          }
+        }
+      )
+    }
+
+    if (showDivider) {
+      HorizontalDivider(
+        modifier = Modifier.padding(start = if (iconBadge != null) 56.dp else 16.dp),
+        thickness = 0.5.dp,
+        color = Color(0x1FFFFFFF)
+      )
+    }
+  }
 }
 
 /**

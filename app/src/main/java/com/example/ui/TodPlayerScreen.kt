@@ -30,6 +30,7 @@ import com.example.player.XtreamRepository
 
 enum class ScreenDestination {
   START_INPUT,
+  QUICK_LINK,
   PLAYER,
   DUAL_PLAYER
 }
@@ -113,8 +114,10 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
   }
 
   // Back handler navigation: close drawer if open, otherwise exit player to home
-  BackHandler(enabled = screenDestination == ScreenDestination.PLAYER) {
-    if (showInPlayerChannelDrawer) {
+  BackHandler(enabled = screenDestination == ScreenDestination.PLAYER || screenDestination == ScreenDestination.QUICK_LINK) {
+    if (screenDestination == ScreenDestination.QUICK_LINK) {
+      screenDestination = ScreenDestination.START_INPUT
+    } else if (showInPlayerChannelDrawer) {
       showInPlayerChannelDrawer = false
     } else {
       exitPlayerToHome()
@@ -161,6 +164,21 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
                 systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
               }
             }
+          },
+          onOpenQuickLinkScreen = {
+            screenDestination = ScreenDestination.QUICK_LINK
+          }
+        )
+      }
+
+      ScreenDestination.QUICK_LINK -> {
+        // Dedicated iOS Modern Full-Screen Quick Link Player Destination
+        TodQuickLinkScreen(
+          onBack = {
+            screenDestination = ScreenDestination.START_INPUT
+          },
+          onPlayStream = { stream, channels ->
+            launchPlayerInLandscape(stream, channels)
           }
         )
       }
