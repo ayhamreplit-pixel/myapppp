@@ -10,10 +10,13 @@ import com.example.R
 
 // خط ثمانية الرسمي المعتمد (IBM Plex Sans Arabic) - الخط الرسمي الموحد لجميع صفحات ونصوص التطبيق
 val ThmanyahFontFamily = FontFamily(
+  Font(R.font.ibm_plex_sans_arabic, FontWeight.Light),
   Font(R.font.ibm_plex_sans_arabic, FontWeight.Normal),
   Font(R.font.ibm_plex_sans_arabic, FontWeight.Medium),
   Font(R.font.ibm_plex_sans_arabic_bold, FontWeight.SemiBold),
-  Font(R.font.ibm_plex_sans_arabic_bold, FontWeight.Bold)
+  Font(R.font.ibm_plex_sans_arabic_bold, FontWeight.Bold),
+  Font(R.font.ibm_plex_sans_arabic_bold, FontWeight.ExtraBold),
+  Font(R.font.ibm_plex_sans_arabic_bold, FontWeight.Black)
 )
 
 val IbmPlexSansArabic = ThmanyahFontFamily

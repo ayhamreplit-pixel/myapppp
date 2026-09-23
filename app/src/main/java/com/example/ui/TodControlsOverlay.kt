@@ -148,10 +148,11 @@ fun TodControlsOverlay(
       ) {
         Box(
           modifier = Modifier
+            .iosBounceClick(scaleDown = 0.88f) { onToggleLock() }
+            .size(46.dp)
             .clip(CircleShape)
-            .background(Color(0xCC101524))
-            .clickable { onToggleLock() }
-            .padding(12.dp)
+            .background(Color(0xCC101524)),
+          contentAlignment = Alignment.Center
         ) {
           Icon(
             imageVector = Icons.Default.Lock,
@@ -208,11 +209,10 @@ fun TodControlsOverlay(
               // iOS Glass Back Button
               Box(
                 modifier = Modifier
+                  .iosBounceClick(scaleDown = 0.88f) { onNavigateBack() }
                   .size(38.dp)
                   .clip(CircleShape)
-                  .background(Color(0x441F293D))
-                  .border(1.dp, Color(0x33FFFFFF), CircleShape)
-                  .clickable { onNavigateBack() },
+                  .background(Color(0x441F293D)),
                 contentAlignment = Alignment.Center
               ) {
                 Icon(
@@ -273,8 +273,8 @@ fun TodControlsOverlay(
               // 1. Favorite Heart Icon
               Box(
                 modifier = Modifier
-                  .size(36.dp)
-                  .clickable { onToggleFavorite() },
+                  .iosBounceClick(scaleDown = 0.84f) { onToggleFavorite() }
+                  .size(36.dp),
                 contentAlignment = Alignment.Center
               ) {
                 Icon(
@@ -288,8 +288,8 @@ fun TodControlsOverlay(
               // 2. Subtitles icon
               Box(
                 modifier = Modifier
-                  .size(36.dp)
-                  .clickable { onOpenSubtitles() },
+                  .iosBounceClick(scaleDown = 0.84f) { onOpenSubtitles() }
+                  .size(36.dp),
                 contentAlignment = Alignment.Center
               ) {
                 TodSubtitles(
@@ -301,8 +301,8 @@ fun TodControlsOverlay(
               // 3. Settings Cog with Play Triangle inside -> opens Audio/Quality modal
               Box(
                 modifier = Modifier
-                  .size(36.dp)
-                  .clickable { onOpenQuality() },
+                  .iosBounceClick(scaleDown = 0.84f) { onOpenQuality() }
+                  .size(36.dp),
                 contentAlignment = Alignment.Center
               ) {
                 TodSettingsCogWithPlay(size = 24.dp, tint = Color.White)
@@ -311,8 +311,8 @@ fun TodControlsOverlay(
               // 4. 4 Rounded Squares Grid icon -> opens channels / stream drawer
               Box(
                 modifier = Modifier
-                  .size(36.dp)
-                  .clickable { onOpenGrid() },
+                  .iosBounceClick(scaleDown = 0.84f) { onOpenGrid() }
+                  .size(36.dp),
                 contentAlignment = Alignment.Center
               ) {
                 TodGridFour(size = 22.dp, tint = Color.White)
@@ -321,10 +321,10 @@ fun TodControlsOverlay(
               // 5. Aspect Ratio pill button (16:9, Fit, Zoom, Stretch)
               Box(
                 modifier = Modifier
+                  .iosBounceClick(scaleDown = 0.88f) { onCycleAspectRatio() }
                   .clip(RoundedCornerShape(6.dp))
                   .background(Color(0x551A2234))
                   .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
-                  .clickable { onCycleAspectRatio() }
                   .padding(horizontal = 7.dp, vertical = 4.dp),
                 contentAlignment = Alignment.Center
               ) {
@@ -350,8 +350,8 @@ fun TodControlsOverlay(
               // 6. Quick Touch Lock
               Box(
                 modifier = Modifier
-                  .size(36.dp)
-                  .clickable { onToggleLock() },
+                  .iosBounceClick(scaleDown = 0.84f) { onToggleLock() }
+                  .size(36.dp),
                 contentAlignment = Alignment.Center
               ) {
                 Icon(
@@ -397,9 +397,9 @@ fun TodControlsOverlay(
                 if (onPreviousChannel != null) {
                   Box(
                     modifier = Modifier
+                      .iosBounceClick(scaleDown = 0.84f) { onPreviousChannel() }
                       .size(46.dp)
-                      .clip(CircleShape)
-                      .clickable { onPreviousChannel() },
+                      .clip(CircleShape),
                     contentAlignment = Alignment.Center
                   ) {
                     Icon(
@@ -415,8 +415,8 @@ fun TodControlsOverlay(
                 // Replay 10 Seconds
                 Box(
                   modifier = Modifier
-                    .size(52.dp)
-                    .clickable { onSeekBackward() },
+                    .iosBounceClick(scaleDown = 0.84f) { onSeekBackward() }
+                    .size(52.dp),
                   contentAlignment = Alignment.Center
                 ) {
                   TodReplay10(size = 46.dp, tint = Color.White)
@@ -474,8 +474,8 @@ fun TodControlsOverlay(
                 // Forward 10 Seconds
                 Box(
                   modifier = Modifier
-                    .size(52.dp)
-                    .clickable { onSeekForward() },
+                    .iosBounceClick(scaleDown = 0.84f) { onSeekForward() }
+                    .size(52.dp),
                   contentAlignment = Alignment.Center
                 ) {
                   TodForward10(size = 46.dp, tint = Color.White)
@@ -485,9 +485,9 @@ fun TodControlsOverlay(
                   Spacer(modifier = Modifier.width(12.dp))
                   Box(
                     modifier = Modifier
+                      .iosBounceClick(scaleDown = 0.84f) { onNextChannel() }
                       .size(46.dp)
-                      .clip(CircleShape)
-                      .clickable { onNextChannel() },
+                      .clip(CircleShape),
                     contentAlignment = Alignment.Center
                   ) {
                     Icon(
@@ -631,8 +631,8 @@ fun TodControlsOverlay(
               // Mute Toggle Icon
               Box(
                 modifier = Modifier
-                  .size(32.dp)
-                  .clickable { onToggleMute() },
+                  .iosBounceClick(scaleDown = 0.84f) { onToggleMute() }
+                  .size(32.dp),
                 contentAlignment = Alignment.Center
               ) {
                 Icon(
@@ -646,7 +646,7 @@ fun TodControlsOverlay(
               // Live Badge: Pulsing live beacon
               Box(
                 modifier = Modifier
-                  .clickable { onSyncToLive() }
+                  .iosBounceClick(scaleDown = 0.90f) { onSyncToLive() }
               ) {
                 PulsingLiveBadge(
                   fontSize = 12.sp,
@@ -658,8 +658,8 @@ fun TodControlsOverlay(
               // Fullscreen Icon
               Box(
                 modifier = Modifier
-                  .size(32.dp)
-                  .clickable { onToggleFullscreen() },
+                  .iosBounceClick(scaleDown = 0.84f) { onToggleFullscreen() }
+                  .size(32.dp),
                 contentAlignment = Alignment.Center
               ) {
                 TodFullscreenArrows(size = 18.dp, tint = Color.White)

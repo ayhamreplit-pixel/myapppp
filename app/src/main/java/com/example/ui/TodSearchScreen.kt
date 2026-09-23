@@ -92,37 +92,48 @@ fun TodSearchScreen(
       .background(TodGradients.ObsidianCanvas)
       .padding(horizontal = 16.dp, vertical = 8.dp)
   ) {
-    // Apple iOS Large Title Header
-    Row(
+    // Apple iOS 18 Large Title Header
+    Column(
       modifier = Modifier
         .fillMaxWidth()
-        .padding(bottom = 10.dp, top = 2.dp),
-      horizontalArrangement = Arrangement.SpaceBetween,
-      verticalAlignment = Alignment.CenterVertically
+        .padding(bottom = 12.dp, top = 2.dp)
     ) {
-      Box(
-        modifier = Modifier
-          .size(36.dp)
-          .clip(CircleShape)
-          .background(Color(0x18FFFFFF))
-          .border(0.75.dp, Color(0x30FFFFFF), CircleShape),
-        contentAlignment = Alignment.Center
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
       ) {
-        Icon(
-          imageVector = Icons.Default.Search,
-          contentDescription = null,
-          tint = TodGold,
-          modifier = Modifier.size(18.dp)
-        )
-      }
+        Box(
+          modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(Color(0x28FFFFFF))
+            .border(0.75.dp, Color(0x35FFFFFF), CircleShape),
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(
+            imageVector = Icons.Default.Search,
+            contentDescription = null,
+            tint = TodGold,
+            modifier = Modifier.size(20.dp)
+          )
+        }
 
-      Text(
-        text = "بحث",
-        color = Color.White,
-        fontSize = 28.sp,
-        fontWeight = FontWeight.Bold,
-        letterSpacing = 0.3.sp
-      )
+        Column(horizontalAlignment = Alignment.End) {
+          Text(
+            text = "بحث",
+            color = Color.White,
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 0.3.sp
+          )
+          Text(
+            text = "البحث الفوري في القنوات والبرامج",
+            color = Color(0xFF8E8E93),
+            fontSize = 11.5.sp
+          )
+        }
+      }
     }
 
     // 1. Apple iOS Frosted Search Input Bar

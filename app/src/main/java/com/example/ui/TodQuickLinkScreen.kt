@@ -229,120 +229,131 @@ fun TodQuickLinkScreen(
     Column(
       modifier = Modifier
         .fillMaxSize()
-        .statusBarsPadding()
         .navigationBarsPadding()
     ) {
       // ==========================================
-      // 1. iOS Translucent Navigation Bar
+      // 1. Apple iOS Seamless Navigation Bar (Continuous Edge-to-Edge)
       // ==========================================
-      Row(
+      Column(
         modifier = Modifier
           .fillMaxWidth()
-          .background(Color(0xCC0D0D12))
-          .border(0.5.dp, Color(0x28FFFFFF), RoundedCornerShape(0.dp))
-          .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+          .background(
+            Brush.verticalGradient(
+              colors = listOf(
+                Color(0xEE12131C),
+                Color(0x880D0E15),
+                Color.Transparent
+              )
+            )
+          )
+          .statusBarsPadding()
+          .padding(horizontal = 16.dp, vertical = 8.dp)
       ) {
-        // iOS Back Button
-        Box(
-          modifier = Modifier
-            .size(38.dp)
-            .clip(CircleShape)
-            .background(Color(0x28FFFFFF))
-            .border(0.5.dp, Color(0x33FFFFFF), CircleShape)
-            .clickable { onBack() },
-          contentAlignment = Alignment.Center
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.SpaceBetween
         ) {
-          Icon(
-            imageVector = if (isRtl) Icons.AutoMirrored.Filled.KeyboardArrowRight else Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-            contentDescription = "رجوع",
-            tint = Color.White,
-            modifier = Modifier.size(22.dp)
-          )
-        }
-
-        // Center Title & Subtitle Badge
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-          Text(
-            text = "تشغيل رابط سريع",
-            color = Color.White,
-            fontSize = 17.sp,
-            fontWeight = FontWeight.Bold
-          )
-          Spacer(modifier = Modifier.height(2.dp))
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-          ) {
-            Box(
-              modifier = Modifier
-                .size(6.dp)
-                .clip(CircleShape)
-                .background(IosSystemGreen)
-            )
-            Text(
-              text = "M3U8 • MPD • TS • MP4",
-              color = Color(0xFF8E8E93),
-              fontSize = 11.sp,
-              fontWeight = FontWeight.Medium
-            )
-          }
-        }
-
-        // Trailing Action: Clear Button or Paste Button
-        if (urlInput.isNotBlank() || titleInput.isNotBlank()) {
+          // iOS Back Button with Spring Press
           Box(
             modifier = Modifier
+              .iosBounceClick(scaleDown = 0.88f, onClick = onBack)
               .size(38.dp)
               .clip(CircleShape)
-              .background(Color(0x28FFFFFF))
-              .border(0.5.dp, Color(0x33FFFFFF), CircleShape)
-              .clickable {
-                urlInput = ""
-                titleInput = ""
-              },
+              .background(Color(0x28FFFFFF)),
             contentAlignment = Alignment.Center
           ) {
             Icon(
-              imageVector = Icons.Default.Clear,
-              contentDescription = "مسح",
-              tint = Color(0xFFFF453A),
-              modifier = Modifier.size(18.dp)
+              imageVector = if (isRtl) Icons.AutoMirrored.Filled.KeyboardArrowRight else Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+              contentDescription = "رجوع",
+              tint = Color.White,
+              modifier = Modifier.size(22.dp)
             )
           }
-        } else {
-          // Paste Shortcut Button
-          Box(
-            modifier = Modifier
-              .clip(RoundedCornerShape(12.dp))
-              .background(Color(0x220A84FF))
-              .border(0.5.dp, Color(0x440A84FF), RoundedCornerShape(12.dp))
-              .clickable {
-                val clip = clipboardManager.getText()?.text
-                if (!clip.isNullOrBlank()) {
-                  parseAndFill(clip)
-                }
-              }
-              .padding(horizontal = 10.dp, vertical = 7.dp),
-            contentAlignment = Alignment.Center
-          ) {
+
+          // Center Title & Subtitle Badge
+          Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+              text = "تشغيل رابط سريع",
+              color = Color.White,
+              fontSize = 17.5.sp,
+              fontWeight = FontWeight.Bold,
+              letterSpacing = 0.2.sp
+            )
+            Spacer(modifier = Modifier.height(2.dp))
             Row(
               verticalAlignment = Alignment.CenterVertically,
               horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-              Icon(
-                imageVector = Icons.Default.ContentPaste,
-                contentDescription = null,
-                tint = IosSystemBlue,
-                modifier = Modifier.size(14.dp)
+              Box(
+                modifier = Modifier
+                  .size(6.dp)
+                  .clip(CircleShape)
+                  .background(IosSystemGreen)
               )
               Text(
-                text = "لصق",
-                color = IosSystemBlue,
-                fontSize = 12.5.sp,
-                fontWeight = FontWeight.Bold
+                text = "M3U8 • MPD • TS • MP4",
+                color = Color(0xFF8E8E93),
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.Medium
               )
+            }
+          }
+
+          // Trailing Action: Clear Button or Paste Button
+          if (urlInput.isNotBlank() || titleInput.isNotBlank()) {
+            Box(
+              modifier = Modifier
+                .size(38.dp)
+                .clip(CircleShape)
+                .background(Color(0x28FFFFFF))
+                .border(0.75.dp, Color(0x35FFFFFF), CircleShape)
+                .clickable {
+                  urlInput = ""
+                  titleInput = ""
+                },
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(
+                imageVector = Icons.Default.Clear,
+                contentDescription = "مسح",
+                tint = Color(0xFFFF453A),
+                modifier = Modifier.size(18.dp)
+              )
+            }
+          } else {
+            // Paste Shortcut Button
+            Box(
+              modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0x280A84FF))
+                .border(0.75.dp, Color(0x550A84FF), RoundedCornerShape(12.dp))
+                .clickable {
+                  val clip = clipboardManager.getText()?.text
+                  if (!clip.isNullOrBlank()) {
+                    parseAndFill(clip)
+                  }
+                }
+                .padding(horizontal = 10.dp, vertical = 7.dp),
+              contentAlignment = Alignment.Center
+            ) {
+              Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+              ) {
+                Icon(
+                  imageVector = Icons.Default.ContentPaste,
+                  contentDescription = null,
+                  tint = Color(0xFF64D2FF),
+                  modifier = Modifier.size(14.dp)
+                )
+                Text(
+                  text = "لصق",
+                  color = Color.White,
+                  fontSize = 12.sp,
+                  fontWeight = FontWeight.Bold
+                )
+              }
             }
           }
         }

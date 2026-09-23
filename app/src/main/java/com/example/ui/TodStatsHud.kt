@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -68,12 +69,17 @@ fun TodStatsHud(
             )
           }
         }
-        IconButton(onClick = onClose, modifier = Modifier.height(24.dp).width(24.dp)) {
+        Box(
+          modifier = Modifier
+            .iosBounceClick(scaleDown = 0.88f) { onClose() }
+            .size(24.dp),
+          contentAlignment = Alignment.Center
+        ) {
           Icon(
             imageVector = Icons.Default.Close,
             contentDescription = "Close Stats",
             tint = DarkTextSecondary,
-            modifier = Modifier.height(16.dp).width(16.dp)
+            modifier = Modifier.size(16.dp)
           )
         }
       }

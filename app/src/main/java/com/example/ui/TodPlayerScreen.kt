@@ -6,6 +6,10 @@ import android.content.pm.ActivityInfo
 import android.os.Build
 import android.util.Rational
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -276,8 +280,12 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
     // MODAL DIALOGS
     // ========================================================
 
-    // 1. TOD Audio & Quality Modal (Screenshots 10 & 11)
-    if (showTodAudioQualityModal) {
+    // 1. TOD Audio & Quality Modal (Exact 75% translucent backdrop & Thmanyah font)
+    AnimatedVisibility(
+      visible = showTodAudioQualityModal,
+      enter = fadeIn(tween(200)),
+      exit = fadeOut(tween(200))
+    ) {
       TodAudioQualityModal(
         initialTab = initialModalTab,
         qualities = playerState.qualities,

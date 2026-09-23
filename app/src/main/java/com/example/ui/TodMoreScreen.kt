@@ -154,68 +154,90 @@ fun TodMoreScreen(
       .background(Color(0xFF000000))
   ) {
     // ==========================================
-    // 1. iOS Translucent Navigation Bar
+    // 1. Apple iOS Seamless Navigation Bar (Continuous Edge-to-Edge)
     // ==========================================
-    Row(
+    Column(
       modifier = Modifier
         .fillMaxWidth()
+        .background(
+          Brush.verticalGradient(
+            colors = listOf(
+              Color(0xEE12131C),
+              Color(0x880D0E15),
+              Color.Transparent
+            )
+          )
+        )
         .statusBarsPadding()
-        .background(Color(0xCC0D0D12))
-        .border(0.5.dp, Color(0x28FFFFFF), RoundedCornerShape(0.dp))
-        .padding(horizontal = 16.dp, vertical = 10.dp),
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.SpaceBetween
+        .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-      // iOS Glass Back Button
-      Box(
-        modifier = Modifier
-          .size(38.dp)
-          .clip(CircleShape)
-          .background(Color(0x28FFFFFF))
-          .border(0.5.dp, Color(0x33FFFFFF), CircleShape)
-          .clickable { onBack() },
-        contentAlignment = Alignment.Center
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
       ) {
-        Icon(
-          imageVector = if (isRtl) Icons.AutoMirrored.Filled.KeyboardArrowRight else Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-          contentDescription = "رجوع",
-          tint = Color.White,
-          modifier = Modifier.size(22.dp)
-        )
-      }
+        // iOS Glass Back Button with Spring Press
+        Box(
+          modifier = Modifier
+            .iosBounceClick(scaleDown = 0.88f, onClick = onBack)
+            .size(38.dp)
+            .clip(CircleShape)
+            .background(Color(0x28FFFFFF)),
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(
+            imageVector = if (isRtl) Icons.AutoMirrored.Filled.KeyboardArrowRight else Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+            contentDescription = "رجوع",
+            tint = Color.White,
+            modifier = Modifier.size(22.dp)
+          )
+        }
 
-      // Title & Badge
-      Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-          text = "الإعدادات والمزيد",
-          color = Color.White,
-          fontSize = 17.sp,
-          fontWeight = FontWeight.Bold
-        )
-        Text(
-          text = "تخصيص المشغل والسيرفرات",
-          color = Color(0xFF8E8E93),
-          fontSize = 11.sp,
-          fontWeight = FontWeight.Medium
-        )
-      }
+        // Centered Title & Subtitle Badge
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+          Text(
+            text = "الإعدادات والمزيد",
+            color = Color.White,
+            fontSize = 17.5.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.2.sp
+          )
+          Spacer(modifier = Modifier.height(2.dp))
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+          ) {
+            Box(
+              modifier = Modifier
+                .size(6.dp)
+                .clip(CircleShape)
+                .background(Color(0xFF34C759))
+            )
+            Text(
+              text = "تخصيص المشغل والسيرفرات",
+              color = Color(0xFF8E8E93),
+              fontSize = 11.5.sp,
+              fontWeight = FontWeight.Medium
+            )
+          }
+        }
 
-      // Reset Defaults Quick Action
-      Box(
-        modifier = Modifier
-          .size(38.dp)
-          .clip(CircleShape)
-          .background(Color(0x22FFFFFF))
-          .border(0.5.dp, Color(0x30FFFFFF), CircleShape)
-          .clickable { showResetDialog = true },
-        contentAlignment = Alignment.Center
-      ) {
-        Icon(
-          imageVector = Icons.Default.RestartAlt,
-          contentDescription = "إعادة ضبط",
-          tint = Color(0xFFFF9F0A),
-          modifier = Modifier.size(19.dp)
-        )
+        // Reset Defaults Quick Action with iOS Spring Press
+        Box(
+          modifier = Modifier
+            .iosBounceClick(scaleDown = 0.88f) { showResetDialog = true }
+            .size(38.dp)
+            .clip(CircleShape)
+            .background(Color(0x28FFFFFF)),
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(
+            imageVector = Icons.Default.RestartAlt,
+            contentDescription = "إعادة ضبط",
+            tint = Color(0xFFFF9F0A),
+            modifier = Modifier.size(19.dp)
+          )
+        }
       }
     }
 

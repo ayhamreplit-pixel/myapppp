@@ -112,7 +112,7 @@ fun TodDualPlayerView(
   // Helper to create high-compatibility ExoPlayer instances
   fun createUniversalPlayer(): ExoPlayer {
     val renderers = DefaultRenderersFactory(context)
-      .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+      .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
       .setEnableDecoderFallback(true)
       .setAllowedVideoJoiningTimeMs(5000)
     val selector = DefaultTrackSelector(context).apply {
@@ -282,15 +282,16 @@ fun TodDualPlayerView(
           horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
           // Toggle Dual / Quad mode
-          IconButton(
-            onClick = {
-              screenCount = if (screenCount == 2) 4 else 2
-              expandedPlayerIndex = 0
-            },
+          Box(
             modifier = Modifier
-              .clip(RoundedCornerShape(8.dp))
-              .background(Color(0xFF1E2638))
+              .iosBounceClick(scaleDown = 0.88f) {
+                screenCount = if (screenCount == 2) 4 else 2
+                expandedPlayerIndex = 0
+              }
               .size(36.dp)
+              .clip(RoundedCornerShape(8.dp))
+              .background(Color(0xFF1E2638)),
+            contentAlignment = Alignment.Center
           ) {
             Icon(
               imageVector = if (screenCount == 2) Icons.Default.Window else Icons.Default.ViewAgenda,
@@ -301,16 +302,17 @@ fun TodDualPlayerView(
           }
 
           // Swap Stream 1 & 2
-          IconButton(
-            onClick = {
-              val temp = s1
-              s1 = s2
-              s2 = temp
-            },
+          Box(
             modifier = Modifier
-              .clip(RoundedCornerShape(8.dp))
-              .background(Color(0xFF1E2638))
+              .iosBounceClick(scaleDown = 0.88f) {
+                val temp = s1
+                s1 = s2
+                s2 = temp
+              }
               .size(36.dp)
+              .clip(RoundedCornerShape(8.dp))
+              .background(Color(0xFF1E2638)),
+            contentAlignment = Alignment.Center
           ) {
             Icon(
               imageVector = Icons.Default.SwapHoriz,
@@ -321,12 +323,13 @@ fun TodDualPlayerView(
           }
 
           // Close Multi-view
-          IconButton(
-            onClick = onClose,
+          Box(
             modifier = Modifier
-              .clip(RoundedCornerShape(8.dp))
-              .background(Color(0xFF33141E))
+              .iosBounceClick(scaleDown = 0.88f) { onClose() }
               .size(36.dp)
+              .clip(RoundedCornerShape(8.dp))
+              .background(Color(0xFF33141E)),
+            contentAlignment = Alignment.Center
           ) {
             Icon(
               imageVector = Icons.Default.Close,
@@ -575,10 +578,11 @@ private fun SingleStreamSlot(
         // Sound status indicator badge
         Box(
           modifier = Modifier
+            .iosBounceClick(scaleDown = 0.90f) { onSelectAudio() }
             .clip(RoundedCornerShape(4.dp))
             .background(if (isAudioActive) themePrimary.copy(alpha = 0.2f) else Color(0xFF1E2638))
-            .clickable { onSelectAudio() }
-            .padding(horizontal = 5.dp, vertical = 2.dp)
+            .padding(horizontal = 5.dp, vertical = 2.dp),
+          contentAlignment = Alignment.Center
         ) {
           Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -598,28 +602,32 @@ private fun SingleStreamSlot(
         }
 
         // Expand / Contract full view
-        IconButton(
-          onClick = onToggleExpand,
-          modifier = Modifier.size(24.dp)
+        Box(
+          modifier = Modifier
+            .iosBounceClick(scaleDown = 0.88f) { onToggleExpand() }
+            .size(26.dp),
+          contentAlignment = Alignment.Center
         ) {
           Icon(
             imageVector = if (isExpanded) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
             contentDescription = "Toggle Fullscreen",
             tint = Color.White,
-            modifier = Modifier.size(14.dp)
+            modifier = Modifier.size(15.dp)
           )
         }
 
         // Change channel
-        IconButton(
-          onClick = onChangeChannel,
-          modifier = Modifier.size(24.dp)
+        Box(
+          modifier = Modifier
+            .iosBounceClick(scaleDown = 0.88f) { onChangeChannel() }
+            .size(26.dp),
+          contentAlignment = Alignment.Center
         ) {
           Icon(
             imageVector = Icons.Default.GridView,
             contentDescription = "Change Channel",
             tint = Color.White,
-            modifier = Modifier.size(14.dp)
+            modifier = Modifier.size(15.dp)
           )
         }
       }

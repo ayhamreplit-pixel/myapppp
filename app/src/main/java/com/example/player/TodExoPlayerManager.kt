@@ -844,21 +844,9 @@ class TodExoPlayerManager(
 
   private fun extractTracks() {
     val tracks = exoPlayer.currentTracks
-    val videoQualities = mutableListOf<VideoQualityTrack>()
+    val rawVideoTracks = mutableListOf<VideoQualityTrack>()
     val audioTracks = mutableListOf<AudioTrackOption>()
     val subtitleTracks = mutableListOf<SubtitleTrackOption>()
-
-    videoQualities.add(
-      VideoQualityTrack(
-        id = "auto",
-        label = "تلقائي (Auto Adaptive)",
-        width = 0,
-        height = 0,
-        bitrate = 0,
-        isAuto = true,
-        isSelected = _playerState.value.selectedQuality?.isAuto ?: true
-      )
-    )
 
     for (group in tracks.groups) {
       when (group.type) {
@@ -866,18 +854,16 @@ class TodExoPlayerManager(
           for (i in 0 until group.length) {
             val format = group.getTrackFormat(i)
             if (format.height > 0) {
-              val label = "${format.height}p" + (if (format.frameRate >= 50) " 60fps" else "") +
-                (if (format.bitrate > 0) " (${format.bitrate / 1000}k)" else "")
-              val quality = VideoQualityTrack(
+              val track = VideoQualityTrack(
                 id = "${format.width}x${format.height}_${format.bitrate}",
-                label = label,
+                label = "",
                 width = format.width,
                 height = format.height,
                 bitrate = format.bitrate,
                 isSelected = group.isTrackSelected(i)
               )
-              if (videoQualities.none { it.height == quality.height }) {
-                videoQualities.add(quality)
+              if (rawVideoTracks.none { it.height == track.height }) {
+                rawVideoTracks.add(track)
               }
             }
           }
@@ -885,13 +871,19 @@ class TodExoPlayerManager(
         C.TRACK_TYPE_AUDIO -> {
           for (i in 0 until group.length) {
             val format = group.getTrackFormat(i)
-            val lang = format.language ?: "und"
-            val label = when (lang.lowercase()) {
-              "ar", "ara" -> "تعليق عربي (Jawwy Arabic)"
-              "en", "eng" -> "تعليق إنجليزي (English)"
-              "fr", "fra" -> "تعليق فرنسي (French)"
-              "es", "spa" -> "تعليق إسباني (Spanish)"
-              else -> if (format.label != null) format.label!! else "قناة صوتية ${audioTracks.size + 1} ($lang)"
+            val lang = format.language?.lowercase() ?: "und"
+            val label = when {
+              lang == "ar" || lang == "ara" || format.label?.contains("ar", ignoreCase = true) == true -> "العربية"
+              lang == "en" || lang == "eng" || format.label?.contains("en", ignoreCase = true) == true -> "الإنجليزية"
+              lang == "fr" || lang == "fra" -> "الفرنسية"
+              lang == "es" || lang == "spa" -> "الإسبانية"
+              lang == "de" || lang == "deu" -> "الألمانية"
+              lang == "it" || lang == "ita" -> "الإيطالية"
+              lang == "tr" || lang == "tur" -> "التركية"
+              lang == "fa" || lang == "fas" -> "الفارسية"
+              lang == "ku" || lang == "kur" -> "الكردية"
+              !format.label.isNullOrBlank() -> format.label!!
+              else -> "العربية"
             }
             audioTracks.add(
               AudioTrackOption(
@@ -907,11 +899,11 @@ class TodExoPlayerManager(
         C.TRACK_TYPE_TEXT -> {
           for (i in 0 until group.length) {
             val format = group.getTrackFormat(i)
-            val lang = format.language ?: "und"
-            val label = when (lang.lowercase()) {
-              "ar", "ara" -> "ترجمة عربية"
-              "en", "eng" -> "English"
-              "fr", "fra" -> "Français"
+            val lang = format.language?.lowercase() ?: "und"
+            val label = when {
+              lang == "ar" || lang == "ara" -> "ترجمة عربية"
+              lang == "en" || lang == "eng" -> "English"
+              lang == "fr" || lang == "fra" -> "Français"
               else -> format.label ?: "ترجمة ($lang)"
             }
             subtitleTracks.add(
@@ -927,10 +919,120 @@ class TodExoPlayerManager(
       }
     }
 
+    // Process Video Qualities to match exact TOD Arabic design (Screenshots 1 & 2)
+    val sortedVideoTracks = rawVideoTracks.sortedByDescending { it.height }
+    val finalQualities = mutableListOf<VideoQualityTrack>()
+
+    if (sortedVideoTracks.size <= 1) {
+      // Single-stream quality (Screenshot 2): Only "قياسي"
+      val single = sortedVideoTracks.firstOrNull()
+      finalQualities.add(
+        VideoQualityTrack(
+          id = single?.id ?: "standard",
+          label = "قياسي",
+          width = single?.width ?: 1920,
+          height = single?.height ?: 1080,
+          bitrate = single?.bitrate ?: 0,
+          isAuto = false,
+          isSelected = true
+        )
+      )
+    } else {
+      // Multi-stream / Adaptive quality (Screenshot 1):
+      // 1. تلقائي (Auto)
+      // 2. قياسي (Standard / Mid)
+      // 3. الأفضل (Best / High)
+      // (and 4. منخفض if extra low bitrate exists)
+      finalQualities.add(
+        VideoQualityTrack(
+          id = "auto",
+          label = "تلقائي",
+          width = 0,
+          height = 0,
+          bitrate = 0,
+          isAuto = true,
+          isSelected = _playerState.value.selectedQuality?.isAuto ?: true
+        )
+      )
+
+      val bestTrack = sortedVideoTracks.first()
+      val standardTrack = if (sortedVideoTracks.size >= 2) sortedVideoTracks[1] else sortedVideoTracks.last()
+
+      finalQualities.add(
+        VideoQualityTrack(
+          id = standardTrack.id,
+          label = "قياسي",
+          width = standardTrack.width,
+          height = standardTrack.height,
+          bitrate = standardTrack.bitrate,
+          isAuto = false,
+          isSelected = _playerState.value.selectedQuality?.id == standardTrack.id
+        )
+      )
+
+      finalQualities.add(
+        VideoQualityTrack(
+          id = bestTrack.id,
+          label = "الأفضل",
+          width = bestTrack.width,
+          height = bestTrack.height,
+          bitrate = bestTrack.bitrate,
+          isAuto = false,
+          isSelected = _playerState.value.selectedQuality?.id == bestTrack.id
+        )
+      )
+
+      if (sortedVideoTracks.size >= 4) {
+        val lowTrack = sortedVideoTracks.last()
+        finalQualities.add(
+          VideoQualityTrack(
+            id = lowTrack.id,
+            label = "منخفض",
+            width = lowTrack.width,
+            height = lowTrack.height,
+            bitrate = lowTrack.bitrate,
+            isAuto = false,
+            isSelected = _playerState.value.selectedQuality?.id == lowTrack.id
+          )
+        )
+      }
+    }
+
+    // Process Audio Tracks (Screenshot 3): Clean list with fallback to "العربية"
+    val finalAudioTracks = if (audioTracks.isNotEmpty()) {
+      // Remove duplicate labels if any
+      val distinctAudio = mutableListOf<AudioTrackOption>()
+      var arabicCount = 0
+      audioTracks.forEach { track ->
+        val finalLabel = if (track.label == "العربية") {
+          arabicCount++
+          if (arabicCount > 1) "العربية ($arabicCount)" else "العربية"
+        } else {
+          track.label
+        }
+        distinctAudio.add(track.copy(label = finalLabel))
+      }
+      distinctAudio
+    } else {
+      listOf(
+        AudioTrackOption(
+          id = "default_ar",
+          label = "العربية",
+          language = "ar",
+          channels = 2,
+          isSelected = true
+        )
+      )
+    }
+
     _playerState.update { state ->
+      val defaultSelectedQuality = state.selectedQuality ?: finalQualities.firstOrNull()
+      val defaultSelectedAudio = state.selectedAudioTrack ?: finalAudioTracks.firstOrNull()
       state.copy(
-        qualities = videoQualities.sortedByDescending { it.height },
-        audioTracks = audioTracks,
+        qualities = finalQualities,
+        selectedQuality = defaultSelectedQuality,
+        audioTracks = finalAudioTracks,
+        selectedAudioTrack = defaultSelectedAudio,
         subtitleTracks = subtitleTracks
       )
     }

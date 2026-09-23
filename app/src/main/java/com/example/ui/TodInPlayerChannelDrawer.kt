@@ -135,19 +135,40 @@ fun TodInPlayerChannelDrawer(
               }
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              IconButton(onClick = onExitToHub) {
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+              Box(
+                modifier = Modifier
+                  .iosBounceClick(scaleDown = 0.88f) { onExitToHub() }
+                  .size(34.dp)
+                  .clip(CircleShape)
+                  .background(Color(0x22FFFFFF))
+                  .border(0.5.dp, Color(0x30FFFFFF), CircleShape),
+                contentAlignment = Alignment.Center
+              ) {
                 Icon(
                   imageVector = Icons.Default.ExitToApp,
-                  contentDescription = "Exit to Hub",
-                  tint = Color(0xFF8E8E93)
+                  contentDescription = "الخروج للمركز",
+                  tint = Color(0xFF8E8E93),
+                  modifier = Modifier.size(17.dp)
                 )
               }
-              IconButton(onClick = onClose) {
+              Box(
+                modifier = Modifier
+                  .iosBounceClick(scaleDown = 0.88f) { onClose() }
+                  .size(34.dp)
+                  .clip(CircleShape)
+                  .background(Color(0x28FFFFFF))
+                  .border(0.5.dp, Color(0x35FFFFFF), CircleShape),
+                contentAlignment = Alignment.Center
+              ) {
                 Icon(
                   imageVector = Icons.Default.Close,
-                  contentDescription = "Close",
-                  tint = Color.White
+                  contentDescription = "إغلاق",
+                  tint = Color.White,
+                  modifier = Modifier.size(17.dp)
                 )
               }
             }
@@ -198,6 +219,10 @@ fun TodInPlayerChannelDrawer(
                 val isPlaying = stream.id == currentStreamId
                 Row(
                   modifier = Modifier
+                    .iosBounceClick(scaleDown = 0.96f) {
+                      onSelectChannel(stream)
+                      onClose()
+                    }
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
                     .background(
@@ -208,10 +233,6 @@ fun TodInPlayerChannelDrawer(
                       if (isPlaying) TodGold else Color(0x12FFFFFF),
                       RoundedCornerShape(12.dp)
                     )
-                    .clickable {
-                      onSelectChannel(stream)
-                      onClose()
-                    }
                     .padding(horizontal = 12.dp, vertical = 10.dp),
                   verticalAlignment = Alignment.CenterVertically,
                   horizontalArrangement = Arrangement.SpaceBetween

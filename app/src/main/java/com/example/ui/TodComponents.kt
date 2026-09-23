@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -317,13 +318,13 @@ fun TodMoreNavIcon(
 }
 
 /**
- * Modern iOS Frosted Glass Floating Navigation Dock
+ * Modern iOS 18 Ultra-Sleek Floating Navigation Dock (Icon-Only Minimalist Dock)
  * Features:
- * - Floating rounded capsule geometry (RoundedCornerShape(28.dp))
- * - Translucent acrylic backdrop with specular hairline reflection
- * - Physics-based Spring haptic bounce on press (scales to 0.88x)
+ * - Clean floating rounded capsule geometry (RoundedCornerShape(32.dp))
+ * - Translucent acrylic backdrop with subtle hairline reflection
+ * - Physics-based iOS Spring bounce on press (scales to 0.88x) with indication = null (NO white flash)
  * - Luminous active capsule indicator with smooth animated scale and glow
- * - Dynamic icon morphing and Apple-standard typography
+ * - Dynamic icon morphing and zero clutter (No text labels)
  */
 @Composable
 fun TodBottomNavBar(
@@ -334,49 +335,49 @@ fun TodBottomNavBar(
   Box(
     modifier = modifier
       .fillMaxWidth()
-      .padding(horizontal = 16.dp, vertical = 8.dp),
+      .padding(horizontal = 24.dp, vertical = 6.dp),
     contentAlignment = Alignment.Center
   ) {
     Box(
       modifier = Modifier
+        .widthIn(max = 380.dp)
         .fillMaxWidth()
-        .height(68.dp)
+        .height(58.dp)
         .shadow(
-          elevation = 20.dp,
-          shape = RoundedCornerShape(28.dp),
-          spotColor = Color(0xAA000000),
-          ambientColor = Color(0x66000000)
+          elevation = 24.dp,
+          shape = RoundedCornerShape(29.dp),
+          spotColor = Color(0xBB000000),
+          ambientColor = Color(0x77000000)
         )
-        .clip(RoundedCornerShape(28.dp))
+        .clip(RoundedCornerShape(29.dp))
         .background(
           Brush.verticalGradient(
             colors = listOf(
-              Color(0xE61E1E2A),
-              Color(0xF5111118)
+              Color(0xF0181822),
+              Color(0xFA0E0E14)
             )
           )
         )
         .border(
-          width = 1.dp,
+          width = 0.75.dp,
           brush = Brush.verticalGradient(
             colors = listOf(
-              Color(0x45FFFFFF),
-              Color(0x12FFFFFF)
+              Color(0x40FFFFFF),
+              Color(0x10FFFFFF)
             )
           ),
-          shape = RoundedCornerShape(28.dp)
+          shape = RoundedCornerShape(29.dp)
         )
-        .padding(horizontal = 10.dp, vertical = 6.dp),
+        .padding(horizontal = 8.dp, vertical = 6.dp),
       contentAlignment = Alignment.Center
     ) {
       Row(
         modifier = Modifier.fillMaxSize(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceAround
+        horizontalArrangement = Arrangement.SpaceEvenly
       ) {
         // Tab 1: المزيد (More / Settings)
         TodIosTabItem(
-          title = "المزيد",
           isSelected = currentTab == TodNavTab.MORE,
           onClick = { onTabSelected(TodNavTab.MORE) },
           icon = { isSel -> TodMoreNavIcon(isSelected = isSel) }
@@ -384,7 +385,6 @@ fun TodBottomNavBar(
 
         // Tab 2: بحث (Search)
         TodIosTabItem(
-          title = "بحث",
           isSelected = currentTab == TodNavTab.SEARCH,
           onClick = { onTabSelected(TodNavTab.SEARCH) },
           icon = { isSel -> TodSearchNavIcon(isSelected = isSel) }
@@ -392,7 +392,6 @@ fun TodBottomNavBar(
 
         // Tab 3: الرئيسية (Home)
         TodIosTabItem(
-          title = "الرئيسية",
           isSelected = currentTab == TodNavTab.HOME,
           onClick = { onTabSelected(TodNavTab.HOME) },
           icon = { isSel -> TodHomeNavIcon(isSelected = isSel) }
@@ -404,7 +403,6 @@ fun TodBottomNavBar(
 
 @Composable
 private fun TodIosTabItem(
-  title: String,
   isSelected: Boolean,
   onClick: () -> Unit,
   icon: @Composable (Boolean) -> Unit
@@ -412,91 +410,76 @@ private fun TodIosTabItem(
   val interactionSource = remember { MutableInteractionSource() }
   val isPressed by interactionSource.collectIsPressedAsState()
 
-  // Spring physical feedback on touch
+  // Spring physical feedback on touch (No white flash!)
   val pressScale by animateFloatAsState(
-    targetValue = if (isPressed) 0.88f else 1.0f,
+    targetValue = if (isPressed) 0.86f else 1.0f,
     animationSpec = spring(
       dampingRatio = Spring.DampingRatioMediumBouncy,
       stiffness = Spring.StiffnessMedium
     ),
-    label = "tabPressScale_$title"
+    label = "tabPressScale"
   )
 
   // Icon bounce when active
   val iconScale by animateFloatAsState(
-    targetValue = if (isSelected) 1.10f else 1.0f,
-    animationSpec = spring(
-      dampingRatio = Spring.DampingRatioLowBouncy,
-      stiffness = Spring.StiffnessLow
-    ),
-    label = "tabIconScale_$title"
-  )
-
-  // Indicator pip width
-  val indicatorWidth by animateFloatAsState(
-    targetValue = if (isSelected) 16f else 0f,
+    targetValue = if (isSelected) 1.15f else 1.0f,
     animationSpec = spring(
       dampingRatio = Spring.DampingRatioMediumBouncy,
       stiffness = Spring.StiffnessLow
     ),
-    label = "tabIndicator_$title"
+    label = "tabIconScale"
+  )
+
+  // Active glowing capsule background
+  val activeBgAlpha by animateFloatAsState(
+    targetValue = if (isSelected) 1.0f else 0.0f,
+    animationSpec = spring(
+      dampingRatio = Spring.DampingRatioNoBouncy,
+      stiffness = Spring.StiffnessMedium
+    ),
+    label = "activeTabBg"
   )
 
   Box(
     modifier = Modifier
       .scale(pressScale)
-      .clip(RoundedCornerShape(20.dp))
+      .height(46.dp)
+      .width(72.dp)
+      .clip(RoundedCornerShape(23.dp))
       .then(
-        if (isSelected) {
+        if (activeBgAlpha > 0.01f) {
           Modifier
-            .background(Color(0x22FDB913))
-            .border(0.75.dp, Color(0x35FDB913), RoundedCornerShape(20.dp))
+            .background(
+              Brush.verticalGradient(
+                colors = listOf(
+                  Color(0x35FDB913).copy(alpha = 0.28f * activeBgAlpha),
+                  Color(0x15FDB913).copy(alpha = 0.12f * activeBgAlpha)
+                )
+              )
+            )
+            .border(
+              0.75.dp,
+              Color(0x44FDB913).copy(alpha = 0.40f * activeBgAlpha),
+              RoundedCornerShape(23.dp)
+            )
         } else {
           Modifier
         }
       )
       .clickable(
         interactionSource = interactionSource,
-        indication = null,
+        indication = null, // Strictly NO white/gray material ripple!
         onClick = onClick
-      )
-      .padding(horizontal = 20.dp, vertical = 6.dp),
+      ),
     contentAlignment = Alignment.Center
   ) {
-    Column(
-      horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.Center
+    Box(
+      modifier = Modifier
+        .size(28.dp)
+        .scale(iconScale),
+      contentAlignment = Alignment.Center
     ) {
-      // Top active indicator glow pill
-      Box(
-        modifier = Modifier
-          .height(2.5.dp)
-          .width(indicatorWidth.dp)
-          .clip(CircleShape)
-          .background(TodGold)
-      )
-
-      Spacer(modifier = Modifier.height(3.dp))
-
-      Box(
-        modifier = Modifier
-          .size(26.dp)
-          .scale(iconScale),
-        contentAlignment = Alignment.Center
-      ) {
-        icon(isSelected)
-      }
-
-      Spacer(modifier = Modifier.height(3.dp))
-
-      Text(
-        text = title,
-        color = if (isSelected) TodGold else Color(0xFF8E8E93),
-        fontSize = 11.sp,
-        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
-        maxLines = 1,
-        letterSpacing = 0.2.sp
-      )
+      icon(isSelected)
     }
   }
 }
@@ -595,9 +578,11 @@ fun TodIosFloatingMiniPlayer(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
       ) {
-        IconButton(
-          onClick = onTogglePlayPause,
-          modifier = Modifier.size(36.dp)
+        Box(
+          modifier = Modifier
+            .iosBounceClick(scaleDown = 0.85f) { onTogglePlayPause() }
+            .size(36.dp),
+          contentAlignment = Alignment.Center
         ) {
           Icon(
             imageVector = if (isPlaying) Icons.Default.Close else Icons.Default.PlayArrow,
@@ -607,9 +592,11 @@ fun TodIosFloatingMiniPlayer(
           )
         }
 
-        IconButton(
-          onClick = onSeekForward30,
-          modifier = Modifier.size(36.dp)
+        Box(
+          modifier = Modifier
+            .iosBounceClick(scaleDown = 0.85f) { onSeekForward30() }
+            .size(36.dp),
+          contentAlignment = Alignment.Center
         ) {
           Box(contentAlignment = Alignment.Center) {
             Icon(

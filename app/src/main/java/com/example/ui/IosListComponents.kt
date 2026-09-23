@@ -37,6 +37,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
@@ -68,6 +70,47 @@ object IosBadgeColors {
   val Pink = Brush.linearGradient(listOf(Color(0xFFFF375F), Color(0xFFB80B32)))
   val Slate = Brush.linearGradient(listOf(Color(0xFF8E8E93), Color(0xFF48484A)))
   val Gold = TodGradients.LiquidGold
+}
+
+/**
+ * Apple iOS Spring Press & Bounce Feedback Modifier
+ */
+fun Modifier.iosBounceClick(
+  scaleDown: Float = 0.94f,
+  alphaDown: Float = 0.80f,
+  onClick: (() -> Unit)? = null
+): Modifier = composed {
+  val interactionSource = remember { MutableInteractionSource() }
+  val isPressed by interactionSource.collectIsPressedAsState()
+  val scale by animateFloatAsState(
+    targetValue = if (isPressed) scaleDown else 1.0f,
+    animationSpec = spring(
+      dampingRatio = Spring.DampingRatioMediumBouncy,
+      stiffness = Spring.StiffnessMedium
+    ),
+    label = "iosBounceScale"
+  )
+  val alpha by animateFloatAsState(
+    targetValue = if (isPressed) alphaDown else 1.0f,
+    animationSpec = spring(
+      dampingRatio = Spring.DampingRatioNoBouncy,
+      stiffness = Spring.StiffnessMedium
+    ),
+    label = "iosBounceAlpha"
+  )
+
+  this
+    .scale(scale)
+    .alpha(alpha)
+    .then(
+      if (onClick != null) {
+        Modifier.clickable(
+          interactionSource = interactionSource,
+          indication = null,
+          onClick = onClick
+        )
+      } else Modifier
+    )
 }
 
 /**
@@ -340,23 +383,52 @@ fun IosSegmentedControl(
 }
 
 /**
- * Apple iOS Section Header
+ * Apple iOS Section Header with subtle glowing category tag
  */
 @Composable
 fun IosSectionHeader(
   title: String,
-  modifier: Modifier = Modifier
+  modifier: Modifier = Modifier,
+  actionText: String? = null,
+  onActionClick: (() -> Unit)? = null
 ) {
-  Text(
-    text = title.uppercase(),
-    color = Color(0xFF8E8E93),
-    fontSize = 12.5.sp,
-    fontWeight = FontWeight.SemiBold,
-    letterSpacing = 0.6.sp,
+  Row(
     modifier = modifier
       .fillMaxWidth()
-      .padding(horizontal = 16.dp, vertical = 8.dp)
-  )
+      .padding(horizontal = 18.dp, vertical = 10.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.SpaceBetween
+  ) {
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+      Box(
+        modifier = Modifier
+          .width(3.dp)
+          .height(13.dp)
+          .clip(RoundedCornerShape(2.dp))
+          .background(Color(0xFFFDB913))
+      )
+      Text(
+        text = title,
+        color = Color(0xFF98989F),
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = 0.3.sp
+      )
+    }
+
+    if (actionText != null && onActionClick != null) {
+      Text(
+        text = actionText,
+        color = Color(0xFF0A84FF),
+        fontSize = 12.5.sp,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier.clickable { onActionClick() }
+      )
+    }
+  }
 }
 
 /**
@@ -374,12 +446,12 @@ fun IosSectionFooter(
     lineHeight = 16.sp,
     modifier = modifier
       .fillMaxWidth()
-      .padding(horizontal = 16.dp, vertical = 6.dp)
+      .padding(horizontal = 18.dp, vertical = 6.dp)
   )
 }
 
 /**
- * Apple iOS Modern Glass Navigation Bar
+ * Apple iOS Ultra-Modern Seamless Navigation Bar (Continuous Edge-to-Edge)
  */
 @Composable
 fun IosNavigationBar(
@@ -391,24 +463,34 @@ fun IosNavigationBar(
 ) {
   val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
-  Box(
+  Column(
     modifier = modifier
       .fillMaxWidth()
+      .background(
+        Brush.verticalGradient(
+          colors = listOf(
+            Color(0xEE12131C),
+            Color(0xAA0D0E15),
+            Color.Transparent
+          )
+        )
+      )
       .statusBarsPadding()
-      .padding(horizontal = 16.dp, vertical = 10.dp)
+      .padding(horizontal = 16.dp, vertical = 8.dp)
   ) {
     Row(
       modifier = Modifier.fillMaxWidth(),
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.SpaceBetween
     ) {
+      // Left: Back Button with iOS Spring Tap
       if (onBack != null) {
         Box(
           modifier = Modifier
-            .size(36.dp)
+            .iosBounceClick(scaleDown = 0.88f, onClick = onBack)
+            .size(38.dp)
             .clip(CircleShape)
-            .background(Color(0x22FFFFFF))
-            .clickable { onBack() },
+            .background(Color(0x28FFFFFF)),
           contentAlignment = Alignment.Center
         ) {
           Icon(
@@ -419,36 +501,43 @@ fun IosNavigationBar(
           )
         }
       } else {
-        Spacer(modifier = Modifier.size(36.dp))
+        Spacer(modifier = Modifier.size(38.dp))
       }
 
+      // Center: Title & Subtitle with Luxury iOS SF Pro Typography
       Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.weight(1f)
+        modifier = Modifier
+          .weight(1f)
+          .padding(horizontal = 8.dp)
       ) {
         Text(
           text = title,
           color = Color.White,
           fontSize = 17.sp,
           fontWeight = FontWeight.Bold,
+          letterSpacing = 0.2.sp,
           maxLines = 1,
           overflow = TextOverflow.Ellipsis
         )
         if (!subtitle.isNullOrBlank()) {
+          Spacer(modifier = Modifier.height(2.dp))
           Text(
             text = subtitle,
             color = Color(0xFF8E8E93),
             fontSize = 11.5.sp,
+            fontWeight = FontWeight.Medium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
           )
         }
       }
 
+      // Right: Trailing Action Button
       if (trailing != null) {
         trailing()
       } else {
-        Spacer(modifier = Modifier.size(36.dp))
+        Spacer(modifier = Modifier.size(38.dp))
       }
     }
   }

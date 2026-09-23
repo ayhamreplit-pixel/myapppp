@@ -443,33 +443,61 @@ fun TodModernHubScreen(
               Row(
                 modifier = Modifier
                   .fillMaxWidth()
-                  .padding(start = 12.dp, end = 20.dp, top = 8.dp, bottom = 12.dp),
+                  .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
               ) {
-                // iOS Clean Settings Gear Button (Left)
-                IconButton(
-                  onClick = {
-                    activeNavTab = TodNavTab.MORE
-                  },
-                  modifier = Modifier.size(44.dp)
+                // iOS Frosted Settings Gear Button (Left) with Spring Press
+                val setInteraction = remember { MutableInteractionSource() }
+                val isSetPressed by setInteraction.collectIsPressedAsState()
+                val setScale by animateFloatAsState(
+                  targetValue = if (isSetPressed) 0.88f else 1.0f,
+                  animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                  label = "setPressScale"
+                )
+
+                Box(
+                  modifier = Modifier
+                    .scale(setScale)
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color(0x35000000))
+                    .border(0.75.dp, Color(0x35FFFFFF), CircleShape)
+                    .clickable(
+                      interactionSource = setInteraction,
+                      indication = null
+                    ) {
+                      activeNavTab = TodNavTab.MORE
+                    },
+                  contentAlignment = Alignment.Center
                 ) {
                   Icon(
                     imageVector = Icons.Default.Settings,
                     contentDescription = "الإعدادات",
                     tint = Color.White,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(20.dp)
                   )
                 }
 
-                // Brand Title (Right)
-                Text(
-                  text = "الذكي IPTV",
-                  color = Color.White,
-                  fontSize = 24.sp,
-                  fontWeight = FontWeight.Bold,
-                  letterSpacing = 0.5.sp
-                )
+                // Brand Title with iOS Glow Badge (Right)
+                Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                  Box(
+                    modifier = Modifier
+                      .size(8.dp)
+                      .clip(CircleShape)
+                      .background(Color(0xFF34C759))
+                  )
+                  Text(
+                    text = "الذكي IPTV",
+                    color = Color.White,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 0.3.sp
+                  )
+                }
               }
 
               Spacer(modifier = Modifier.height(6.dp))

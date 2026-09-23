@@ -267,26 +267,20 @@ fun TodHomeScreen(
       .fillMaxSize()
       .background(TodGradients.ObsidianCanvas)
   ) {
-    // 1. Ultra-Clean Modern iOS Navigation Header
+    // 1. Ultra-Clean Modern iOS Seamless Navigation Header (Continuous Edge-to-Edge)
     Column(
       modifier = Modifier
         .fillMaxWidth()
         .background(
           Brush.verticalGradient(
             colors = listOf(
-              Color(0xF514141D),
-              Color(0xE60E0E14)
+              Color(0xEE12131C),
+              Color(0x880D0E15),
+              Color.Transparent
             )
           )
         )
-        .border(
-          width = 0.5.dp,
-          brush = Brush.verticalGradient(
-            colors = listOf(Color(0x28FFFFFF), Color(0x08FFFFFF))
-          ),
-          shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)
-        )
-        .padding(top = 4.dp, bottom = 10.dp)
+        .padding(top = 4.dp, bottom = 6.dp)
     ) {
       // Top Row: Avatar + Brand + Quick Link Action
       Row(
@@ -481,89 +475,133 @@ fun TodHomeScreen(
           .fillMaxSize()
           .background(DarkBg)
       ) {
-        // iOS Glass Category Header with Back, Title, and List/Grid toggle
-        Row(
+        // Apple iOS Seamless Category Navigation Header (Continuous Edge-to-Edge)
+        Column(
           modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
+            .background(
+              Brush.verticalGradient(
+                colors = listOf(
+                  Color(0xEE12131C),
+                  Color(0x880D0E15),
+                  Color.Transparent
+                )
+              )
+            )
+            .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
           Row(
-            modifier = Modifier
-              .clip(CircleShape)
-              .background(Color(0x28FFFFFF))
-              .border(0.5.dp, Color(0x33FFFFFF), CircleShape)
-              .clickable { selectedCategoryId = null }
-              .padding(horizontal = 12.dp, vertical = 6.dp),
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
           ) {
-            Icon(
-              imageVector = Icons.Default.KeyboardArrowLeft,
-              contentDescription = "رجوع للرئيسية",
-              tint = TodGold,
-              modifier = Modifier.size(18.dp)
+            val catBackInteraction = remember { MutableInteractionSource() }
+            val isCatBackPressed by catBackInteraction.collectIsPressedAsState()
+            val catBackScale by animateFloatAsState(
+              targetValue = if (isCatBackPressed) 0.90f else 1.0f,
+              animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+              label = "catBackScale"
             )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text("الرئيسية", color = TodGold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+
+            Row(
+              modifier = Modifier
+                .scale(catBackScale)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color(0x28FFFFFF))
+                .border(0.75.dp, Color(0x35FFFFFF), RoundedCornerShape(16.dp))
+                .clickable(
+                  interactionSource = catBackInteraction,
+                  indication = null
+                ) { selectedCategoryId = null }
+                .padding(horizontal = 12.dp, vertical = 7.dp),
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Icon(
+                imageVector = Icons.Default.KeyboardArrowLeft,
+                contentDescription = "رجوع للرئيسية",
+                tint = TodGold,
+                modifier = Modifier.size(18.dp)
+              )
+              Spacer(modifier = Modifier.width(4.dp))
+              Text("الرئيسية", color = TodGold, fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+            }
+
+            Column(horizontalAlignment = Alignment.End) {
+              Text(
+                text = activeCatName,
+                color = Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Black
+              )
+              Text(
+                text = "${baseCategoryChannels.size} قناة متاحة",
+                color = Color(0xFF8E8E93),
+                fontSize = 11.sp
+              )
+            }
           }
 
-          Text(
-            text = "$activeCatName (${baseCategoryChannels.size})",
-            color = Color.White,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Black
-          )
-        }
+          Spacer(modifier = Modifier.height(8.dp))
 
-        // View Mode Switcher (Grid vs List for long names)
-        Row(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Text(
-            text = "${baseCategoryChannels.size} قناة متاحة",
-            color = DarkTextSecondary,
-            fontSize = 12.sp
-          )
-
+          // View Mode Switcher (Grid vs List)
           Row(
-            modifier = Modifier
-              .clip(RoundedCornerShape(8.dp))
-              .background(Color(0xFF161622))
-              .border(0.75.dp, Color(0xFF282838), RoundedCornerShape(8.dp))
-              .padding(2.dp),
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
           ) {
-            Box(
-              modifier = Modifier
-                .clip(RoundedCornerShape(6.dp))
-                .background(if (!isListView) TodGold else Color.Transparent)
-                .clickable { isListView = false }
-                .padding(horizontal = 10.dp, vertical = 4.dp),
-              contentAlignment = Alignment.Center
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-              Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.GridView, contentDescription = null, tint = if (!isListView) Color.Black else DarkTextSecondary, modifier = Modifier.size(13.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("شبكة", color = if (!isListView) Color.Black else DarkTextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-              }
+              Box(
+                modifier = Modifier
+                  .size(8.dp)
+                  .clip(CircleShape)
+                  .background(Color(0xFF34C759))
+              )
+              Text(
+                text = "بثوث نشطة ومباشرة",
+                color = Color(0xFF34C759),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
+              )
             }
-            Box(
+
+            Row(
               modifier = Modifier
-                .clip(RoundedCornerShape(6.dp))
-                .background(if (isListView) TodGold else Color.Transparent)
-                .clickable { isListView = true }
-                .padding(horizontal = 10.dp, vertical = 4.dp),
-              contentAlignment = Alignment.Center
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color(0x24FFFFFF))
+                .border(0.75.dp, Color(0x28FFFFFF), RoundedCornerShape(10.dp))
+                .padding(3.dp),
+              verticalAlignment = Alignment.CenterVertically
             ) {
-              Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.ViewAgenda, contentDescription = null, tint = if (isListView) Color.Black else DarkTextSecondary, modifier = Modifier.size(13.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("قائمة", color = if (isListView) Color.Black else DarkTextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+              Box(
+                modifier = Modifier
+                  .clip(RoundedCornerShape(8.dp))
+                  .background(if (!isListView) TodGold else Color.Transparent)
+                  .clickable { isListView = false }
+                  .padding(horizontal = 12.dp, vertical = 5.dp),
+                contentAlignment = Alignment.Center
+              ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                  Icon(Icons.Default.GridView, contentDescription = null, tint = if (!isListView) Color.Black else Color.White, modifier = Modifier.size(13.dp))
+                  Spacer(modifier = Modifier.width(4.dp))
+                  Text("شبكة", color = if (!isListView) Color.Black else Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                }
+              }
+              Box(
+                modifier = Modifier
+                  .clip(RoundedCornerShape(8.dp))
+                  .background(if (isListView) TodGold else Color.Transparent)
+                  .clickable { isListView = true }
+                  .padding(horizontal = 12.dp, vertical = 5.dp),
+                contentAlignment = Alignment.Center
+              ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                  Icon(Icons.Default.ViewAgenda, contentDescription = null, tint = if (isListView) Color.Black else Color.White, modifier = Modifier.size(13.dp))
+                  Spacer(modifier = Modifier.width(4.dp))
+                  Text("قائمة", color = if (isListView) Color.Black else Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                }
               }
             }
           }
