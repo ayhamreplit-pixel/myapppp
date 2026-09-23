@@ -83,34 +83,16 @@ enum class AppFontPreset(
   val descriptionAr: String,
   val fontFamily: androidx.compose.ui.text.font.FontFamily
 ) {
-  CAIRO(
-    id = "cairo",
-    titleAr = "خط كايرو (Cairo)",
-    descriptionAr = "واضح جداً، مريح للعين، متزن ومثالي للبث الرياضي",
-    fontFamily = CairoFontFamily
-  ),
-  ALMARAI(
-    id = "almarai",
-    titleAr = "خط المراعي (Almarai)",
-    descriptionAr = "تصميم أنيق وعصري شبيه بأسلوب Apple",
-    fontFamily = AlmaraiFontFamily
-  ),
-  TAJAWAL(
-    id = "tajawal",
-    titleAr = "خط تجوال (Tajawal)",
-    descriptionAr = "هندسي مستدير وواضح",
-    fontFamily = TajawalFontFamily
-  ),
-  IBM_PLEX(
-    id = "ibm_plex",
-    titleAr = "خط ثمانية (IBM Plex)",
-    descriptionAr = "خط صحفي وثائقي راقي",
+  THMANYAH(
+    id = "thmanyah",
+    titleAr = "خط ثمانية الرسمي",
+    descriptionAr = "الخط العربي الأصلي المعتمد لجميع صفحات ونصوص التطبيق",
     fontFamily = ThmanyahFontFamily
   );
 
   companion object {
     fun fromId(id: String): AppFontPreset {
-      return entries.find { it.id.equals(id, ignoreCase = true) } ?: CAIRO
+      return THMANYAH
     }
   }
 }
@@ -120,11 +102,11 @@ object ThemeStateHolder {
 }
 
 object FontStateHolder {
-  var currentFont by mutableStateOf(AppFontPreset.CAIRO)
+  var currentFont by mutableStateOf(AppFontPreset.THMANYAH)
 }
 
 val LocalAppTheme = compositionLocalOf { AppThemePreset.GOLD }
-val LocalAppFont = compositionLocalOf { AppFontPreset.CAIRO }
+val LocalAppFont = compositionLocalOf { AppFontPreset.THMANYAH }
 
 @Composable
 fun MyApplicationTheme(

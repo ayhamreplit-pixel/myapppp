@@ -1,5 +1,6 @@
 package com.example.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
@@ -123,36 +124,43 @@ fun TodHomeScreen(
   onOpenQuickLink: () -> Unit = {},
   modifier: Modifier = Modifier
 ) {
-  var selectedCategoryId by remember { mutableStateOf<String?>("ALL") }
+  // Start on Home view (null = Main Feed with Hero & Rails)
+  var selectedCategoryId by remember { mutableStateOf<String?>(null) }
   var isMuted by remember { mutableStateOf(false) }
 
-  // Map channels grouped by Xtream category dynamically with complete O(N) coverage
+  // Handle hardware & system back gesture to return from category view to home feed
+  BackHandler(enabled = selectedCategoryId != null) {
+    selectedCategoryId = null
+  }
+
+  // Map channels grouped by Xtream category dynamically with complete O(N) coverage and robust matching
   val channelsByCategory: Map<XtreamCategory, List<XtreamChannel>> = remember(allChannels, xtreamCategories) {
     if (allChannels.isEmpty()) {
       emptyMap()
     } else {
       val map = mutableMapOf<XtreamCategory, List<XtreamChannel>>()
-      
-      // Fast O(N) grouping by categoryId
-      val channelsByCatId = allChannels.groupBy { it.categoryId ?: "" }
 
-      // Map standard categories
+      // Clean category matching
       xtreamCategories.forEach { category ->
         if (category.categoryId != "ALL") {
-          val list = channelsByCatId[category.categoryId]
-            ?: channelsByCatId[category.categoryName]
-            ?: emptyList()
-          if (list.isNotEmpty()) {
-            map[category] = list
+          val catTrim = category.categoryId.trim()
+          val matched = allChannels.filter { ch ->
+            val chCat = ch.categoryId?.trim() ?: ""
+            chCat.equals(catTrim, ignoreCase = true) ||
+            (chCat.toIntOrNull() != null && catTrim.toIntOrNull() != null && chCat.toInt() == catTrim.toInt()) ||
+            (chCat.isEmpty() && category.categoryName.trim().equals("عام", ignoreCase = true))
+          }
+          if (matched.isNotEmpty()) {
+            map[category.copy(channelCount = matched.size)] = matched
           }
         }
       }
 
-      // If no categories matched or categories empty, group dynamically
+      // If no categories matched or categories empty, group dynamically by categoryId or default
       if (map.isEmpty()) {
+        val channelsByCatId = allChannels.groupBy { it.categoryId?.trim()?.ifBlank { "القنوات العامة" } ?: "القنوات العامة" }
         channelsByCatId.forEach { (catKey, list) ->
-          val label = catKey.ifBlank { "القنوات الرئيسية" }
-          map[XtreamCategory(label, label, list.size)] = list
+          map[XtreamCategory(catKey, catKey, list.size)] = list
         }
       }
 
@@ -160,12 +168,25 @@ fun TodHomeScreen(
     }
   }
 
-  // Channels for current selected category view
+  // Robust category channels for selected category view
   val currentCategoryChannels = remember(allChannels, selectedCategoryId) {
     if (selectedCategoryId == null || selectedCategoryId == "ALL") {
       allChannels
     } else {
-      allChannels.filter { it.categoryId == selectedCategoryId }
+      val targetCat = selectedCategoryId?.trim() ?: ""
+      val matched = allChannels.filter { ch ->
+        val chCat = ch.categoryId?.trim() ?: ""
+        chCat.equals(targetCat, ignoreCase = true) ||
+        (chCat.toIntOrNull() != null && targetCat.toIntOrNull() != null && chCat.toInt() == targetCat.toInt())
+      }
+      if (matched.isNotEmpty()) matched
+      else {
+        // Fallback by category name
+        val catName = xtreamCategories.find { it.categoryId.trim() == targetCat }?.categoryName?.trim()
+        if (!catName.isNullOrBlank()) {
+          allChannels.filter { (it.categoryId?.trim() ?: "").equals(catName, ignoreCase = true) }
+        } else emptyList()
+      }
     }
   }
 
@@ -430,7 +451,7 @@ fun TodHomeScreen(
                 interactionSource = catInteraction,
                 indication = null
               ) {
-                selectedCategoryId = if (isSelected) null else category.categoryId
+                selectedCategoryId = category.categoryId
               }
               .padding(horizontal = 15.dp, vertical = 7.dp),
             contentAlignment = Alignment.Center
@@ -449,8 +470,10 @@ fun TodHomeScreen(
     // 2. Main Content Body
     if (selectedCategoryId != null) {
       val isAll = selectedCategoryId == "ALL"
-      val activeCatName = if (isAll) "جميع القنوات" else xtreamCategories.find { it.categoryId == selectedCategoryId }?.categoryName ?: "القنوات"
-      val baseCategoryChannels = if (isAll) allChannels else channelsByCategory.entries.find { it.key.categoryId == selectedCategoryId }?.value ?: emptyList()
+      val activeCatName = if (isAll) "جميع القنوات"
+        else xtreamCategories.find { it.categoryId.trim() == selectedCategoryId?.trim() }?.categoryName
+          ?: selectedCategoryId ?: "القنوات"
+      val baseCategoryChannels = currentCategoryChannels
       var isListView by remember { mutableStateOf(false) }
 
       Column(
@@ -458,7 +481,7 @@ fun TodHomeScreen(
           .fillMaxSize()
           .background(DarkBg)
       ) {
-        // Category Header with Back, Title, and List/Grid toggle
+        // iOS Glass Category Header with Back, Title, and List/Grid toggle
         Row(
           modifier = Modifier
             .fillMaxWidth()
@@ -466,14 +489,23 @@ fun TodHomeScreen(
           horizontalArrangement = Arrangement.SpaceBetween,
           verticalAlignment = Alignment.CenterVertically
         ) {
-          Box(
+          Row(
             modifier = Modifier
-              .clip(RoundedCornerShape(8.dp))
-              .background(Color(0xFF1A1A24))
+              .clip(CircleShape)
+              .background(Color(0x28FFFFFF))
+              .border(0.5.dp, Color(0x33FFFFFF), CircleShape)
               .clickable { selectedCategoryId = null }
-              .padding(horizontal = 12.dp, vertical = 6.dp)
+              .padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
           ) {
-            Text("العودة للرئيسية", color = TodGold, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+            Icon(
+              imageVector = Icons.Default.KeyboardArrowLeft,
+              contentDescription = "رجوع للرئيسية",
+              tint = TodGold,
+              modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text("الرئيسية", color = TodGold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
           }
 
           Text(

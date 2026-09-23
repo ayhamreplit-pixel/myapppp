@@ -1062,6 +1062,10 @@ class XtreamRepository(context: Context) {
     prefs.edit().putString("custom_url_history", array.toString()).apply()
   }
 
+  fun clearCustomUrlHistory() {
+    prefs.edit().remove("custom_url_history").apply()
+  }
+
   // Theme persistence
   fun getSavedTheme(): String {
     return prefs.getString("app_theme_id", "gold") ?: "gold"
@@ -1146,6 +1150,16 @@ class XtreamRepository(context: Context) {
       }
       prefs.edit().putString("disk_streams_$cacheKey", array.toString()).apply()
     } catch (ignored: Exception) {}
+  }
+
+  fun clearAllCache(): Int {
+    val count = streamCache.size
+    clearMemoryCache()
+    val allKeys = prefs.all.keys.filter { it.startsWith("disk_streams_") || it.startsWith("disk_categories_") }
+    val editor = prefs.edit()
+    allKeys.forEach { editor.remove(it) }
+    editor.apply()
+    return count + allKeys.size
   }
 }
 

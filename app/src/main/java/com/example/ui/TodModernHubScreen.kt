@@ -5,6 +5,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -34,6 +35,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -284,21 +291,39 @@ fun TodModernHubScreen(
             serverUrl = config.serverUrl
           )
 
-          // Build categories
+          // Build categories with robust trimming and fallback
           val cats = catsRes.getOrDefault(emptyList())
           xtreamCategories.clear()
           xtreamCategories.add(XtreamCategory("ALL", "جميع القنوات", streams.size))
 
           if (cats.isNotEmpty()) {
             cats.forEach { cat ->
-              val count = streams.count { it.categoryId == cat.categoryId }
+              val catId = cat.categoryId.trim()
+              val count = streams.count { ch ->
+                val chCat = ch.categoryId?.trim() ?: ""
+                chCat.equals(catId, ignoreCase = true) ||
+                (chCat.toIntOrNull() != null && catId.toIntOrNull() != null && chCat.toInt() == catId.toInt())
+              }
               if (count > 0) {
-                xtreamCategories.add(XtreamCategory(cat.categoryId, cat.categoryName, count))
+                xtreamCategories.add(XtreamCategory(catId, cat.categoryName.trim(), count))
               }
             }
-          } else {
-            // Auto extract categories dynamically from stream tags
-            val groupMap = streams.groupBy { it.categoryId ?: "عام" }
+          }
+
+          // If some channels have categoryIds not present in cats, add them dynamically
+          val knownCatIds = xtreamCategories.map { it.categoryId.lowercase() }.toSet()
+          val unmappedStreams = streams.filter { ch ->
+            val chCat = ch.categoryId?.trim() ?: ""
+            chCat.isNotBlank() && chCat.lowercase() !in knownCatIds
+          }
+          if (unmappedStreams.isNotEmpty()) {
+            val groupMap = unmappedStreams.groupBy { it.categoryId?.trim() ?: "عام" }
+            groupMap.forEach { (groupId, list) ->
+              xtreamCategories.add(XtreamCategory(groupId, groupId, list.size))
+            }
+          } else if (xtreamCategories.size <= 1 && streams.isNotEmpty()) {
+            // Auto extract categories dynamically from stream tags if server returned no categories
+            val groupMap = streams.groupBy { it.categoryId?.trim()?.ifBlank { "عام" } ?: "عام" }
             groupMap.forEach { (groupId, list) ->
               xtreamCategories.add(XtreamCategory(groupId, groupId, list.size))
             }
@@ -370,432 +395,405 @@ fun TodModernHubScreen(
       when (viewMode) {
         HubViewMode.ONBOARDING -> {
           // ========================================================
-          // ULTRA-MODERN SMART IPTV ONBOARDING / LOGIN SCREEN (MATCHES PHOTO)
+          // ULTRA-MODERN SMART IPTV ONBOARDING / LOGIN SCREEN (MATCHES PHOTO EXACTLY)
           // ========================================================
-          Column(
+          Box(
             modifier = Modifier
               .fillMaxSize()
-              .background(Color(0xFF0C0C12))
-              .verticalScroll(rememberScrollState())
-              .navigationBarsPadding()
-              .padding(bottom = 24.dp)
+              .background(Color(0xFF0A0A0F))
           ) {
-            // 1. TOP BAR: Settings Gear (Left) & App Title "الذكي IPTV" (Right)
-            Row(
-              modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 12.dp),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              // Settings Circle Button (Left)
-              Box(
-                modifier = Modifier
-                  .size(38.dp)
-                  .clip(CircleShape)
-                  .background(Color(0x22FFFFFF))
-                  .border(0.75.dp, Color(0x35FFFFFF), CircleShape)
-                  .clickable {
-                    if (savedPlaylists.isNotEmpty()) {
-                      showPlaylistsManagerModal = true
-                    } else {
-                      showAccountInfoModal = true
-                    }
-                  },
-                contentAlignment = Alignment.Center
-              ) {
-                Icon(
-                  imageVector = Icons.Default.Settings,
-                  contentDescription = "الإعدادات",
-                  tint = Color.White,
-                  modifier = Modifier.size(19.dp)
-                )
-              }
-
-              // Brand Title (Right)
-              Text(
-                text = "الذكي IPTV",
-                color = Color.White,
-                fontSize = 23.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.5.sp
-              )
-            }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            // 2. HERO PREVIEW SECTION WITH CINEMATIC POSTERS COLLAGE & FLOATING PILL
+            // 1. CINEMATIC MOVIE POSTERS WALL BACKDROP (TOP FADE)
             Box(
               modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-              contentAlignment = Alignment.TopCenter
+                .height(300.dp)
             ) {
-              // Faint Cinematic Poster Collage Backdrop Behind Preview
+              Image(
+                painter = painterResource(id = R.drawable.iptv_posters_wall),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+              )
+              // Gradient blending seamlessly into dark OLED surface
+              Box(
+                modifier = Modifier
+                  .fillMaxSize()
+                  .background(
+                    Brush.verticalGradient(
+                      colors = listOf(
+                        Color(0x33000000),
+                        Color(0x880A0A0F),
+                        Color(0xE60A0A0F),
+                        Color(0xFF0A0A0F)
+                      )
+                    )
+                  )
+              )
+            }
+
+            // 2. MAIN SCROLLABLE ONBOARDING CONTENT
+            Column(
+              modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .navigationBarsPadding()
+                .padding(bottom = 28.dp)
+            ) {
+              // TOP BAR: Settings Gear (Left) & App Title "الذكي IPTV" (Right)
               Row(
                 modifier = Modifier
                   .fillMaxWidth()
-                  .height(130.dp)
-                  .clip(RoundedCornerShape(20.dp))
-                  .background(Color(0xFF14141C))
-                  .padding(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                  .padding(start = 12.dp, end = 20.dp, top = 8.dp, bottom = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
               ) {
-                listOf(
-                  "MOONLIGHT" to Color(0xFF1B2838),
-                  "CAPTAIN" to Color(0xFF381414),
-                  "THE CROWN" to Color(0xFF282414),
-                  "INCEPTION" to Color(0xFF142438)
-                ).forEach { (title, col) ->
-                  Box(
-                    modifier = Modifier
-                      .weight(1f)
-                      .fillMaxSize()
-                      .clip(RoundedCornerShape(8.dp))
-                      .background(col)
-                      .border(0.5.dp, Color(0x22FFFFFF), RoundedCornerShape(8.dp)),
-                    contentAlignment = Alignment.BottomCenter
-                  ) {
-                    Box(
-                      modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                          Brush.verticalGradient(
-                            listOf(Color(0x33000000), Color(0xDD000000))
-                          )
-                        )
-                    )
-                    Text(
-                      text = title,
-                      color = Color(0x66FFFFFF),
-                      fontSize = 8.sp,
-                      fontWeight = FontWeight.Bold,
-                      modifier = Modifier.padding(bottom = 6.dp)
-                    )
-                  }
+                // iOS Clean Settings Gear Button (Left)
+                IconButton(
+                  onClick = {
+                    activeNavTab = TodNavTab.MORE
+                  },
+                  modifier = Modifier.size(44.dp)
+                ) {
+                  Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "الإعدادات",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                  )
                 }
+
+                // Brand Title (Right)
+                Text(
+                  text = "الذكي IPTV",
+                  color = Color.White,
+                  fontSize = 24.sp,
+                  fontWeight = FontWeight.Bold,
+                  letterSpacing = 0.5.sp
+                )
               }
 
-              // Foreground Main Cinematic Living Room Preview Card
+              Spacer(modifier = Modifier.height(6.dp))
+
+              // HERO CARD SECTION (LIVING ROOM PREVIEW WITH TV AND SMARTPHONE)
               Box(
                 modifier = Modifier
                   .fillMaxWidth()
-                  .padding(top = 18.dp)
-                  .height(190.dp)
-                  .clip(RoundedCornerShape(22.dp))
-                  .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(22.dp))
+                  .padding(horizontal = 16.dp),
+                contentAlignment = Alignment.TopCenter
               ) {
-                Image(
-                  painter = painterResource(id = R.drawable.streaming_preview),
-                  contentDescription = "بث مباشر وتلفزيون ذكي",
-                  modifier = Modifier.fillMaxSize(),
-                  contentScale = ContentScale.Crop
-                )
-
-                // Soft dark vignette overlay
+                // Rounded Living Room Cinematic Card
                 Box(
                   modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                      Brush.verticalGradient(
-                        colors = listOf(Color.Transparent, Color(0xCC0C0C12))
+                    .fillMaxWidth()
+                    .height(195.dp)
+                    .clip(RoundedCornerShape(22.dp))
+                    .border(1.dp, Color(0x35FFFFFF), RoundedCornerShape(22.dp))
+                ) {
+                  Image(
+                    painter = painterResource(id = R.drawable.iptv_hero_livingroom),
+                    contentDescription = "بث مباشر وتلفزيون ذكي",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                  )
+
+                  // Soft cinematic dark vignette
+                  Box(
+                    modifier = Modifier
+                      .fillMaxSize()
+                      .background(
+                        Brush.verticalGradient(
+                          colors = listOf(Color.Transparent, Color(0xB3000000))
+                        )
                       )
-                    )
-                )
+                  )
+                }
               }
-            }
 
-            // Floating Pill: "اختيار Xtreaming" Overlapping the Bottom of the Card
-            val xtreamingInteraction = remember { MutableInteractionSource() }
-            val isXtreamingPressed by xtreamingInteraction.collectIsPressedAsState()
-            val xtreamingScale by animateFloatAsState(
-              targetValue = if (isXtreamingPressed) 0.94f else 1.0f,
-              animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-              label = "xtreamingScale"
-            )
+              // Floating Pill: "اختيار Xtreaming" Overlapping the Bottom Edge of Hero Card
+              val xtreamingInteraction = remember { MutableInteractionSource() }
+              val isXtreamingPressed by xtreamingInteraction.collectIsPressedAsState()
+              val xtreamingScale by animateFloatAsState(
+                targetValue = if (isXtreamingPressed) 0.94f else 1.0f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                label = "xtreamingScale"
+              )
 
-            Box(
-              modifier = Modifier
-                .fillMaxWidth()
-                .offset(y = (-18).dp),
-              contentAlignment = Alignment.Center
-            ) {
               Box(
                 modifier = Modifier
-                  .scale(xtreamingScale)
-                  .clip(RoundedCornerShape(32.dp))
-                  .background(Color(0xFA1E1E26))
-                  .border(1.2.dp, Color(0x40FFFFFF), RoundedCornerShape(32.dp))
-                  .clickable(
-                    interactionSource = xtreamingInteraction,
-                    indication = null
-                  ) {
-                    if (savedPlaylists.isNotEmpty()) {
-                      viewMode = HubViewMode.CATEGORIES
-                    } else {
-                      playlistConfig = XtreamPlaylistConfig(playlistName = "سيرفر Xtream 1")
-                      viewMode = HubViewMode.XTREAM_FORM
+                  .fillMaxWidth()
+                  .offset(y = (-18).dp),
+                contentAlignment = Alignment.Center
+              ) {
+                Box(
+                  modifier = Modifier
+                    .scale(xtreamingScale)
+                    .clip(RoundedCornerShape(32.dp))
+                    .background(Color(0xF21C1C24))
+                    .border(1.2.dp, Color(0x40FFFFFF), RoundedCornerShape(32.dp))
+                    .clickable(
+                      interactionSource = xtreamingInteraction,
+                      indication = null
+                    ) {
+                      if (savedPlaylists.isNotEmpty()) {
+                        viewMode = HubViewMode.CATEGORIES
+                      } else {
+                        playlistConfig = XtreamPlaylistConfig(playlistName = "سيرفر Xtream 1")
+                        viewMode = HubViewMode.XTREAM_FORM
+                      }
                     }
-                  }
-                  .padding(horizontal = 22.dp, vertical = 10.dp)
-              ) {
-                Row(
-                  verticalAlignment = Alignment.CenterVertically,
-                  horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    .padding(horizontal = 22.dp, vertical = 10.dp)
                 ) {
-                  Text(
-                    text = "اختيار Xtreaming",
-                    color = Color.White,
-                    fontSize = 14.5.sp,
-                    fontWeight = FontWeight.Bold
-                  )
-
-                  // Red Live/Broadcast Beacon
-                  Box(
-                    modifier = Modifier
-                      .size(22.dp)
-                      .clip(CircleShape)
-                      .background(Color(0xFFEE2A35)),
-                    contentAlignment = Alignment.Center
-                  ) {
-                    Icon(
-                      imageVector = Icons.Default.Podcasts,
-                      contentDescription = null,
-                      tint = Color.White,
-                      modifier = Modifier.size(13.dp)
-                    )
-                  }
-                }
-              }
-            }
-
-            Spacer(modifier = Modifier.height(2.dp))
-
-            // 3. MIDDLE SECTION: TWO SIDE-BY-SIDE CARDS ("قناة واحدة" & "قائمة التشغيل")
-            Row(
-              modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-              horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-              // Left Card: "قناة واحدة" (Single Channel via direct stream link)
-              val singleInteraction = remember { MutableInteractionSource() }
-              val isSinglePressed by singleInteraction.collectIsPressedAsState()
-              val singleScale by animateFloatAsState(
-                targetValue = if (isSinglePressed) 0.94f else 1.0f,
-                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-                label = "singleScale"
-              )
-
-              Box(
-                modifier = Modifier
-                  .weight(1f)
-                  .scale(singleScale)
-                  .height(160.dp)
-                  .clip(RoundedCornerShape(20.dp))
-                  .background(Color(0xFF1B1B22))
-                  .border(0.75.dp, Color(0x28FFFFFF), RoundedCornerShape(20.dp))
-                  .clickable(
-                    interactionSource = singleInteraction,
-                    indication = null
-                  ) { onOpenQuickLinkScreen() }
-                  .padding(14.dp)
-              ) {
-                Column(
-                  modifier = Modifier.fillMaxSize(),
-                  horizontalAlignment = Alignment.CenterHorizontally,
-                  verticalArrangement = Arrangement.SpaceBetween
-                ) {
-                  Text(
-                    text = "قناة واحدة",
-                    color = Color.White,
-                    fontSize = 15.5.sp,
-                    fontWeight = FontWeight.Bold
-                  )
-
-                  // Circular Red Badge with Radio/Broadcast Waves
-                  Box(
-                    modifier = Modifier
-                      .size(48.dp)
-                      .clip(CircleShape)
-                      .background(Color(0xFFEE2A35)),
-                    contentAlignment = Alignment.Center
-                  ) {
-                    Icon(
-                      imageVector = Icons.Default.Podcasts,
-                      contentDescription = null,
-                      tint = Color.White,
-                      modifier = Modifier.size(26.dp)
-                    )
-                  }
-
-                  Text(
-                    text = "تشغيل القناة باستخدام رابط البث",
-                    color = Color(0xFF8E8E93),
-                    fontSize = 11.sp,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 15.sp
-                  )
-                }
-              }
-
-              // Right Card: "قائمة التشغيل" (M3U / Playlists)
-              val playlistInteraction = remember { MutableInteractionSource() }
-              val isPlaylistPressed by playlistInteraction.collectIsPressedAsState()
-              val playlistScale by animateFloatAsState(
-                targetValue = if (isPlaylistPressed) 0.94f else 1.0f,
-                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-                label = "playlistScale"
-              )
-
-              Box(
-                modifier = Modifier
-                  .weight(1f)
-                  .scale(playlistScale)
-                  .height(160.dp)
-                  .clip(RoundedCornerShape(20.dp))
-                  .background(Color(0xFF1B1B22))
-                  .border(0.75.dp, Color(0x28FFFFFF), RoundedCornerShape(20.dp))
-                  .clickable(
-                    interactionSource = playlistInteraction,
-                    indication = null
-                  ) {
-                    playlistConfig = XtreamPlaylistConfig(isM3u = true, playlistName = "قائمة التشغيل")
-                    viewMode = HubViewMode.M3U_FORM
-                  }
-                  .padding(14.dp)
-              ) {
-                Column(
-                  modifier = Modifier.fillMaxSize(),
-                  horizontalAlignment = Alignment.CenterHorizontally,
-                  verticalArrangement = Arrangement.SpaceBetween
-                ) {
-                  Text(
-                    text = "قائمة التشغيل",
-                    color = Color.White,
-                    fontSize = 15.5.sp,
-                    fontWeight = FontWeight.Bold
-                  )
-
-                  // Squircle Red Badge with Live/Playlist TV Icon
-                  Box(
-                    modifier = Modifier
-                      .size(48.dp)
-                      .clip(RoundedCornerShape(13.dp))
-                      .background(Color(0xFFEE2A35)),
-                    contentAlignment = Alignment.Center
-                  ) {
-                    Icon(
-                      imageVector = Icons.Default.LiveTv,
-                      contentDescription = null,
-                      tint = Color.White,
-                      modifier = Modifier.size(26.dp)
-                    )
-                  }
-
-                  Text(
-                    text = "استكشاف جميع قنوات قائمة التشغيل الخاصة بك",
-                    color = Color(0xFF8E8E93),
-                    fontSize = 11.sp,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 15.sp
-                  )
-                }
-              }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // 4. BOTTOM WIDE CARD: "قائمة Xtream" (XC API Form)
-            val xtreamCardInteraction = remember { MutableInteractionSource() }
-            val isXtreamCardPressed by xtreamCardInteraction.collectIsPressedAsState()
-            val xtreamCardScale by animateFloatAsState(
-              targetValue = if (isXtreamCardPressed) 0.96f else 1.0f,
-              animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-              label = "xtreamCardScale"
-            )
-
-            Box(
-              modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .scale(xtreamCardScale)
-                .height(125.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(Color(0xFF1B1B22))
-                .border(0.75.dp, Color(0x28FFFFFF), RoundedCornerShape(20.dp))
-                .clickable(
-                  interactionSource = xtreamCardInteraction,
-                  indication = null
-                ) {
-                  playlistConfig = XtreamPlaylistConfig(playlistName = "سيرفر Xtream 1")
-                  viewMode = HubViewMode.XTREAM_FORM
-                }
-                .padding(horizontal = 16.dp, vertical = 14.dp)
-            ) {
-              Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.SpaceBetween
-              ) {
-                // Top Row: Title + Red Squircle Badge (Right) and Arrow Button (Left)
-                Row(
-                  modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.SpaceBetween,
-                  verticalAlignment = Alignment.CenterVertically
-                ) {
-                  // Left (in RTL layout): Dark Circular Arrow Button
-                  Box(
-                    modifier = Modifier
-                      .size(38.dp)
-                      .clip(CircleShape)
-                      .background(Color(0xFF2A2A36)),
-                    contentAlignment = Alignment.Center
-                  ) {
-                    Icon(
-                      imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                      contentDescription = "دخول",
-                      tint = Color.White,
-                      modifier = Modifier.size(20.dp)
-                    )
-                  }
-
-                  // Right (in RTL layout): Title + Red Squircle Server Badge
                   Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                   ) {
                     Text(
-                      text = "قائمة Xtream",
+                      text = "اختيار Xtreaming",
                       color = Color.White,
-                      fontSize = 17.sp,
+                      fontSize = 14.5.sp,
                       fontWeight = FontWeight.Bold
                     )
 
+                    // Red Live/Broadcast Beacon
                     Box(
                       modifier = Modifier
-                        .size(46.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .size(24.dp)
+                        .clip(CircleShape)
                         .background(Color(0xFFEE2A35)),
                       contentAlignment = Alignment.Center
                     ) {
-                      Icon(
-                        imageVector = Icons.Default.Dns,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
+                      BroadcastWavesIcon(
+                        modifier = Modifier.size(13.dp),
+                        color = Color.White
                       )
                     }
                   }
                 }
+              }
 
-                // Bottom Row: Subtitle
-                Text(
-                  text = "إضافة قائمة التشغيل الخاصة بك (عبر واجهة API لـ XC)",
-                  color = Color(0xFF8E8E93),
-                  fontSize = 11.5.sp,
-                  textAlign = TextAlign.End,
-                  modifier = Modifier.fillMaxWidth()
+              Spacer(modifier = Modifier.height(2.dp))
+
+              // MIDDLE SECTION: TWO SIDE-BY-SIDE CARDS ("قناة واحدة" on Left & "قائمة التشغيل" on Right)
+              Row(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+              ) {
+                // Left Card: "قناة واحدة" (Single Channel direct link)
+                val singleInteraction = remember { MutableInteractionSource() }
+                val isSinglePressed by singleInteraction.collectIsPressedAsState()
+                val singleScale by animateFloatAsState(
+                  targetValue = if (isSinglePressed) 0.94f else 1.0f,
+                  animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                  label = "singleScale"
                 )
+
+                Box(
+                  modifier = Modifier
+                    .weight(1f)
+                    .scale(singleScale)
+                    .height(165.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xFF1B1B22))
+                    .border(0.75.dp, Color(0x28FFFFFF), RoundedCornerShape(20.dp))
+                    .clickable(
+                      interactionSource = singleInteraction,
+                      indication = null
+                    ) { onOpenQuickLinkScreen() }
+                    .padding(14.dp)
+                ) {
+                  Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.SpaceBetween
+                  ) {
+                    Text(
+                      text = "قناة واحدة",
+                      color = Color.White,
+                      fontSize = 15.5.sp,
+                      fontWeight = FontWeight.Bold
+                    )
+
+                    // Circular Red Badge with iOS Radio/Broadcast Waves
+                    Box(
+                      modifier = Modifier
+                        .size(50.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFEE2A35)),
+                      contentAlignment = Alignment.Center
+                    ) {
+                      BroadcastWavesIcon(
+                        modifier = Modifier.size(27.dp),
+                        color = Color.White
+                      )
+                    }
+
+                    Text(
+                      text = "تشغيل القناة باستخدام\nرابط البث",
+                      color = Color(0xFF8E8E93),
+                      fontSize = 11.5.sp,
+                      textAlign = TextAlign.Center,
+                      lineHeight = 16.sp
+                    )
+                  }
+                }
+
+                // Right Card: "قائمة التشغيل" (M3U / Playlists)
+                val playlistInteraction = remember { MutableInteractionSource() }
+                val isPlaylistPressed by playlistInteraction.collectIsPressedAsState()
+                val playlistScale by animateFloatAsState(
+                  targetValue = if (isPlaylistPressed) 0.94f else 1.0f,
+                  animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                  label = "playlistScale"
+                )
+
+                Box(
+                  modifier = Modifier
+                    .weight(1f)
+                    .scale(playlistScale)
+                    .height(165.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xFF1B1B22))
+                    .border(0.75.dp, Color(0x28FFFFFF), RoundedCornerShape(20.dp))
+                    .clickable(
+                      interactionSource = playlistInteraction,
+                      indication = null
+                    ) {
+                      playlistConfig = XtreamPlaylistConfig(isM3u = true, playlistName = "قائمة التشغيل")
+                      viewMode = HubViewMode.M3U_FORM
+                    }
+                    .padding(14.dp)
+                ) {
+                  Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.SpaceBetween
+                  ) {
+                    Text(
+                      text = "قائمة التشغيل",
+                      color = Color.White,
+                      fontSize = 15.5.sp,
+                      fontWeight = FontWeight.Bold
+                    )
+
+                    // Squircle Red Badge with Live/Playlist TV Display Icon
+                    Box(
+                      modifier = Modifier
+                        .size(50.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Color(0xFFEE2A35)),
+                      contentAlignment = Alignment.Center
+                    ) {
+                      PlaylistTvIcon(
+                        modifier = Modifier.size(28.dp),
+                        color = Color.White
+                      )
+                    }
+
+                    Text(
+                      text = "استكشاف جميع قنوات قائمة\nالتشغيل الخاصة بك",
+                      color = Color(0xFF8E8E93),
+                      fontSize = 11.5.sp,
+                      textAlign = TextAlign.Center,
+                      lineHeight = 16.sp
+                    )
+                  }
+                }
+              }
+
+              Spacer(modifier = Modifier.height(14.dp))
+
+              // BOTTOM WIDE CARD: "قائمة Xtream" (XC API Form)
+              val xtreamCardInteraction = remember { MutableInteractionSource() }
+              val isXtreamCardPressed by xtreamCardInteraction.collectIsPressedAsState()
+              val xtreamCardScale by animateFloatAsState(
+                targetValue = if (isXtreamCardPressed) 0.96f else 1.0f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                label = "xtreamCardScale"
+              )
+
+              Box(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(horizontal = 16.dp)
+                  .scale(xtreamCardScale)
+                  .height(122.dp)
+                  .clip(RoundedCornerShape(20.dp))
+                  .background(Color(0xFF1B1B22))
+                  .border(0.75.dp, Color(0x28FFFFFF), RoundedCornerShape(20.dp))
+                  .clickable(
+                    interactionSource = xtreamCardInteraction,
+                    indication = null
+                  ) {
+                    playlistConfig = XtreamPlaylistConfig(playlistName = "سيرفر Xtream 1")
+                    viewMode = HubViewMode.XTREAM_FORM
+                  }
+                  .padding(horizontal = 16.dp, vertical = 14.dp)
+              ) {
+                Column(
+                  modifier = Modifier.fillMaxSize(),
+                  verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                  // Top Row: Circular Arrow Button (Left) and Title + Red Squircle Server Badge (Right)
+                  Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                  ) {
+                    // Left: Dark Circular Arrow Button
+                    Box(
+                      modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF2C2C36))
+                        .border(0.5.dp, Color(0x20FFFFFF), CircleShape),
+                      contentAlignment = Alignment.Center
+                    ) {
+                      Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "دخول",
+                        tint = Color.White,
+                        modifier = Modifier.size(19.dp)
+                      )
+                    }
+
+                    // Right: Title + Red Squircle Server Badge
+                    Row(
+                      verticalAlignment = Alignment.CenterVertically,
+                      horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                      Text(
+                        text = "قائمة Xtream",
+                        color = Color.White,
+                        fontSize = 17.5.sp,
+                        fontWeight = FontWeight.Bold
+                      )
+
+                      Box(
+                        modifier = Modifier
+                          .size(46.dp)
+                          .clip(RoundedCornerShape(12.dp))
+                          .background(Color(0xFFEE2A35)),
+                        contentAlignment = Alignment.Center
+                      ) {
+                        XtreamServerIcon(
+                          modifier = Modifier.size(25.dp),
+                          color = Color.White
+                        )
+                      }
+                    }
+                  }
+
+                  // Bottom Row: Subtitle
+                  Text(
+                    text = "إضافة قائمة التشغيل الخاصة بك (عبر واجهة API لـ XC)",
+                    color = Color(0xFF8E8E93),
+                    fontSize = 11.5.sp,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.fillMaxWidth()
+                  )
+                }
               }
             }
           }
@@ -870,6 +868,9 @@ fun TodModernHubScreen(
                     onDeletePlaylist = { config ->
                       xtreamRepo.deletePlaylistConfig(config)
                       savedPlaylists = xtreamRepo.getAllPlaylists()
+                    },
+                    onBack = {
+                      activeNavTab = TodNavTab.HOME
                     }
                   )
                 }
@@ -1455,5 +1456,183 @@ fun TodModernHubScreen(
         }
       }
     }
+  }
+}
+
+/**
+ * Pixel-perfect iOS Live Broadcast Waves Icon ((•))
+ */
+@Composable
+fun BroadcastWavesIcon(
+  modifier: Modifier = Modifier,
+  color: Color = Color.White
+) {
+  Canvas(modifier = modifier) {
+    val strokeWidth = size.width * 0.11f
+    val centerPoint = Offset(size.width / 2f, size.height / 2f)
+
+    // Center circular dot
+    drawCircle(
+      color = color,
+      radius = size.width * 0.12f,
+      center = centerPoint
+    )
+
+    // Inner concentric wave arcs
+    val innerR = size.width * 0.26f
+    drawArc(
+      color = color,
+      startAngle = 135f,
+      sweepAngle = 90f,
+      useCenter = false,
+      topLeft = Offset(centerPoint.x - innerR, centerPoint.y - innerR),
+      size = Size(innerR * 2, innerR * 2),
+      style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+    )
+    drawArc(
+      color = color,
+      startAngle = -45f,
+      sweepAngle = 90f,
+      useCenter = false,
+      topLeft = Offset(centerPoint.x - innerR, centerPoint.y - innerR),
+      size = Size(innerR * 2, innerR * 2),
+      style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+    )
+
+    // Outer concentric wave arcs
+    val outerR = size.width * 0.44f
+    drawArc(
+      color = color,
+      startAngle = 135f,
+      sweepAngle = 90f,
+      useCenter = false,
+      topLeft = Offset(centerPoint.x - outerR, centerPoint.y - outerR),
+      size = Size(outerR * 2, outerR * 2),
+      style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+    )
+    drawArc(
+      color = color,
+      startAngle = -45f,
+      sweepAngle = 90f,
+      useCenter = false,
+      topLeft = Offset(centerPoint.x - outerR, centerPoint.y - outerR),
+      size = Size(outerR * 2, outerR * 2),
+      style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+    )
+  }
+}
+
+/**
+ * Pixel-perfect iOS Playlist TV Display Icon
+ */
+@Composable
+fun PlaylistTvIcon(
+  modifier: Modifier = Modifier,
+  color: Color = Color.White
+) {
+  Canvas(modifier = modifier) {
+    val stroke = size.width * 0.085f
+
+    // TV Screen frame
+    val screenW = size.width * 0.82f
+    val screenH = size.height * 0.58f
+    val screenLeft = (size.width - screenW) / 2f
+    val screenTop = size.height * 0.12f
+
+    drawRoundRect(
+      color = color,
+      topLeft = Offset(screenLeft, screenTop),
+      size = Size(screenW, screenH),
+      cornerRadius = CornerRadius(size.width * 0.12f),
+      style = Stroke(width = stroke)
+    )
+
+    // TV Stand column & base
+    val standTop = screenTop + screenH
+    drawLine(
+      color = color,
+      start = Offset(size.width / 2f, standTop),
+      end = Offset(size.width / 2f, standTop + size.height * 0.12f),
+      strokeWidth = stroke,
+      cap = StrokeCap.Round
+    )
+    drawLine(
+      color = color,
+      start = Offset(size.width * 0.30f, standTop + size.height * 0.12f),
+      end = Offset(size.width * 0.70f, standTop + size.height * 0.12f),
+      strokeWidth = stroke,
+      cap = StrokeCap.Round
+    )
+
+    // Centered Play Triangle inside TV display
+    val triPath = Path().apply {
+      val triSize = size.width * 0.22f
+      val cx = size.width / 2f
+      val cy = screenTop + screenH / 2f
+      moveTo(cx - triSize * 0.42f, cy - triSize * 0.5f)
+      lineTo(cx + triSize * 0.58f, cy)
+      lineTo(cx - triSize * 0.42f, cy + triSize * 0.5f)
+      close()
+    }
+    drawPath(triPath, color = color)
+  }
+}
+
+/**
+ * Pixel-perfect iOS Xtream XC API Server Icon
+ */
+@Composable
+fun XtreamServerIcon(
+  modifier: Modifier = Modifier,
+  color: Color = Color.White
+) {
+  Canvas(modifier = modifier) {
+    val stroke = size.width * 0.085f
+
+    // Top Rack Unit
+    drawRoundRect(
+      color = color,
+      topLeft = Offset(size.width * 0.12f, size.height * 0.16f),
+      size = Size(size.width * 0.76f, size.height * 0.28f),
+      cornerRadius = CornerRadius(size.width * 0.08f),
+      style = Stroke(width = stroke)
+    )
+    // LED indicator
+    drawCircle(
+      color = color,
+      radius = size.width * 0.045f,
+      center = Offset(size.width * 0.26f, size.height * 0.30f)
+    )
+    // Bus line
+    drawLine(
+      color = color,
+      start = Offset(size.width * 0.40f, size.height * 0.30f),
+      end = Offset(size.width * 0.76f, size.height * 0.30f),
+      strokeWidth = stroke * 0.85f,
+      cap = StrokeCap.Round
+    )
+
+    // Bottom Rack Unit
+    drawRoundRect(
+      color = color,
+      topLeft = Offset(size.width * 0.12f, size.height * 0.54f),
+      size = Size(size.width * 0.76f, size.height * 0.28f),
+      cornerRadius = CornerRadius(size.width * 0.08f),
+      style = Stroke(width = stroke)
+    )
+    // LED indicator
+    drawCircle(
+      color = color,
+      radius = size.width * 0.045f,
+      center = Offset(size.width * 0.26f, size.height * 0.68f)
+    )
+    // Bus line
+    drawLine(
+      color = color,
+      start = Offset(size.width * 0.40f, size.height * 0.68f),
+      end = Offset(size.width * 0.76f, size.height * 0.68f),
+      strokeWidth = stroke * 0.85f,
+      cap = StrokeCap.Round
+    )
   }
 }

@@ -8,30 +8,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.example.R
 
-// خط كايرو العربي الحديث (Cairo) - واضح جداً، متناسق، ومريح للعين
-val CairoFontFamily = FontFamily(
-  Font(R.font.cairo)
-)
-
-val AlmaraiFontFamily = FontFamily(
-  Font(R.font.almarai, FontWeight.Normal),
-  Font(R.font.almarai_bold, FontWeight.Bold)
-)
-
-val TajawalFontFamily = FontFamily(
-  Font(R.font.tajawal, FontWeight.Normal),
-  Font(R.font.tajawal_bold, FontWeight.Bold)
-)
-
+// خط ثمانية الرسمي المعتمد (IBM Plex Sans Arabic) - الخط الرسمي الموحد لجميع صفحات ونصوص التطبيق
 val ThmanyahFontFamily = FontFamily(
   Font(R.font.ibm_plex_sans_arabic, FontWeight.Normal),
+  Font(R.font.ibm_plex_sans_arabic, FontWeight.Medium),
+  Font(R.font.ibm_plex_sans_arabic_bold, FontWeight.SemiBold),
   Font(R.font.ibm_plex_sans_arabic_bold, FontWeight.Bold)
 )
 
 val IbmPlexSansArabic = ThmanyahFontFamily
 
 // الخط الموحد المطبق على التطبيق بالكامل
-val AppFontFamily = CairoFontFamily
+val AppFontFamily = ThmanyahFontFamily
 
 fun getTypography(fontFamily: FontFamily = AppFontFamily) = Typography(
   displayLarge = TextStyle(

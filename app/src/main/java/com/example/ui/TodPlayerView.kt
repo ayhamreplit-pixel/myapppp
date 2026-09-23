@@ -64,9 +64,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
@@ -143,11 +146,12 @@ fun TodPlayerView(
     }
   }
 
-  Box(
-    modifier = modifier
-      .fillMaxSize()
-      .background(Color.Black)
-      .pointerInput(playerState.isControlsLocked) {
+  CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+    Box(
+      modifier = modifier
+        .fillMaxSize()
+        .background(Color.Black)
+        .pointerInput(playerState.isControlsLocked) {
         detectTapGestures(
           onTap = {
             controlsVisible = !controlsVisible
@@ -541,4 +545,5 @@ fun TodPlayerView(
       }
     }
   }
+}
 }

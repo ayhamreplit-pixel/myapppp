@@ -29,10 +29,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.ui.draw.scale
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.AspectRatio
@@ -80,6 +82,7 @@ import com.example.model.MatchMoment
 import com.example.model.TodPlayerState
 import com.example.ui.theme.DarkTextPrimary
 import com.example.ui.theme.DarkTextSecondary
+import com.example.ui.theme.TodAmberYellow
 import com.example.ui.theme.TodCyan
 
 /**
@@ -167,139 +170,83 @@ fun TodControlsOverlay(
       enter = fadeIn(tween(220)),
       exit = fadeOut(tween(220))
     ) {
-      Box(
-        modifier = Modifier
-          .fillMaxSize()
-          .background(
-            Brush.verticalGradient(
-              colors = listOf(
-                Color(0xCC000000),
-                Color(0x33000000),
-                Color(0x00000000),
-                Color(0x44000000),
-                Color(0xEE000000)
+      CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        Box(
+          modifier = Modifier
+            .fillMaxSize()
+            .background(
+              Brush.verticalGradient(
+                colors = listOf(
+                  Color(0xCC000000),
+                  Color(0x33000000),
+                  Color(0x00000000),
+                  Color(0x44000000),
+                  Color(0xEE000000)
+                )
               )
             )
-          )
-      ) {
-        // ==========================================
-        // 1. TOP BAR (Screenshots 2, 4, 7, 9, 12, 13)
-        // Strictly LTR: Left has tools (Subtitles, Settings, Grid, Lock); Right has Title & Back Arrow (→)
-        // ==========================================
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        ) {
+          // ==========================================
+          // 1. TOP BAR (Sleek, Balanced, Never Overflowing)
+          // Left: Back button + Title & Subtitle + Resolution Badge
+          // Right: Action Icons (Favorite, Subtitles, Settings, Grid, Aspect Ratio, Lock)
+          // ==========================================
           Row(
             modifier = Modifier
               .fillMaxWidth()
               .align(Alignment.TopCenter)
-              .padding(horizontal = 20.dp, vertical = 16.dp),
+              .padding(horizontal = 20.dp, vertical = 14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
           ) {
-            // Left side icons: Subtitles, Settings Cog, 4-Grid, Aspect Ratio, Sleep Timer, PiP, Reload, Camera, Lock
+            // Left Group: Back Button + Stream Title & Info
             Row(
               verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.spacedBy(14.dp)
+              horizontalArrangement = Arrangement.spacedBy(12.dp),
+              modifier = Modifier.weight(1f, fill = false)
             ) {
-              // 1. Subtitles icon (Screenshot 7)
+              // iOS Glass Back Button
               Box(
                 modifier = Modifier
-                  .size(36.dp)
-                  .clickable { onOpenSubtitles() },
-                contentAlignment = Alignment.Center
-              ) {
-                TodSubtitles(
-                  size = 24.dp,
-                  tint = if (playerState.selectedSubtitleTrack != null) TodAmberYellow else Color.White
-                )
-              }
-
-              // 2. Settings Cog with Play Triangle inside (Screenshot 2 & 7) -> opens Audio/Quality modal
-              Box(
-                modifier = Modifier
-                  .size(36.dp)
-                  .clickable { onOpenQuality() },
-                contentAlignment = Alignment.Center
-              ) {
-                TodSettingsCogWithPlay(size = 26.dp, tint = Color.White)
-              }
-
-              // 3. 4 Rounded Squares Grid icon (Screenshot 2 & 12) -> opens channels / stream hub
-              Box(
-                modifier = Modifier
-                  .size(36.dp)
-                  .clickable { onOpenGrid() },
-                contentAlignment = Alignment.Center
-              ) {
-                TodGridFour(size = 24.dp, tint = Color.White)
-              }
-
-              // 4. Aspect Ratio pill button (16:9, Fit, Zoom, Stretch)
-              Box(
-                modifier = Modifier
-                  .clip(RoundedCornerShape(6.dp))
-                  .background(Color(0x551A2234))
-                  .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
-                  .clickable { onCycleAspectRatio() }
-                  .padding(horizontal = 8.dp, vertical = 5.dp),
-                contentAlignment = Alignment.Center
-              ) {
-                Row(
-                  verticalAlignment = Alignment.CenterVertically,
-                  horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                  Icon(
-                    imageVector = Icons.Default.AspectRatio,
-                    contentDescription = "Aspect Ratio",
-                    tint = TodAmberYellow,
-                    modifier = Modifier.size(15.dp)
-                  )
-                  Text(
-                    text = playerState.aspectRatioMode.label,
-                    color = Color.White,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold
-                  )
-                }
-              }
-
-              // 5. Quick Touch Lock (locks gestures for safe viewing)
-              Box(
-                modifier = Modifier
-                  .size(36.dp)
-                  .clickable { onToggleLock() },
+                  .size(38.dp)
+                  .clip(CircleShape)
+                  .background(Color(0x441F293D))
+                  .border(1.dp, Color(0x33FFFFFF), CircleShape)
+                  .clickable { onNavigateBack() },
                 contentAlignment = Alignment.Center
               ) {
                 Icon(
-                  imageVector = Icons.Default.LockOpen,
-                  contentDescription = "Lock Controls",
+                  imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                  contentDescription = "Back",
                   tint = Color.White,
                   modifier = Modifier.size(20.dp)
                 )
               }
-            }
 
-            // Right side: Favorite + Quality Badge + Match / Content Title + Subtitle + Back Arrow (→)
-            Row(
-              verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-              // Favorite Heart Icon
-              Box(
-                modifier = Modifier
-                  .size(36.dp)
-                  .clickable { onToggleFavorite() },
-                contentAlignment = Alignment.Center
-              ) {
-                Icon(
-                  imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                  contentDescription = "Favorite",
-                  tint = if (isFavorite) Color(0xFFFF2A55) else Color.White.copy(alpha = 0.85f),
-                  modifier = Modifier.size(22.dp)
+              // Content Title & Category / Subtitle
+              Column(modifier = Modifier.widthIn(max = 280.dp)) {
+                Text(
+                  text = stream.title.ifEmpty { "قناة البث المباشر" },
+                  color = Color.White,
+                  fontSize = 15.sp,
+                  fontWeight = FontWeight.Bold,
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis
                 )
+                val subText = if (stream.subtitle.isNotEmpty()) stream.subtitle else stream.tournamentOrLeague
+                if (subText.isNotEmpty()) {
+                  Text(
+                    text = subText,
+                    color = Color(0xFFB0B0B0),
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                  )
+                }
               }
 
               // Resolution Badge (e.g. 1080p FHD, 4K UHD, 720p HD)
-              val resBadge = playerState.activeResolutionBadge.ifEmpty { "HD" }
+              val resBadge = playerState.activeResolutionBadge.ifEmpty { "FHD" }
               Box(
                 modifier = Modifier
                   .clip(RoundedCornerShape(4.dp))
@@ -310,82 +257,119 @@ fun TodControlsOverlay(
                 Text(
                   text = resBadge,
                   color = TodAmberYellow,
-                  fontSize = 11.sp,
+                  fontSize = 10.sp,
                   fontWeight = FontWeight.Bold
                 )
               }
+            }
 
-              Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.clickable { onNavigateBack() }
+            Spacer(modifier = Modifier.width(16.dp))
+
+            // Right Group: Player Action Icons
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+              // 1. Favorite Heart Icon
+              Box(
+                modifier = Modifier
+                  .size(36.dp)
+                  .clickable { onToggleFavorite() },
+                contentAlignment = Alignment.Center
               ) {
-                Column(horizontalAlignment = Alignment.End) {
-                  Text(
-                    text = stream.title.ifEmpty { "Premier League" },
-                    color = Color.White,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                  )
-                  if (stream.subtitle.isNotEmpty() || stream.tournamentOrLeague.isNotEmpty()) {
-                    Text(
-                      text = if (stream.subtitle.isNotEmpty()) stream.subtitle else stream.tournamentOrLeague,
-                      color = Color(0xFFB0B0B0),
-                      fontSize = 11.sp,
-                      maxLines = 1
-                    )
-                  }
-                }
+                Icon(
+                  imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                  contentDescription = "Favorite",
+                  tint = if (isFavorite) Color(0xFFFF2A55) else Color.White.copy(alpha = 0.85f),
+                  modifier = Modifier.size(21.dp)
+                )
+              }
 
-                // Thin white back arrow → (Screenshot 4)
-                TodArrowBackRtl(size = 24.dp, tint = Color.White)
+              // 2. Subtitles icon
+              Box(
+                modifier = Modifier
+                  .size(36.dp)
+                  .clickable { onOpenSubtitles() },
+                contentAlignment = Alignment.Center
+              ) {
+                TodSubtitles(
+                  size = 22.dp,
+                  tint = if (playerState.selectedSubtitleTrack != null) TodAmberYellow else Color.White
+                )
+              }
+
+              // 3. Settings Cog with Play Triangle inside -> opens Audio/Quality modal
+              Box(
+                modifier = Modifier
+                  .size(36.dp)
+                  .clickable { onOpenQuality() },
+                contentAlignment = Alignment.Center
+              ) {
+                TodSettingsCogWithPlay(size = 24.dp, tint = Color.White)
+              }
+
+              // 4. 4 Rounded Squares Grid icon -> opens channels / stream drawer
+              Box(
+                modifier = Modifier
+                  .size(36.dp)
+                  .clickable { onOpenGrid() },
+                contentAlignment = Alignment.Center
+              ) {
+                TodGridFour(size = 22.dp, tint = Color.White)
+              }
+
+              // 5. Aspect Ratio pill button (16:9, Fit, Zoom, Stretch)
+              Box(
+                modifier = Modifier
+                  .clip(RoundedCornerShape(6.dp))
+                  .background(Color(0x551A2234))
+                  .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
+                  .clickable { onCycleAspectRatio() }
+                  .padding(horizontal = 7.dp, vertical = 4.dp),
+                contentAlignment = Alignment.Center
+              ) {
+                Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                  Icon(
+                    imageVector = Icons.Default.AspectRatio,
+                    contentDescription = "Aspect Ratio",
+                    tint = TodAmberYellow,
+                    modifier = Modifier.size(14.dp)
+                  )
+                  Text(
+                    text = playerState.aspectRatioMode.label,
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold
+                  )
+                }
+              }
+
+              // 6. Quick Touch Lock
+              Box(
+                modifier = Modifier
+                  .size(36.dp)
+                  .clickable { onToggleLock() },
+                contentAlignment = Alignment.Center
+              ) {
+                Icon(
+                  imageVector = Icons.Default.LockOpen,
+                  contentDescription = "Lock Controls",
+                  tint = Color.White,
+                  modifier = Modifier.size(19.dp)
+                )
               }
             }
           }
-        }
 
-        // ==========================================
-        // 2. CENTER CONTROLS (Screenshots 3, 9, 12, 13)
-        // Includes: Previous Channel (|◀), Replay 10, Play/Pause, Forward 10, Next Channel (▶|)
-        // ==========================================
-        Row(
-          modifier = Modifier
-            .align(Alignment.Center)
-            .fillMaxWidth(0.68f),
-          horizontalArrangement = Arrangement.SpaceEvenly,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          // Previous Channel (|◀)
-          if (onPreviousChannel != null) {
-            Box(
-              modifier = Modifier
-                .size(50.dp)
-                .clip(CircleShape)
-                .clickable { onPreviousChannel() },
-              contentAlignment = Alignment.Center
-            ) {
-              Icon(
-                imageVector = Icons.Default.SkipPrevious,
-                contentDescription = "Previous Channel",
-                tint = Color.White.copy(alpha = 0.9f),
-                modifier = Modifier.size(34.dp)
-              )
-            }
-          }
-
-          // Replay 10 Seconds: Circular arrow with "10" inside (Screenshot 3)
-          Box(
-            modifier = Modifier
-              .size(54.dp)
-              .clickable { onSeekBackward() },
-            contentAlignment = Alignment.Center
-          ) {
-            TodReplay10(size = 46.dp, tint = Color.White)
-          }
-
-          // Center Pause Bars (||) or Play Triangle (▶) with Spring Bounce and Radial Glow Halo
+          // ==========================================
+          // 2. CENTER CONTROLS (Strictly Symmetrical & Mathematically Dead-Centered)
+          // Play button is ALWAYS at 50% X, 50% Y.
+          // Left: Previous Channel + Replay 10 (fixed width pod)
+          // Right: Forward 10 + Next Channel (fixed width pod)
+          // ==========================================
           val playInteractionSource = remember { MutableInteractionSource() }
           val isPlayPressed by playInteractionSource.collectIsPressedAsState()
           val playScale by animateFloatAsState(
@@ -396,164 +380,217 @@ fun TodControlsOverlay(
 
           Box(
             modifier = Modifier
-              .scale(playScale)
-              .size(76.dp)
-              .clip(CircleShape)
-              .background(
-                Brush.radialGradient(
-                  colors = listOf(Color(0x33FDB913), Color(0x11000000), Color.Transparent)
-                )
-              )
-              .clickable(
-                interactionSource = playInteractionSource,
-                indication = null
-              ) { onTogglePlayPause() },
+              .align(Alignment.Center)
+              .fillMaxWidth(),
             contentAlignment = Alignment.Center
           ) {
-            if (playerState.isBuffering) {
-              CircularProgressIndicator(
-                color = TodAmberYellow,
-                strokeWidth = 3.dp,
-                modifier = Modifier.size(44.dp)
-              )
-            } else if (playerState.isPlaying) {
-              // Two tall rounded vertical pill bars (Screenshot 3 & 9)
-              TodPauseBars(
-                width = 11.dp,
-                height = 54.dp,
-                gap = 14.dp,
-                tint = Color.White.copy(alpha = 0.92f)
-              )
-            } else {
-              // Sleek play triangle
-              TodPlayTriangle(
-                size = 52.dp,
-                tint = Color.White.copy(alpha = 0.92f)
-              )
-            }
-          }
-
-          // Forward 10 Seconds: Circular arrow with "10" inside
-          Box(
-            modifier = Modifier
-              .size(54.dp)
-              .clickable { onSeekForward() },
-            contentAlignment = Alignment.Center
-          ) {
-            TodForward10(size = 46.dp, tint = Color.White)
-          }
-
-          // Next Channel (▶|)
-          if (onNextChannel != null) {
-            Box(
-              modifier = Modifier
-                .size(50.dp)
-                .clip(CircleShape)
-                .clickable { onNextChannel() },
-              contentAlignment = Alignment.Center
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.Center
             ) {
-              Icon(
-                imageVector = Icons.Default.SkipNext,
-                contentDescription = "Next Channel",
-                tint = Color.White.copy(alpha = 0.9f),
-                modifier = Modifier.size(34.dp)
-              )
+              // Left Pod: Previous Channel (|◀) + Replay 10 (Fixed 130.dp width, right-aligned)
+              Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.End,
+                modifier = Modifier.width(130.dp)
+              ) {
+                if (onPreviousChannel != null) {
+                  Box(
+                    modifier = Modifier
+                      .size(46.dp)
+                      .clip(CircleShape)
+                      .clickable { onPreviousChannel() },
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Icon(
+                      imageVector = Icons.Default.SkipPrevious,
+                      contentDescription = "Previous Channel",
+                      tint = Color.White.copy(alpha = 0.9f),
+                      modifier = Modifier.size(32.dp)
+                    )
+                  }
+                  Spacer(modifier = Modifier.width(12.dp))
+                }
+
+                // Replay 10 Seconds
+                Box(
+                  modifier = Modifier
+                    .size(52.dp)
+                    .clickable { onSeekBackward() },
+                  contentAlignment = Alignment.Center
+                ) {
+                  TodReplay10(size = 46.dp, tint = Color.White)
+                }
+              }
+
+              Spacer(modifier = Modifier.width(28.dp))
+
+              // Dead Center: Pause Bars (||) or Play Triangle (▶)
+              Box(
+                modifier = Modifier
+                  .scale(playScale)
+                  .size(76.dp)
+                  .clip(CircleShape)
+                  .background(
+                    Brush.radialGradient(
+                      colors = listOf(Color(0x33FDB913), Color(0x11000000), Color.Transparent)
+                    )
+                  )
+                  .clickable(
+                    interactionSource = playInteractionSource,
+                    indication = null
+                  ) { onTogglePlayPause() },
+                contentAlignment = Alignment.Center
+              ) {
+                if (playerState.isBuffering) {
+                  CircularProgressIndicator(
+                    color = TodAmberYellow,
+                    strokeWidth = 3.dp,
+                    modifier = Modifier.size(44.dp)
+                  )
+                } else if (playerState.isPlaying) {
+                  TodPauseBars(
+                    width = 11.dp,
+                    height = 54.dp,
+                    gap = 14.dp,
+                    tint = Color.White.copy(alpha = 0.92f)
+                  )
+                } else {
+                  TodPlayTriangle(
+                    size = 52.dp,
+                    tint = Color.White.copy(alpha = 0.92f)
+                  )
+                }
+              }
+
+              Spacer(modifier = Modifier.width(28.dp))
+
+              // Right Pod: Forward 10 + Next Channel (▶|) (Fixed 130.dp width, left-aligned)
+              Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
+                modifier = Modifier.width(130.dp)
+              ) {
+                // Forward 10 Seconds
+                Box(
+                  modifier = Modifier
+                    .size(52.dp)
+                    .clickable { onSeekForward() },
+                  contentAlignment = Alignment.Center
+                ) {
+                  TodForward10(size = 46.dp, tint = Color.White)
+                }
+
+                if (onNextChannel != null) {
+                  Spacer(modifier = Modifier.width(12.dp))
+                  Box(
+                    modifier = Modifier
+                      .size(46.dp)
+                      .clip(CircleShape)
+                      .clickable { onNextChannel() },
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Icon(
+                      imageVector = Icons.Default.SkipNext,
+                      contentDescription = "Next Channel",
+                      tint = Color.White.copy(alpha = 0.9f),
+                      modifier = Modifier.size(32.dp)
+                    )
+                  }
+                }
+              }
             }
           }
-        }
 
-        // ==========================================
-        // 3. LEFT & RIGHT VERTICAL SLIDERS & WATERMARK (Screenshot 5 & 9)
-        // ==========================================
-        // Left side vertical volume slider
-        Column(
-          modifier = Modifier
-            .align(Alignment.CenterStart)
-            .padding(start = 16.dp),
-          horizontalAlignment = Alignment.CenterHorizontally,
-          verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-          Box(
+          // ==========================================
+          // 3. LEFT & RIGHT VERTICAL SLIDERS (True Left & True Right)
+          // ==========================================
+          // Physical Left side: Volume slider
+          Column(
             modifier = Modifier
-              .width(5.dp)
-              .height(90.dp)
-              .clip(RoundedCornerShape(3.dp))
-              .background(Color(0x66555555))
-              .pointerInput(Unit) {
-                detectVerticalDragGestures { _, dragAmount ->
-                  val delta = -dragAmount / 90f
-                  val newLevel = (volumeLevel + delta).coerceIn(0.0f, 1.0f)
-                  onVolumeChange(newLevel)
-                }
-              }
+              .align(Alignment.CenterStart)
+              .padding(start = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)
           ) {
             Box(
               modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .fillMaxHeight(volumeLevel)
+                .width(5.dp)
+                .height(90.dp)
                 .clip(RoundedCornerShape(3.dp))
-                .background(Color(0xFFCCCCCC))
+                .background(Color(0x66555555))
+                .pointerInput(Unit) {
+                  detectVerticalDragGestures { _, dragAmount ->
+                    val delta = -dragAmount / 90f
+                    val newLevel = (volumeLevel + delta).coerceIn(0.0f, 1.0f)
+                    onVolumeChange(newLevel)
+                  }
+                }
+            ) {
+              Box(
+                modifier = Modifier
+                  .align(Alignment.BottomCenter)
+                  .fillMaxWidth()
+                  .fillMaxHeight(volumeLevel)
+                  .clip(RoundedCornerShape(3.dp))
+                  .background(Color(0xFFCCCCCC))
+              )
+            }
+
+            Icon(
+              imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+              contentDescription = "Volume",
+              tint = Color.White,
+              modifier = Modifier.size(20.dp)
             )
           }
 
-          Icon(
-            imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-            contentDescription = "Volume",
-            tint = Color.White,
-            modifier = Modifier.size(20.dp)
-          )
-        }
-
-        // Right side vertical brightness slider capsule (Screenshot 5)
-        Column(
-          modifier = Modifier
-            .align(Alignment.CenterEnd)
-            .padding(end = 16.dp),
-          horizontalAlignment = Alignment.CenterHorizontally,
-          verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-          Box(
+          // Physical Right side: Brightness slider
+          Column(
             modifier = Modifier
-              .width(5.dp)
-              .height(90.dp)
-              .clip(RoundedCornerShape(3.dp))
-              .background(Color(0x66555555))
-              .pointerInput(Unit) {
-                detectVerticalDragGestures { _, dragAmount ->
-                  val delta = -dragAmount / 90f
-                  val newLevel = (brightnessLevel + delta).coerceIn(0.1f, 1.0f)
-                  onBrightnessChange(newLevel)
-                }
-              }
+              .align(Alignment.CenterEnd)
+              .padding(end = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)
           ) {
-            // Filled vertical level
             Box(
               modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .fillMaxHeight(brightnessLevel)
+                .width(5.dp)
+                .height(90.dp)
                 .clip(RoundedCornerShape(3.dp))
-                .background(Color(0xFFCCCCCC))
-            )
+                .background(Color(0x66555555))
+                .pointerInput(Unit) {
+                  detectVerticalDragGestures { _, dragAmount ->
+                    val delta = -dragAmount / 90f
+                    val newLevel = (brightnessLevel + delta).coerceIn(0.1f, 1.0f)
+                    onBrightnessChange(newLevel)
+                  }
+                }
+            ) {
+              Box(
+                modifier = Modifier
+                  .align(Alignment.BottomCenter)
+                  .fillMaxWidth()
+                  .fillMaxHeight(brightnessLevel)
+                  .clip(RoundedCornerShape(3.dp))
+                  .background(Color(0xFFCCCCCC))
+              )
+            }
+
+            TodSunBrightness(size = 20.dp, tint = Color.White)
           }
 
-          // Sun / Brightness Icon underneath slider (Screenshot 5)
-          TodSunBrightness(size = 20.dp, tint = Color.White)
-        }
+          // ==========================================
+          // 4. BOTTOM BAR & TIMELINE (True LTR)
+          // ==========================================
+          val currentProgress = if (playerState.durationMs > 0) {
+            (playerState.currentPositionMs.toFloat() / playerState.durationMs.toFloat()).coerceIn(0f, 1f)
+          } else 1.0f
 
-        // ==========================================
-        // 4. BOTTOM BAR & TIMELINE (Screenshot 100% Match)
-        // ==========================================
-        val currentProgress = if (playerState.durationMs > 0) {
-          (playerState.currentPositionMs.toFloat() / playerState.durationMs.toFloat()).coerceIn(0f, 1f)
-        } else 1.0f // Live default full line
+          var isSeeking by remember { mutableStateOf(false) }
+          var seekProgress by remember { mutableFloatStateOf(0f) }
+          val displayProgress = if (isSeeking) seekProgress else currentProgress
 
-        var isSeeking by remember { mutableStateOf(false) }
-        var seekProgress by remember { mutableFloatStateOf(0f) }
-        val displayProgress = if (isSeeking) seekProgress else currentProgress
-
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
           Row(
             modifier = Modifier
               .fillMaxWidth()
@@ -570,9 +607,9 @@ fun TodControlsOverlay(
               fontWeight = FontWeight.Bold
             )
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(14.dp))
 
-            // Middle: iOS Liquid Seek Bar (Matching images (5).jpeg)
+            // Middle: iOS Liquid Seek Bar
             IosLiquidSlider(
               value = displayProgress,
               onValueChange = { frac ->
@@ -584,7 +621,7 @@ fun TodControlsOverlay(
               modifier = Modifier.weight(1f)
             )
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(14.dp))
 
             // Right: Mute + Live badge + Fullscreen toggle icon
             Row(
@@ -606,7 +643,7 @@ fun TodControlsOverlay(
                 )
               }
 
-              // Live Badge: Pulsing live beacon with Arabic text
+              // Live Badge: Pulsing live beacon
               Box(
                 modifier = Modifier
                   .clickable { onSyncToLive() }
