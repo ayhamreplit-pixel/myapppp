@@ -115,16 +115,17 @@ class TodExoPlayerManager(
       .setEnableDecoderFallback(true)
       .setAllowedVideoJoiningTimeMs(5000)
 
-    // High-capacity LoadControl for smooth, buffer-drop-free continuous live playback
+    // High-capacity LoadControl tuned for zero-stutter playback on 1080p FHD / 4K UHD
     val loadControl = DefaultLoadControl.Builder()
       .setBufferDurationsMs(
-        /* minBufferMs = */ 15_000,
-        /* maxBufferMs = */ 60_000,
-        /* bufferForPlaybackMs = */ 500,
-        /* bufferForPlaybackAfterRebufferMs = */ 1_000
+        /* minBufferMs = */ 25_000,
+        /* maxBufferMs = */ 65_000,
+        /* bufferForPlaybackMs = */ 2_000,
+        /* bufferForPlaybackAfterRebufferMs = */ 3_500
       )
-      .setBackBuffer(15_000, true)
-      .setPrioritizeTimeOverSizeThresholds(true)
+      .setTargetBufferBytes(64 * 1024 * 1024) // 64MB buffer allocation prevents 4K starvation
+      .setBackBuffer(20_000, true)
+      .setPrioritizeTimeOverSizeThresholds(false)
       .build()
 
     val audioAttributes = AudioAttributes.Builder()
@@ -174,6 +175,38 @@ class TodExoPlayerManager(
       }
       return
     }
+
+    // Check if link might be an iframe embed, web player page, or dynamic script needing extraction
+    val cleanUrl = rawUrl.substringBefore('?').lowercase()
+    val isWebOrEmbed = !cleanUrl.endsWith(".m3u8") && !cleanUrl.endsWith(".mpd") &&
+        !cleanUrl.endsWith(".ts") && !cleanUrl.endsWith(".mp4") &&
+        !cleanUrl.endsWith(".mkv") && !cleanUrl.endsWith(".ism") &&
+        (rawUrl.contains("<iframe", ignoreCase = true) || rawUrl.contains("embed", ignoreCase = true) ||
+         rawUrl.contains("player", ignoreCase = true) || rawUrl.contains(".html", ignoreCase = true) ||
+         rawUrl.contains(".php", ignoreCase = true) || rawUrl.contains("watch", ignoreCase = true) ||
+         rawUrl.contains("live", ignoreCase = true) && !cleanUrl.endsWith(".ts"))
+
+    if (isWebOrEmbed && !isRetry) {
+      _playerState.update {
+        it.copy(
+          isBuffering = true,
+          errorMessage = null,
+          isLive = stream.isLive
+        )
+      }
+      coroutineScope.launch(Dispatchers.Main) {
+        val resolved = SmartStreamResolver.resolveAsync(rawUrl, stream.title)
+        executePlay(resolved, isRetry = false)
+      }
+      return
+    }
+
+    executePlay(stream, isRetry)
+  }
+
+  private fun executePlay(stream: BroadcastStream, isRetry: Boolean) {
+    currentStream = stream
+    val rawUrl = stream.streamUrl.trim()
 
     val hasValidScheme = rawUrl.startsWith("http://", ignoreCase = true) ||
         rawUrl.startsWith("https://", ignoreCase = true) ||
@@ -704,7 +737,7 @@ class TodExoPlayerManager(
       _playerState.update {
         it.copy(
           isPlaying = isPlaying,
-          isBuffering = false
+          isBuffering = if (isPlaying) false else (exoPlayer.playbackState == Player.STATE_BUFFERING)
         )
       }
       if (isPlaying) {

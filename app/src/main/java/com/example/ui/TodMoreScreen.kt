@@ -111,9 +111,42 @@ fun TodMoreScreen(
       .fillMaxSize()
       .background(TodGradients.ObsidianCanvas)
       .verticalScroll(rememberScrollState())
-      .padding(horizontal = 20.dp, vertical = 24.dp),
+      .padding(horizontal = 20.dp, vertical = 12.dp),
     horizontalAlignment = Alignment.CenterHorizontally
   ) {
+    // Apple iOS Large Title Header ("المزيد")
+    Row(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(bottom = 18.dp, top = 2.dp),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      Box(
+        modifier = Modifier
+          .size(36.dp)
+          .clip(CircleShape)
+          .background(Color(0x18FFFFFF))
+          .border(0.75.dp, Color(0x30FFFFFF), CircleShape),
+        contentAlignment = Alignment.Center
+      ) {
+        Icon(
+          imageVector = Icons.Default.Tune,
+          contentDescription = null,
+          tint = TodGold,
+          modifier = Modifier.size(18.dp)
+        )
+      }
+
+      Text(
+        text = "المزيد",
+        color = Color.White,
+        fontSize = 28.sp,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = 0.3.sp
+      )
+    }
+
     // 1. TOD Dynamic Profiles Section ("من يشاهد الآن؟" - Screenshot 6 + Multi-Xtream)
     Text(
       text = "من يشاهد الآن؟",

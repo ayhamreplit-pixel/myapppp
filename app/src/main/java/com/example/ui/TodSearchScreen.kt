@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
@@ -89,29 +90,70 @@ fun TodSearchScreen(
     modifier = modifier
       .fillMaxSize()
       .background(TodGradients.ObsidianCanvas)
-      .padding(horizontal = 16.dp, vertical = 12.dp)
+      .padding(horizontal = 16.dp, vertical = 8.dp)
   ) {
-    // 1. Search Text Field
+    // Apple iOS Large Title Header
+    Row(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(bottom = 10.dp, top = 2.dp),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      Box(
+        modifier = Modifier
+          .size(36.dp)
+          .clip(CircleShape)
+          .background(Color(0x18FFFFFF))
+          .border(0.75.dp, Color(0x30FFFFFF), CircleShape),
+        contentAlignment = Alignment.Center
+      ) {
+        Icon(
+          imageVector = Icons.Default.Search,
+          contentDescription = null,
+          tint = TodGold,
+          modifier = Modifier.size(18.dp)
+        )
+      }
+
+      Text(
+        text = "بحث",
+        color = Color.White,
+        fontSize = 28.sp,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = 0.3.sp
+      )
+    }
+
+    // 1. Apple iOS Frosted Search Input Bar
     OutlinedTextField(
       value = searchQuery,
       onValueChange = { searchQuery = it },
       modifier = Modifier.fillMaxWidth(),
-      placeholder = { Text("ابحث عن مباراة، قناة، رياضة أو باقة...", color = DarkTextSecondary, fontSize = 14.sp) },
-      leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TodGold) },
+      placeholder = { Text("ابحث عن مباراة، قناة، رياضة أو باقة...", color = Color(0xFF8E8E93), fontSize = 13.5.sp) },
+      leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color(0xFF8E8E93), modifier = Modifier.size(20.dp)) },
       trailingIcon = {
         if (searchQuery.isNotBlank()) {
           IconButton(onClick = { searchQuery = "" }) {
-            Icon(Icons.Default.Clear, contentDescription = "مسح", tint = Color.White)
+            Box(
+              modifier = Modifier
+                .size(20.dp)
+                .clip(CircleShape)
+                .background(Color(0x44FFFFFF)),
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(Icons.Default.Clear, contentDescription = "مسح", tint = Color.White, modifier = Modifier.size(12.dp))
+            }
           }
         }
       },
       singleLine = true,
-      shape = RoundedCornerShape(12.dp),
+      shape = RoundedCornerShape(16.dp),
       colors = OutlinedTextFieldDefaults.colors(
-        focusedContainerColor = Color(0xFF16161D),
-        unfocusedContainerColor = Color(0xFF121217),
+        focusedContainerColor = Color(0xFF1A1A24),
+        unfocusedContainerColor = Color(0xFF14141C),
         focusedBorderColor = TodGold,
-        unfocusedBorderColor = Color(0xFF262633),
+        unfocusedBorderColor = Color(0x25FFFFFF),
         focusedTextColor = Color.White,
         unfocusedTextColor = Color.White,
         cursorColor = TodGold
@@ -130,23 +172,28 @@ fun TodSearchScreen(
       ) {
         xtreamCategories.forEach { category ->
           val isSelected = selectedCategoryId == category.categoryId
+          val chipInteraction = remember { MutableInteractionSource() }
+          val isPressed by chipInteraction.collectIsPressedAsState()
           val chipScale by animateFloatAsState(
-            targetValue = if (isSelected) 1.05f else 1.0f,
-            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-            label = "searchChipScale"
+            targetValue = if (isPressed) 0.92f else if (isSelected) 1.04f else 1.0f,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+            label = "searchChipScale_${category.categoryId}"
           )
 
           Box(
             modifier = Modifier
               .scale(chipScale)
               .clip(RoundedCornerShape(18.dp))
-              .background(if (isSelected) TodGradients.LiquidGold else Brush.horizontalGradient(listOf(Color(0xFF1C1C28), Color(0xFF14141E))))
+              .background(if (isSelected) TodGradients.LiquidGold else Brush.horizontalGradient(listOf(Color(0x18FFFFFF), Color(0x10FFFFFF))))
               .border(
                 1.dp,
-                if (isSelected) Color(0xFFFFD54F) else Color(0xFF28283A),
+                if (isSelected) Color(0xFFFFD54F) else Color(0x22FFFFFF),
                 RoundedCornerShape(18.dp)
               )
-              .clickable { 
+              .clickable(
+                interactionSource = chipInteraction,
+                indication = null
+              ) { 
                 selectedCategoryId = if (isSelected) null else category.categoryId
               }
               .padding(horizontal = 14.dp, vertical = 6.dp)

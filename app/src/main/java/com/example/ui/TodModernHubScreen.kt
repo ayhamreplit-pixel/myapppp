@@ -2,10 +2,16 @@ package com.example.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -26,7 +33,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
@@ -41,7 +50,12 @@ import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Podcasts
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -120,16 +134,18 @@ fun TodModernHubScreen(
   val scope = rememberCoroutineScope()
   val xtreamRepo = remember { XtreamRepository(context) }
 
+  // Saved Playlists State
+  var playlistConfig by remember { mutableStateOf<XtreamPlaylistConfig?>(null) }
+  var savedPlaylists by remember { mutableStateOf(xtreamRepo.getAllPlaylists()) }
+
   // App Navigation View Mode
-  var viewMode by remember { mutableStateOf(HubViewMode.CATEGORIES) }
+  var viewMode by remember {
+    mutableStateOf(if (savedPlaylists.isNotEmpty()) HubViewMode.CATEGORIES else HubViewMode.ONBOARDING)
+  }
   var activeNavTab by remember { mutableStateOf(TodNavTab.HOME) }
 
   // Match Detail Modal Sheet
   var activeMatchDetail by remember { mutableStateOf<TodMatchDetail?>(null) }
-
-  // Saved Playlists State
-  var playlistConfig by remember { mutableStateOf<XtreamPlaylistConfig?>(null) }
-  var savedPlaylists by remember { mutableStateOf(xtreamRepo.getAllPlaylists()) }
 
   // Active Connection State
   var isXtreamLoading by remember { mutableStateOf(false) }
@@ -353,115 +369,432 @@ fun TodModernHubScreen(
       // ========================================================
       when (viewMode) {
         HubViewMode.ONBOARDING -> {
-          // Apple iOS Ultra-Modern Glassmorphic Welcome Hub
-          Box(
+          // ========================================================
+          // ULTRA-MODERN SMART IPTV ONBOARDING / LOGIN SCREEN (MATCHES PHOTO)
+          // ========================================================
+          Column(
             modifier = Modifier
               .fillMaxSize()
-              .background(TodGradients.IosCanvasBg)
+              .background(Color(0xFF0C0C12))
+              .verticalScroll(rememberScrollState())
+              .navigationBarsPadding()
+              .padding(bottom = 24.dp)
           ) {
-            // Ambient Radial Glows
-            Box(
+            // 1. TOP BAR: Settings Gear (Left) & App Title "الذكي IPTV" (Right)
+            Row(
               modifier = Modifier
-                .size(320.dp)
-                .align(Alignment.TopCenter)
-                .background(
-                  Brush.radialGradient(
-                    colors = listOf(Color(0x350A84FF), Color(0x105E5CE6), Color.Transparent)
-                  )
-                )
-            )
-
-            Column(
-              modifier = Modifier
-                .fillMaxSize()
-                .navigationBarsPadding()
-                .padding(horizontal = 24.dp, vertical = 20.dp),
-              horizontalAlignment = Alignment.CenterHorizontally,
-              verticalArrangement = Arrangement.Center
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp, vertical = 12.dp),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically
             ) {
-              // Glass Logo Badge
+              // Settings Circle Button (Left)
               Box(
                 modifier = Modifier
-                  .clip(RoundedCornerShape(26.dp))
-                  .background(
-                    Brush.verticalGradient(listOf(Color(0x33FFFFFF), Color(0x10FFFFFF)))
-                  )
-                  .border(1.dp, Color(0x40FFFFFF), RoundedCornerShape(26.dp))
-                  .padding(horizontal = 28.dp, vertical = 14.dp),
+                  .size(38.dp)
+                  .clip(CircleShape)
+                  .background(Color(0x22FFFFFF))
+                  .border(0.75.dp, Color(0x35FFFFFF), CircleShape)
+                  .clickable {
+                    if (savedPlaylists.isNotEmpty()) {
+                      showPlaylistsManagerModal = true
+                    } else {
+                      showAccountInfoModal = true
+                    }
+                  },
                 contentAlignment = Alignment.Center
               ) {
-                TodLogo(fontSize = 34, showSubtext = true)
+                Icon(
+                  imageVector = Icons.Default.Settings,
+                  contentDescription = "الإعدادات",
+                  tint = Color.White,
+                  modifier = Modifier.size(19.dp)
+                )
               }
 
-              Spacer(modifier = Modifier.height(28.dp))
-
+              // Brand Title (Right)
               Text(
-                text = "ابدأ تجربة البث المباشر الآن",
+                text = "الذكي IPTV",
                 color = Color.White,
-                fontSize = 22.sp,
+                fontSize = 23.sp,
                 fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
+                letterSpacing = 0.5.sp
               )
+            }
 
-              Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
-              Text(
-                text = "اربط حساب Xtream Codes أو أضف قائمة M3U أو شغل أي رابط فيديو مباشر بدقة عالية وفك تشفير تلقائي.",
-                color = Color(0x99EBEBF5),
-                fontSize = 13.5.sp,
-                modifier = Modifier.padding(horizontal = 8.dp),
-                lineHeight = 21.sp,
-                textAlign = TextAlign.Center
-              )
-
-              Spacer(modifier = Modifier.height(34.dp))
-
-              // Inset Grouped iOS Card with Modern Options
-              IosListGroup {
-                // Option 1: Quick Link (Direct Stream Player) - Highlighted
-                IosListRow(
-                  title = "تشغيل رابط سريع ومباشر",
-                  subtitle = "روابط M3U8, TS, DASH مع دعم الحماية و DRM",
-                  iconBadge = {
-                    IosIconBadge(
-                      icon = Icons.Default.Bolt,
-                      background = Brush.linearGradient(listOf(Color(0xFF0A84FF), Color(0xFF0055D4)))
+            // 2. HERO PREVIEW SECTION WITH CINEMATIC POSTERS COLLAGE & FLOATING PILL
+            Box(
+              modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+              contentAlignment = Alignment.TopCenter
+            ) {
+              // Faint Cinematic Poster Collage Backdrop Behind Preview
+              Row(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .height(130.dp)
+                  .clip(RoundedCornerShape(20.dp))
+                  .background(Color(0xFF14141C))
+                  .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+              ) {
+                listOf(
+                  "MOONLIGHT" to Color(0xFF1B2838),
+                  "CAPTAIN" to Color(0xFF381414),
+                  "THE CROWN" to Color(0xFF282414),
+                  "INCEPTION" to Color(0xFF142438)
+                ).forEach { (title, col) ->
+                  Box(
+                    modifier = Modifier
+                      .weight(1f)
+                      .fillMaxSize()
+                      .clip(RoundedCornerShape(8.dp))
+                      .background(col)
+                      .border(0.5.dp, Color(0x22FFFFFF), RoundedCornerShape(8.dp)),
+                    contentAlignment = Alignment.BottomCenter
+                  ) {
+                    Box(
+                      modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                          Brush.verticalGradient(
+                            listOf(Color(0x33000000), Color(0xDD000000))
+                          )
+                        )
                     )
-                  },
-                  onClick = { onOpenQuickLinkScreen() }
-                )
-
-                // Option 2: Add Xtream Codes Server
-                IosListRow(
-                  title = "إضافة سيرفر Xtream Codes",
-                  subtitle = "تسجيل الدخول عبر الرابط والمستخدم وكلمة السر",
-                  iconBadge = {
-                    IosIconBadge(
-                      icon = Icons.Default.Dns,
-                      background = Brush.linearGradient(listOf(Color(0xFFFF9F0A), Color(0xFFD66000)))
+                    Text(
+                      text = title,
+                      color = Color(0x66FFFFFF),
+                      fontSize = 8.sp,
+                      fontWeight = FontWeight.Bold,
+                      modifier = Modifier.padding(bottom = 6.dp)
                     )
-                  },
-                  onClick = {
-                    playlistConfig = XtreamPlaylistConfig(playlistName = "سيرفر Xtream 1")
-                    viewMode = HubViewMode.XTREAM_FORM
                   }
+                }
+              }
+
+              // Foreground Main Cinematic Living Room Preview Card
+              Box(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(top = 18.dp)
+                  .height(190.dp)
+                  .clip(RoundedCornerShape(22.dp))
+                  .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(22.dp))
+              ) {
+                Image(
+                  painter = painterResource(id = R.drawable.streaming_preview),
+                  contentDescription = "بث مباشر وتلفزيون ذكي",
+                  modifier = Modifier.fillMaxSize(),
+                  contentScale = ContentScale.Crop
                 )
 
-                // Option 3: Add M3U Playlist
-                IosListRow(
-                  title = "إضافة قائمة M3U جديدة",
-                  subtitle = "تحميل ملف M3U محلي أو رابط ويب مباشر",
-                  iconBadge = {
-                    IosIconBadge(
-                      icon = Icons.Default.Add,
-                      background = Brush.linearGradient(listOf(Color(0xFFBF5AF2), Color(0xFF7A24A6)))
+                // Soft dark vignette overlay
+                Box(
+                  modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                      Brush.verticalGradient(
+                        colors = listOf(Color.Transparent, Color(0xCC0C0C12))
+                      )
                     )
-                  },
-                  showDivider = false,
-                  onClick = {
-                    playlistConfig = XtreamPlaylistConfig(isM3u = true, playlistName = "قائمة M3U")
+                )
+              }
+            }
+
+            // Floating Pill: "اختيار Xtreaming" Overlapping the Bottom of the Card
+            val xtreamingInteraction = remember { MutableInteractionSource() }
+            val isXtreamingPressed by xtreamingInteraction.collectIsPressedAsState()
+            val xtreamingScale by animateFloatAsState(
+              targetValue = if (isXtreamingPressed) 0.94f else 1.0f,
+              animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+              label = "xtreamingScale"
+            )
+
+            Box(
+              modifier = Modifier
+                .fillMaxWidth()
+                .offset(y = (-18).dp),
+              contentAlignment = Alignment.Center
+            ) {
+              Box(
+                modifier = Modifier
+                  .scale(xtreamingScale)
+                  .clip(RoundedCornerShape(32.dp))
+                  .background(Color(0xFA1E1E26))
+                  .border(1.2.dp, Color(0x40FFFFFF), RoundedCornerShape(32.dp))
+                  .clickable(
+                    interactionSource = xtreamingInteraction,
+                    indication = null
+                  ) {
+                    if (savedPlaylists.isNotEmpty()) {
+                      viewMode = HubViewMode.CATEGORIES
+                    } else {
+                      playlistConfig = XtreamPlaylistConfig(playlistName = "سيرفر Xtream 1")
+                      viewMode = HubViewMode.XTREAM_FORM
+                    }
+                  }
+                  .padding(horizontal = 22.dp, vertical = 10.dp)
+              ) {
+                Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                  Text(
+                    text = "اختيار Xtreaming",
+                    color = Color.White,
+                    fontSize = 14.5.sp,
+                    fontWeight = FontWeight.Bold
+                  )
+
+                  // Red Live/Broadcast Beacon
+                  Box(
+                    modifier = Modifier
+                      .size(22.dp)
+                      .clip(CircleShape)
+                      .background(Color(0xFFEE2A35)),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Icon(
+                      imageVector = Icons.Default.Podcasts,
+                      contentDescription = null,
+                      tint = Color.White,
+                      modifier = Modifier.size(13.dp)
+                    )
+                  }
+                }
+              }
+            }
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            // 3. MIDDLE SECTION: TWO SIDE-BY-SIDE CARDS ("قناة واحدة" & "قائمة التشغيل")
+            Row(
+              modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+              horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+              // Left Card: "قناة واحدة" (Single Channel via direct stream link)
+              val singleInteraction = remember { MutableInteractionSource() }
+              val isSinglePressed by singleInteraction.collectIsPressedAsState()
+              val singleScale by animateFloatAsState(
+                targetValue = if (isSinglePressed) 0.94f else 1.0f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                label = "singleScale"
+              )
+
+              Box(
+                modifier = Modifier
+                  .weight(1f)
+                  .scale(singleScale)
+                  .height(160.dp)
+                  .clip(RoundedCornerShape(20.dp))
+                  .background(Color(0xFF1B1B22))
+                  .border(0.75.dp, Color(0x28FFFFFF), RoundedCornerShape(20.dp))
+                  .clickable(
+                    interactionSource = singleInteraction,
+                    indication = null
+                  ) { onOpenQuickLinkScreen() }
+                  .padding(14.dp)
+              ) {
+                Column(
+                  modifier = Modifier.fillMaxSize(),
+                  horizontalAlignment = Alignment.CenterHorizontally,
+                  verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                  Text(
+                    text = "قناة واحدة",
+                    color = Color.White,
+                    fontSize = 15.5.sp,
+                    fontWeight = FontWeight.Bold
+                  )
+
+                  // Circular Red Badge with Radio/Broadcast Waves
+                  Box(
+                    modifier = Modifier
+                      .size(48.dp)
+                      .clip(CircleShape)
+                      .background(Color(0xFFEE2A35)),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Icon(
+                      imageVector = Icons.Default.Podcasts,
+                      contentDescription = null,
+                      tint = Color.White,
+                      modifier = Modifier.size(26.dp)
+                    )
+                  }
+
+                  Text(
+                    text = "تشغيل القناة باستخدام رابط البث",
+                    color = Color(0xFF8E8E93),
+                    fontSize = 11.sp,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 15.sp
+                  )
+                }
+              }
+
+              // Right Card: "قائمة التشغيل" (M3U / Playlists)
+              val playlistInteraction = remember { MutableInteractionSource() }
+              val isPlaylistPressed by playlistInteraction.collectIsPressedAsState()
+              val playlistScale by animateFloatAsState(
+                targetValue = if (isPlaylistPressed) 0.94f else 1.0f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                label = "playlistScale"
+              )
+
+              Box(
+                modifier = Modifier
+                  .weight(1f)
+                  .scale(playlistScale)
+                  .height(160.dp)
+                  .clip(RoundedCornerShape(20.dp))
+                  .background(Color(0xFF1B1B22))
+                  .border(0.75.dp, Color(0x28FFFFFF), RoundedCornerShape(20.dp))
+                  .clickable(
+                    interactionSource = playlistInteraction,
+                    indication = null
+                  ) {
+                    playlistConfig = XtreamPlaylistConfig(isM3u = true, playlistName = "قائمة التشغيل")
                     viewMode = HubViewMode.M3U_FORM
                   }
+                  .padding(14.dp)
+              ) {
+                Column(
+                  modifier = Modifier.fillMaxSize(),
+                  horizontalAlignment = Alignment.CenterHorizontally,
+                  verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                  Text(
+                    text = "قائمة التشغيل",
+                    color = Color.White,
+                    fontSize = 15.5.sp,
+                    fontWeight = FontWeight.Bold
+                  )
+
+                  // Squircle Red Badge with Live/Playlist TV Icon
+                  Box(
+                    modifier = Modifier
+                      .size(48.dp)
+                      .clip(RoundedCornerShape(13.dp))
+                      .background(Color(0xFFEE2A35)),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Icon(
+                      imageVector = Icons.Default.LiveTv,
+                      contentDescription = null,
+                      tint = Color.White,
+                      modifier = Modifier.size(26.dp)
+                    )
+                  }
+
+                  Text(
+                    text = "استكشاف جميع قنوات قائمة التشغيل الخاصة بك",
+                    color = Color(0xFF8E8E93),
+                    fontSize = 11.sp,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 15.sp
+                  )
+                }
+              }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // 4. BOTTOM WIDE CARD: "قائمة Xtream" (XC API Form)
+            val xtreamCardInteraction = remember { MutableInteractionSource() }
+            val isXtreamCardPressed by xtreamCardInteraction.collectIsPressedAsState()
+            val xtreamCardScale by animateFloatAsState(
+              targetValue = if (isXtreamCardPressed) 0.96f else 1.0f,
+              animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+              label = "xtreamCardScale"
+            )
+
+            Box(
+              modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .scale(xtreamCardScale)
+                .height(125.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color(0xFF1B1B22))
+                .border(0.75.dp, Color(0x28FFFFFF), RoundedCornerShape(20.dp))
+                .clickable(
+                  interactionSource = xtreamCardInteraction,
+                  indication = null
+                ) {
+                  playlistConfig = XtreamPlaylistConfig(playlistName = "سيرفر Xtream 1")
+                  viewMode = HubViewMode.XTREAM_FORM
+                }
+                .padding(horizontal = 16.dp, vertical = 14.dp)
+            ) {
+              Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.SpaceBetween
+              ) {
+                // Top Row: Title + Red Squircle Badge (Right) and Arrow Button (Left)
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  // Left (in RTL layout): Dark Circular Arrow Button
+                  Box(
+                    modifier = Modifier
+                      .size(38.dp)
+                      .clip(CircleShape)
+                      .background(Color(0xFF2A2A36)),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Icon(
+                      imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                      contentDescription = "دخول",
+                      tint = Color.White,
+                      modifier = Modifier.size(20.dp)
+                    )
+                  }
+
+                  // Right (in RTL layout): Title + Red Squircle Server Badge
+                  Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                  ) {
+                    Text(
+                      text = "قائمة Xtream",
+                      color = Color.White,
+                      fontSize = 17.sp,
+                      fontWeight = FontWeight.Bold
+                    )
+
+                    Box(
+                      modifier = Modifier
+                        .size(46.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFEE2A35)),
+                      contentAlignment = Alignment.Center
+                    ) {
+                      Icon(
+                        imageVector = Icons.Default.Dns,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                      )
+                    }
+                  }
+                }
+
+                // Bottom Row: Subtitle
+                Text(
+                  text = "إضافة قائمة التشغيل الخاصة بك (عبر واجهة API لـ XC)",
+                  color = Color(0xFF8E8E93),
+                  fontSize = 11.5.sp,
+                  textAlign = TextAlign.End,
+                  modifier = Modifier.fillMaxWidth()
                 )
               }
             }
