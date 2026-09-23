@@ -26,6 +26,7 @@ import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.dash.DashMediaSource
 import androidx.media3.exoplayer.hls.DefaultHlsExtractorFactory
 import androidx.media3.exoplayer.hls.HlsMediaSource
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.smoothstreaming.SsMediaSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
@@ -112,6 +113,7 @@ class TodExoPlayerManager(
     // Universal RenderersFactory with software decoder fallback and safe component querying
     val renderersFactory = DefaultRenderersFactory(context)
       .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
+      .setMediaCodecSelector(MediaCodecSelector.DEFAULT)
       .setEnableDecoderFallback(true)
       .setAllowedVideoJoiningTimeMs(5000)
 
@@ -246,34 +248,63 @@ class TodExoPlayerManager(
     }
   }
 
+  private var currentAudioSessionId: Int = C.AUDIO_SESSION_ID_UNSET
+
   private fun initLoudnessEnhancer() {
     try {
       val audioSessionId = exoPlayer.audioSessionId
-      if (audioSessionId != C.AUDIO_SESSION_ID_UNSET && audioSessionId != 0) {
+      if (audioSessionId == C.AUDIO_SESSION_ID_UNSET || audioSessionId == 0) return
+
+      // If audio session changed, safely dispose of old enhancer instance
+      if (loudnessEnhancer != null && currentAudioSessionId != audioSessionId) {
+        try {
+          loudnessEnhancer?.release()
+        } catch (ignored: Exception) {}
+        loudnessEnhancer = null
+      }
+      currentAudioSessionId = audioSessionId
+
+      val boost = _playerState.value.audioBoostPercent
+      val isVoice = _playerState.value.isVoiceEnhancerEnabled
+
+      // Only allocate system effect if boost or voice enhancement is active
+      if (boost > 0 || isVoice) {
         if (loudnessEnhancer == null) {
           loudnessEnhancer = LoudnessEnhancer(audioSessionId).apply {
             enabled = true
           }
         }
-        applyAudioGain(_playerState.value.audioBoostPercent, _playerState.value.isVoiceEnhancerEnabled)
+        applyAudioGain(boost, isVoice)
+      } else {
+        loudnessEnhancer?.enabled = false
       }
-    } catch (e: Exception) {
-      Log.w("TodExoPlayerManager", "LoudnessEnhancer not supported on this device/session", e)
+    } catch (e: Throwable) {
+      Log.w("TodExoPlayerManager", "LoudnessEnhancer not supported on this device/session: ${e.message}")
+      loudnessEnhancer = null
     }
   }
 
   private fun applyAudioGain(boostPercent: Int, isVoiceEnhancer: Boolean) {
     try {
+      if (boostPercent == 0 && !isVoiceEnhancer) {
+        loudnessEnhancer?.enabled = false
+        return
+      }
+      val audioSessionId = exoPlayer.audioSessionId
+      if (loudnessEnhancer == null && audioSessionId != C.AUDIO_SESSION_ID_UNSET && audioSessionId != 0) {
+        loudnessEnhancer = LoudnessEnhancer(audioSessionId).apply {
+          enabled = true
+        }
+      }
       val enhancer = loudnessEnhancer
       if (enhancer != null) {
-        // Boost target in milliBels (0 to 3000 mB)
         val extraVoiceGain = if (isVoiceEnhancer) 600 else 0
         val targetMb = (boostPercent * 15) + extraVoiceGain
         enhancer.setTargetGain(targetMb.coerceIn(0, 4000))
-        enhancer.enabled = (boostPercent > 0 || isVoiceEnhancer)
+        enhancer.enabled = true
       }
-    } catch (e: Exception) {
-      Log.w("TodExoPlayerManager", "Error applying audio gain", e)
+    } catch (e: Throwable) {
+      Log.w("TodExoPlayerManager", "Error applying audio gain: ${e.message}")
     }
   }
 

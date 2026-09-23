@@ -32,29 +32,38 @@ android {
       keyPassword = System.getenv("KEY_PASSWORD")
     }
     create("debugConfig") {
-      storeFile = file("${rootDir}/debug.keystore")
-      storePassword = "android"
-      keyAlias = "androiddebugkey"
-      keyPassword = "android"
+      val dbgFile = file("${rootDir}/debug.keystore")
+      if (dbgFile.exists()) {
+        storeFile = dbgFile
+        storePassword = "android"
+        keyAlias = "androiddebugkey"
+        keyPassword = "android"
+      }
     }
   }
 
   buildTypes {
     release {
       isCrunchPngs = false
-      isMinifyEnabled = true
-      isShrinkResources = true
+      isMinifyEnabled = false
+      isShrinkResources = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       val releaseKeystore = file(System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks")
       if (releaseKeystore.exists() && System.getenv("STORE_PASSWORD") != null) {
         signingConfig = signingConfigs.getByName("release")
       } else {
-        signingConfig = signingConfigs.getByName("debugConfig")
+        val dbg = file("${rootDir}/debug.keystore")
+        if (dbg.exists()) {
+          signingConfig = signingConfigs.getByName("debugConfig")
+        }
       }
       matchingFallbacks += listOf("release")
     }
     debug {
-      signingConfig = signingConfigs.getByName("debugConfig")
+      val dbg = file("${rootDir}/debug.keystore")
+      if (dbg.exists()) {
+        signingConfig = signingConfigs.getByName("debugConfig")
+      }
       matchingFallbacks += listOf("release")
     }
   }
