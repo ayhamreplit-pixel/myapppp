@@ -237,6 +237,7 @@ class TodExoPlayerManager(
     }
 
     try {
+      applyAppSettings()
       val mediaSource = createMediaSource(stream)
       exoPlayer.setMediaSource(mediaSource)
       exoPlayer.prepare()
@@ -305,6 +306,42 @@ class TodExoPlayerManager(
       }
     } catch (e: Throwable) {
       Log.w("TodExoPlayerManager", "Error applying audio gain: ${e.message}")
+    }
+  }
+
+  fun applyAppSettings() {
+    try {
+      val appSettings = AppSettings.getInstance(context)
+      val builder = trackSelector.buildUponParameters()
+
+      // 1. Data Saver mode: cap video resolution to 720p and bitrate to 1.5Mbps
+      if (appSettings.dataSaverMode) {
+        builder.setMaxVideoSize(1280, 720)
+               .setMaxVideoBitrate(1_500_000)
+      } else {
+        builder.clearVideoSizeConstraints()
+               .setMaxVideoBitrate(Int.MAX_VALUE)
+      }
+
+      // 2. Adaptive Bitrate
+      if (!appSettings.adaptiveBitrate) {
+        builder.setAllowVideoNonSeamlessAdaptiveness(false)
+      } else {
+        builder.setAllowVideoNonSeamlessAdaptiveness(true)
+      }
+
+      trackSelector.setParameters(builder)
+
+      // 3. Audio Boost & Vocal Clarity
+      if (appSettings.audioBoostEnabled) {
+        val boost = appSettings.defaultAudioBoostPercent
+        val isVoice = appSettings.vocalClarity
+        applyAudioGain(boost, isVoice)
+      } else {
+        applyAudioGain(0, false)
+      }
+    } catch (e: Throwable) {
+      Log.w("TodExoPlayerManager", "Failed to apply real AppSettings: ${e.message}")
     }
   }
 

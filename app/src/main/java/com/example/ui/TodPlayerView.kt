@@ -82,6 +82,8 @@ import com.example.player.TodExoPlayerManager
 import com.example.ui.theme.TodAmberYellow
 import com.example.ui.theme.TodCyan
 import com.example.ui.theme.TodViolet
+import com.example.ui.theme.ThmanyahFontFamily
+import com.example.player.AppSettings
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -111,6 +113,22 @@ fun TodPlayerView(
   val context = LocalContext.current
   val activity = context as? Activity
   val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
+  val appSettings = remember { AppSettings.getInstance(context) }
+
+  // Live time ticker for clock overlay
+  var currentLiveClock by remember {
+    val sdf = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+    mutableStateOf(sdf.format(java.util.Date()))
+  }
+  LaunchedEffect(appSettings.showClockOverlay) {
+    if (appSettings.showClockOverlay) {
+      val sdf = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+      while (true) {
+        currentLiveClock = sdf.format(java.util.Date())
+        delay(30_000)
+      }
+    }
+  }
 
   var controlsVisible by remember { mutableStateOf(true) }
   var lastUserInteraction by remember { mutableFloatStateOf(0f) }
@@ -183,8 +201,8 @@ fun TodPlayerView(
           }
         )
       }
-      .pointerInput(playerState.isControlsLocked) {
-        if (playerState.isControlsLocked) return@pointerInput
+      .pointerInput(playerState.isControlsLocked, appSettings.swipeGestures) {
+        if (playerState.isControlsLocked || !appSettings.swipeGestures) return@pointerInput
         detectDragGestures(
           onDragStart = { offset ->
             lastUserInteraction = System.currentTimeMillis().toFloat()
@@ -253,7 +271,7 @@ fun TodPlayerView(
           )
           useController = false
           player = playerManager.exoPlayer
-          keepScreenOn = true
+          keepScreenOn = appSettings.keepScreenOn
           resizeMode = when (playerState.aspectRatioMode) {
             AspectRatioMode.FIT -> AspectRatioFrameLayout.RESIZE_MODE_FIT
             AspectRatioMode.ZOOM -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
@@ -265,6 +283,7 @@ fun TodPlayerView(
       },
       update = { view ->
         view.player = playerManager.exoPlayer
+        view.keepScreenOn = appSettings.keepScreenOn
         view.resizeMode = when (playerState.aspectRatioMode) {
           AspectRatioMode.FIT -> AspectRatioFrameLayout.RESIZE_MODE_FIT
           AspectRatioMode.ZOOM -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
@@ -541,6 +560,38 @@ fun TodPlayerView(
               }
             }
           }
+        }
+      }
+    }
+
+    // Apple iOS Live Clock Pill Overlay
+    if (appSettings.showClockOverlay && controlsVisible) {
+      Box(
+        modifier = Modifier
+          .align(Alignment.TopStart)
+          .padding(start = 16.dp, top = 16.dp)
+          .clip(RoundedCornerShape(12.dp))
+          .background(Color(0x77000000))
+          .border(0.5.dp, Color(0x35FFFFFF), RoundedCornerShape(12.dp))
+          .padding(horizontal = 10.dp, vertical = 5.dp)
+      ) {
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+          Box(
+            modifier = Modifier
+              .size(6.dp)
+              .clip(CircleShape)
+              .background(Color(0xFF34C759))
+          )
+          Text(
+            text = currentLiveClock,
+            color = Color.White,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = ThmanyahFontFamily
+          )
         }
       }
     }

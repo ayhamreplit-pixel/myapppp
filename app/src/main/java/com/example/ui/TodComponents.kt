@@ -43,6 +43,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -177,42 +179,35 @@ enum class TodNavTab {
 fun TodHomeNavIcon(
   isSelected: Boolean,
   activeColor: Color = Color(0xFFFFB800),
-  inactiveColor: Color = Color(0xFF8E8E93),
+  inactiveColor: Color = Color(0xFF9E9EA8),
   modifier: Modifier = Modifier
 ) {
-  val color = if (isSelected) activeColor else inactiveColor
-  Canvas(modifier = modifier.size(26.dp)) {
-    val w = size.width
-    val h = size.height
-    val strokeWidth = 2.4.dp.toPx()
-
-    val path = Path().apply {
-      moveTo(w * 0.5f, h * 0.08f)
-      lineTo(w * 0.94f, h * 0.44f)
-      lineTo(w * 0.85f, h * 0.86f)
-      quadraticBezierTo(w * 0.85f, h * 0.96f, w * 0.74f, h * 0.96f)
-      lineTo(w * 0.26f, h * 0.96f)
-      quadraticBezierTo(w * 0.15f, h * 0.96f, w * 0.15f, h * 0.86f)
-      lineTo(w * 0.06f, h * 0.44f)
-      close()
-    }
-
-    drawPath(
-      path = path,
-      color = color,
-      style = Stroke(
-        width = strokeWidth,
-        cap = StrokeCap.Round,
-        join = StrokeJoin.Round
-      )
-    )
-
-    val dotSize = w * 0.22f
-    drawRoundRect(
-      color = color,
-      topLeft = Offset((w - dotSize) / 2f, h * 0.52f),
-      size = Size(dotSize, dotSize),
-      cornerRadius = CornerRadius(3.5.dp.toPx())
+  Box(
+    modifier = modifier
+      .size(40.dp)
+      .clip(RoundedCornerShape(14.dp))
+      .then(
+        if (isSelected) {
+          Modifier
+            .background(
+              Brush.linearGradient(
+                listOf(Color(0x35FFAE00), Color(0x18FFAE00))
+              )
+            )
+            .border(1.dp, Color(0x66FFAE00), RoundedCornerShape(14.dp))
+        } else {
+          Modifier
+            .background(Color(0x15FFFFFF))
+            .border(0.5.dp, Color(0x1AFFFFFF), RoundedCornerShape(14.dp))
+        }
+      ),
+    contentAlignment = Alignment.Center
+  ) {
+    Icon(
+      imageVector = Icons.Default.Home,
+      contentDescription = "الرئيسية",
+      tint = if (isSelected) activeColor else inactiveColor,
+      modifier = Modifier.size(22.dp)
     )
   }
 }
@@ -221,32 +216,35 @@ fun TodHomeNavIcon(
 fun TodSearchNavIcon(
   isSelected: Boolean,
   activeColor: Color = Color(0xFFFFB800),
-  inactiveColor: Color = Color(0xFF8E8E93),
+  inactiveColor: Color = Color(0xFF9E9EA8),
   modifier: Modifier = Modifier
 ) {
-  val color = if (isSelected) activeColor else inactiveColor
-  Canvas(modifier = modifier.size(26.dp)) {
-    val w = size.width
-    val h = size.height
-    val strokeWidth = 2.3.dp.toPx()
-    val radius = w * 0.32f
-    val center = Offset(w * 0.42f, h * 0.42f)
-
-    drawCircle(
-      color = color,
-      radius = radius,
-      center = center,
-      style = Stroke(width = strokeWidth)
-    )
-
-    val handleStart = Offset(center.x + radius * 0.707f, center.y + radius * 0.707f)
-    val handleEnd = Offset(w * 0.92f, h * 0.92f)
-    drawLine(
-      color = color,
-      start = handleStart,
-      end = handleEnd,
-      strokeWidth = strokeWidth * 1.15f,
-      cap = StrokeCap.Round
+  Box(
+    modifier = modifier
+      .size(40.dp)
+      .clip(RoundedCornerShape(14.dp))
+      .then(
+        if (isSelected) {
+          Modifier
+            .background(
+              Brush.linearGradient(
+                listOf(Color(0x35FFAE00), Color(0x18FFAE00))
+              )
+            )
+            .border(1.dp, Color(0x66FFAE00), RoundedCornerShape(14.dp))
+        } else {
+          Modifier
+            .background(Color(0x15FFFFFF))
+            .border(0.5.dp, Color(0x1AFFFFFF), RoundedCornerShape(14.dp))
+        }
+      ),
+    contentAlignment = Alignment.Center
+  ) {
+    Icon(
+      imageVector = Icons.Default.Search,
+      contentDescription = "بحث",
+      tint = if (isSelected) activeColor else inactiveColor,
+      modifier = Modifier.size(21.dp)
     )
   }
 }
@@ -255,65 +253,36 @@ fun TodSearchNavIcon(
 fun TodMoreNavIcon(
   isSelected: Boolean,
   activeColor: Color = Color(0xFFFFB800),
-  inactiveColor: Color = Color(0xFF8E8E93),
+  inactiveColor: Color = Color(0xFF9E9EA8),
   modifier: Modifier = Modifier
 ) {
-  if (isSelected) {
-    Box(
-      modifier = modifier
-        .size(26.dp)
-        .clip(RoundedCornerShape(7.dp))
-        .background(activeColor),
-      contentAlignment = Alignment.Center
-    ) {
-      Canvas(modifier = Modifier.size(17.dp)) {
-        val w = size.width
-        val h = size.height
-        val headRadius = w * 0.24f
-        val strokeW = 1.8.dp.toPx()
-
-        drawCircle(
-          color = Color(0xFF141414),
-          radius = headRadius,
-          center = Offset(w * 0.5f, h * 0.32f),
-          style = Stroke(width = strokeW)
-        )
-        val shoulderPath = Path().apply {
-          moveTo(w * 0.16f, h * 0.88f)
-          quadraticBezierTo(w * 0.16f, h * 0.58f, w * 0.5f, h * 0.58f)
-          quadraticBezierTo(w * 0.84f, h * 0.58f, w * 0.84f, h * 0.88f)
+  Box(
+    modifier = modifier
+      .size(40.dp)
+      .clip(RoundedCornerShape(14.dp))
+      .then(
+        if (isSelected) {
+          Modifier
+            .background(
+              Brush.linearGradient(
+                listOf(Color(0x35FFAE00), Color(0x18FFAE00))
+              )
+            )
+            .border(1.dp, Color(0x66FFAE00), RoundedCornerShape(14.dp))
+        } else {
+          Modifier
+            .background(Color(0x15FFFFFF))
+            .border(0.5.dp, Color(0x1AFFFFFF), RoundedCornerShape(14.dp))
         }
-        drawPath(
-          path = shoulderPath,
-          color = Color(0xFF141414),
-          style = Stroke(width = strokeW, cap = StrokeCap.Round)
-        )
-      }
-    }
-  } else {
-    Canvas(modifier = modifier.size(26.dp)) {
-      val w = size.width
-      val h = size.height
-      val headRadius = w * 0.24f
-      val strokeW = 2.1.dp.toPx()
-
-      drawCircle(
-        color = inactiveColor,
-        radius = headRadius,
-        center = Offset(w * 0.5f, h * 0.30f),
-        style = Stroke(width = strokeW)
-      )
-      val shoulderPath = Path().apply {
-        moveTo(w * 0.16f, h * 0.88f)
-        quadraticBezierTo(w * 0.16f, h * 0.58f, w * 0.5f, h * 0.58f)
-        quadraticBezierTo(w * 0.84f, h * 0.58f, w * 0.84f, h * 0.88f)
-      }
-      drawPath(
-        path = shoulderPath,
-        color = inactiveColor,
-        style = Stroke(width = strokeW, cap = StrokeCap.Round)
-      )
-    }
+      ),
+    contentAlignment = Alignment.Center
+  ) {
+    Icon(
+      imageVector = Icons.Default.Settings,
+      contentDescription = "المزيد",
+      tint = if (isSelected) activeColor else inactiveColor,
+      modifier = Modifier.size(21.dp)
+    )
   }
 }
 
@@ -412,7 +381,7 @@ private fun TodIosTabItem(
 
   // Spring physical feedback on touch (No white flash!)
   val pressScale by animateFloatAsState(
-    targetValue = if (isPressed) 0.86f else 1.0f,
+    targetValue = if (isPressed) 0.84f else 1.0f,
     animationSpec = spring(
       dampingRatio = Spring.DampingRatioMediumBouncy,
       stiffness = Spring.StiffnessMedium
@@ -420,9 +389,8 @@ private fun TodIosTabItem(
     label = "tabPressScale"
   )
 
-  // Icon bounce when active
   val iconScale by animateFloatAsState(
-    targetValue = if (isSelected) 1.15f else 1.0f,
+    targetValue = if (isSelected) 1.06f else 1.0f,
     animationSpec = spring(
       dampingRatio = Spring.DampingRatioMediumBouncy,
       stiffness = Spring.StiffnessLow
@@ -430,42 +398,12 @@ private fun TodIosTabItem(
     label = "tabIconScale"
   )
 
-  // Active glowing capsule background
-  val activeBgAlpha by animateFloatAsState(
-    targetValue = if (isSelected) 1.0f else 0.0f,
-    animationSpec = spring(
-      dampingRatio = Spring.DampingRatioNoBouncy,
-      stiffness = Spring.StiffnessMedium
-    ),
-    label = "activeTabBg"
-  )
-
   Box(
     modifier = Modifier
       .scale(pressScale)
-      .height(46.dp)
-      .width(72.dp)
-      .clip(RoundedCornerShape(23.dp))
-      .then(
-        if (activeBgAlpha > 0.01f) {
-          Modifier
-            .background(
-              Brush.verticalGradient(
-                colors = listOf(
-                  Color(0x35FDB913).copy(alpha = 0.28f * activeBgAlpha),
-                  Color(0x15FDB913).copy(alpha = 0.12f * activeBgAlpha)
-                )
-              )
-            )
-            .border(
-              0.75.dp,
-              Color(0x44FDB913).copy(alpha = 0.40f * activeBgAlpha),
-              RoundedCornerShape(23.dp)
-            )
-        } else {
-          Modifier
-        }
-      )
+      .height(50.dp)
+      .width(76.dp)
+      .clip(RoundedCornerShape(18.dp))
       .clickable(
         interactionSource = interactionSource,
         indication = null, // Strictly NO white/gray material ripple!
@@ -473,13 +411,28 @@ private fun TodIosTabItem(
       ),
     contentAlignment = Alignment.Center
   ) {
-    Box(
-      modifier = Modifier
-        .size(28.dp)
-        .scale(iconScale),
-      contentAlignment = Alignment.Center
+    Column(
+      horizontalAlignment = Alignment.CenterHorizontally,
+      verticalArrangement = Arrangement.Center
     ) {
-      icon(isSelected)
+      Box(
+        modifier = Modifier.scale(iconScale),
+        contentAlignment = Alignment.Center
+      ) {
+        icon(isSelected)
+      }
+      if (isSelected) {
+        Spacer(modifier = Modifier.height(3.dp))
+        Box(
+          modifier = Modifier
+            .width(14.dp)
+            .height(2.5.dp)
+            .clip(RoundedCornerShape(1.25.dp))
+            .background(Color(0xFFFFB800))
+        )
+      } else {
+        Spacer(modifier = Modifier.height(5.5.dp))
+      }
     }
   }
 }

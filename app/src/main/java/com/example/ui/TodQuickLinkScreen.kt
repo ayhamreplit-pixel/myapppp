@@ -94,6 +94,7 @@ import com.example.ui.theme.IosSystemOrange
 import com.example.ui.theme.IosSystemPurple
 import com.example.ui.theme.IosSystemRed
 import com.example.ui.theme.IosSystemTeal
+import com.example.ui.theme.ThmanyahFontFamily
 import com.example.ui.theme.TodAmberYellow
 import com.example.ui.theme.TodGradients
 
@@ -277,6 +278,7 @@ fun TodQuickLinkScreen(
               text = "تشغيل رابط سريع",
               color = Color.White,
               fontSize = 17.5.sp,
+              fontFamily = ThmanyahFontFamily,
               fontWeight = FontWeight.Bold,
               letterSpacing = 0.2.sp
             )
@@ -295,6 +297,7 @@ fun TodQuickLinkScreen(
                 text = "M3U8 • MPD • TS • MP4",
                 color = Color(0xFF8E8E93),
                 fontSize = 11.5.sp,
+                fontFamily = ThmanyahFontFamily,
                 fontWeight = FontWeight.Medium
               )
             }

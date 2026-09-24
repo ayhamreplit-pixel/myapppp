@@ -41,6 +41,8 @@ import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.PictureInPictureAlt
@@ -82,8 +84,10 @@ import com.example.model.MatchMoment
 import com.example.model.TodPlayerState
 import com.example.ui.theme.DarkTextPrimary
 import com.example.ui.theme.DarkTextSecondary
+import com.example.ui.theme.ThmanyahFontFamily
 import com.example.ui.theme.TodAmberYellow
 import com.example.ui.theme.TodCyan
+import com.example.ui.theme.TodGold
 
 /**
  * TOD Controls Overlay: Crafted pixel-perfect to match the user's provided screenshots.
@@ -223,22 +227,40 @@ fun TodControlsOverlay(
                 )
               }
 
-              // Content Title & Category / Subtitle
-              Column(modifier = Modifier.widthIn(max = 280.dp)) {
-                Text(
-                  text = stream.title.ifEmpty { "قناة البث المباشر" },
-                  color = Color.White,
-                  fontSize = 15.sp,
-                  fontWeight = FontWeight.Bold,
-                  maxLines = 1,
-                  overflow = TextOverflow.Ellipsis
-                )
+              // Content Title & Category / Subtitle - Clickable to open Channel Drawer directly!
+              Column(
+                modifier = Modifier
+                  .widthIn(max = 280.dp)
+                  .clip(RoundedCornerShape(8.dp))
+                  .clickable { onOpenGrid() }
+              ) {
+                Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                  Text(
+                    text = stream.title.ifEmpty { "قناة البث المباشر" },
+                    color = Color.White,
+                    fontSize = 15.sp,
+                    fontFamily = ThmanyahFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                  )
+                  Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = "فتح قائمة القنوات",
+                    tint = TodGold,
+                    modifier = Modifier.size(15.dp)
+                  )
+                }
                 val subText = if (stream.subtitle.isNotEmpty()) stream.subtitle else stream.tournamentOrLeague
                 if (subText.isNotEmpty()) {
                   Text(
                     text = subText,
                     color = Color(0xFFB0B0B0),
                     fontSize = 11.sp,
+                    fontFamily = ThmanyahFontFamily,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                   )
@@ -308,14 +330,34 @@ fun TodControlsOverlay(
                 TodSettingsCogWithPlay(size = 24.dp, tint = Color.White)
               }
 
-              // 4. 4 Rounded Squares Grid icon -> opens channels / stream drawer
+              // 4. Modern iOS 18 Glass Channels Button -> opens channel drawer
               Box(
                 modifier = Modifier
-                  .iosBounceClick(scaleDown = 0.84f) { onOpenGrid() }
-                  .size(36.dp),
+                  .iosBounceClick(scaleDown = 0.88f) { onOpenGrid() }
+                  .clip(RoundedCornerShape(10.dp))
+                  .background(Color(0x33FFFFFF))
+                  .border(0.75.dp, Color(0x55FFFFFF), RoundedCornerShape(10.dp))
+                  .padding(horizontal = 9.dp, vertical = 5.dp),
                 contentAlignment = Alignment.Center
               ) {
-                TodGridFour(size = 22.dp, tint = Color.White)
+                Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                  Icon(
+                    imageVector = Icons.Default.LiveTv,
+                    contentDescription = "القنوات",
+                    tint = TodGold,
+                    modifier = Modifier.size(16.dp)
+                  )
+                  Text(
+                    text = "القنوات",
+                    color = Color.White,
+                    fontSize = 12.sp,
+                    fontFamily = ThmanyahFontFamily,
+                    fontWeight = FontWeight.Bold
+                  )
+                }
               }
 
               // 5. Aspect Ratio pill button (16:9, Fit, Zoom, Stretch)

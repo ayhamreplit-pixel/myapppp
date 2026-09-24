@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -45,14 +46,23 @@ import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.SportsSoccer
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.filled.ViewAgenda
+import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -87,6 +97,7 @@ import com.example.model.XtreamChannel
 import com.example.ui.theme.DarkBg
 import com.example.ui.theme.DarkTextSecondary
 import com.example.ui.theme.DarkTextTertiary
+import com.example.ui.theme.ThmanyahFontFamily
 import com.example.ui.theme.TodButtonGrey
 import com.example.ui.theme.TodGold
 import com.example.ui.theme.TodGoldGlow
@@ -133,59 +144,47 @@ fun TodHomeScreen(
     selectedCategoryId = null
   }
 
-  // Map channels grouped by Xtream category dynamically with complete O(N) coverage and robust matching
+  // High-performance single-pass category grouping to prevent UI freezing and ANR on 30k+ channels
   val channelsByCategory: Map<XtreamCategory, List<XtreamChannel>> = remember(allChannels, xtreamCategories) {
     if (allChannels.isEmpty()) {
       emptyMap()
     } else {
-      val map = mutableMapOf<XtreamCategory, List<XtreamChannel>>()
-
-      // Clean category matching
-      xtreamCategories.forEach { category ->
-        if (category.categoryId != "ALL") {
-          val catTrim = category.categoryId.trim()
-          val matched = allChannels.filter { ch ->
-            val chCat = ch.categoryId?.trim() ?: ""
-            chCat.equals(catTrim, ignoreCase = true) ||
-            (chCat.toIntOrNull() != null && catTrim.toIntOrNull() != null && chCat.toInt() == catTrim.toInt()) ||
-            (chCat.isEmpty() && category.categoryName.trim().equals("عام", ignoreCase = true))
-          }
-          if (matched.isNotEmpty()) {
-            map[category.copy(channelCount = matched.size)] = matched
-          }
+      val catGroupMap = HashMap<String, MutableList<XtreamChannel>>()
+      for (ch in allChannels) {
+        val key = ch.categoryId?.trim()?.lowercase() ?: "general"
+        catGroupMap.getOrPut(key) { mutableListOf() }.add(ch)
+      }
+      val result = LinkedHashMap<XtreamCategory, List<XtreamChannel>>()
+      for (cat in xtreamCategories) {
+        if (cat.categoryId == "ALL") continue
+        val key = cat.categoryId.trim().lowercase()
+        val list = catGroupMap[key]
+        if (!list.isNullOrEmpty()) {
+          result[cat.copy(channelCount = list.size)] = list
         }
       }
-
-      // If no categories matched or categories empty, group dynamically by categoryId or default
-      if (map.isEmpty()) {
-        val channelsByCatId = allChannels.groupBy { it.categoryId?.trim()?.ifBlank { "القنوات العامة" } ?: "القنوات العامة" }
-        channelsByCatId.forEach { (catKey, list) ->
-          map[XtreamCategory(catKey, catKey, list.size)] = list
+      if (result.isEmpty()) {
+        catGroupMap.entries.take(20).forEach { (k, list) ->
+          result[XtreamCategory(k, k, list.size)] = list
         }
       }
-
-      map
+      result
     }
   }
 
-  // Robust category channels for selected category view
-  val currentCategoryChannels = remember(allChannels, selectedCategoryId) {
+  // Robust category channels for selected category view using instant map lookup
+  val currentCategoryChannels = remember(allChannels, selectedCategoryId, channelsByCategory) {
     if (selectedCategoryId == null || selectedCategoryId == "ALL") {
       allChannels
     } else {
-      val targetCat = selectedCategoryId?.trim() ?: ""
-      val matched = allChannels.filter { ch ->
-        val chCat = ch.categoryId?.trim() ?: ""
-        chCat.equals(targetCat, ignoreCase = true) ||
-        (chCat.toIntOrNull() != null && targetCat.toIntOrNull() != null && chCat.toInt() == targetCat.toInt())
-      }
-      if (matched.isNotEmpty()) matched
-      else {
-        // Fallback by category name
-        val catName = xtreamCategories.find { it.categoryId.trim() == targetCat }?.categoryName?.trim()
-        if (!catName.isNullOrBlank()) {
-          allChannels.filter { (it.categoryId?.trim() ?: "").equals(catName, ignoreCase = true) }
-        } else emptyList()
+      val target = selectedCategoryId?.trim() ?: ""
+      val matchedFromMap = channelsByCategory.entries.firstOrNull {
+        it.key.categoryId.trim().equals(target, ignoreCase = true)
+      }?.value
+      if (!matchedFromMap.isNullOrEmpty()) {
+        matchedFromMap
+      } else {
+        allChannels.filter { (it.categoryId?.trim() ?: "").equals(target, ignoreCase = true) }
       }
     }
   }
@@ -226,21 +225,23 @@ fun TodHomeScreen(
           isLive = true,
           backdropGradient = gradients[index % gradients.size],
           tags = tags,
-          primaryButtonLabel = "تابع الآن"
+          primaryButtonLabel = "مشاهدة الآن"
         )
       }
     } else {
       listOf(
         DynamicTodHeroItem(
-          id = "welcome_hero",
-          title = "مرحباً بك في TOD • البث المباشر",
-          subtitle = "قم بربط اشتراك Xtream Codes أو M3U لبدء البث المباشر الفوري لكافة القنوات",
+          id = "welcome_hero_pro",
+          title = "مرحباً بك في TOD Pro",
+          subtitle = "بث فوري بدون تقطيع لكافة القنوات الرياضية والعالمية بجودة 4K UHD",
           categoryName = "TOD by beIN",
           channel = null,
           isLive = false,
-          backdropGradient = TodGradients.SportsPurple,
-          tags = listOf("Xtream Codes", "M3U8", "4K / FHD"),
-          primaryButtonLabel = "إضافة سيرفر جديد"
+          backdropGradient = Brush.verticalGradient(
+            listOf(Color(0xFF2E1A48), Color(0xFF16192E), Color(0xFF07080F))
+          ),
+          tags = listOf("🏆 TOD by beIN", "✨ 4K UHD", "⚡ مانع التقطيع", "بث فوري"),
+          primaryButtonLabel = "تسجيل الدخول إلى سيرفرك"
         )
       )
     }
@@ -258,9 +259,9 @@ fun TodHomeScreen(
     }
   }
 
-  val activeHero = dynamicHeroItems.getOrElse(currentHeroIndex.coerceIn(0, dynamicHeroItems.size - 1)) {
-    dynamicHeroItems.first()
-  }
+  val activeHero = if (dynamicHeroItems.isNotEmpty()) {
+    dynamicHeroItems.getOrNull(currentHeroIndex.coerceIn(0, dynamicHeroItems.size - 1))
+  } else null
 
   Column(
     modifier = modifier
@@ -274,13 +275,14 @@ fun TodHomeScreen(
         .background(
           Brush.verticalGradient(
             colors = listOf(
-              Color(0xEE12131C),
-              Color(0x880D0E15),
+              Color(0xF211121A),
+              Color(0xD80D0E15),
               Color.Transparent
             )
           )
         )
-        .padding(top = 4.dp, bottom = 6.dp)
+        .statusBarsPadding()
+        .padding(top = 2.dp, bottom = 4.dp)
     ) {
       // Top Row: Avatar + Brand + Quick Link Action
       Row(
@@ -663,12 +665,13 @@ fun TodHomeScreen(
         contentPadding = PaddingValues(bottom = 32.dp)
       ) {
         // 3. Apple TV Style Floating Cinematic Glass Carousel Banner
-        item(key = "hero_banner") {
-          Box(
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(horizontal = 14.dp, vertical = 6.dp)
-              .height(310.dp)
+        if (activeHero != null) {
+          item(key = "hero_banner") {
+            Box(
+              modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 6.dp)
+                .height(310.dp)
               .shadow(
                 elevation = 20.dp,
                 shape = RoundedCornerShape(24.dp),
@@ -778,6 +781,7 @@ fun TodHomeScreen(
                         text = hero.title,
                         color = Color.White,
                         fontSize = 20.sp,
+                        fontFamily = ThmanyahFontFamily,
                         fontWeight = FontWeight.Black,
                         textAlign = TextAlign.End,
                         maxLines = 2,
@@ -787,6 +791,7 @@ fun TodHomeScreen(
                         text = hero.subtitle,
                         color = Color(0xFFD0D0D8),
                         fontSize = 12.sp,
+                        fontFamily = ThmanyahFontFamily,
                         textAlign = TextAlign.End
                       )
                     }
@@ -822,59 +827,100 @@ fun TodHomeScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
               ) {
-                // Replay Button (↺)
-                val replayInteraction = remember { MutableInteractionSource() }
-                val isReplayPressed by replayInteraction.collectIsPressedAsState()
-                val replayScale by animateFloatAsState(
-                  targetValue = if (isReplayPressed) 0.88f else 1.0f,
-                  animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-                  label = "replayScale"
-                )
+                if (activeHero.channel != null) {
+                  // Replay Button (↺)
+                  val replayInteraction = remember { MutableInteractionSource() }
+                  val isReplayPressed by replayInteraction.collectIsPressedAsState()
+                  val replayScale by animateFloatAsState(
+                    targetValue = if (isReplayPressed) 0.88f else 1.0f,
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                    label = "replayScale"
+                  )
 
-                Box(
-                  modifier = Modifier
-                    .scale(replayScale)
-                    .size(42.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0x28FFFFFF))
-                    .border(0.75.dp, Color(0x35FFFFFF), RoundedCornerShape(12.dp))
-                    .clickable(
-                      interactionSource = replayInteraction,
-                      indication = null
+                  Box(
+                    modifier = Modifier
+                      .scale(replayScale)
+                      .size(42.dp)
+                      .clip(RoundedCornerShape(12.dp))
+                      .background(Color(0x28FFFFFF))
+                      .border(0.75.dp, Color(0x35FFFFFF), RoundedCornerShape(12.dp))
+                      .clickable(
+                        interactionSource = replayInteraction,
+                        indication = null
+                      ) {
+                        activeHero.channel.let { onPlayChannel(it, allChannels, "Hero Replay") }
+                      },
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Icon(Icons.Default.Refresh, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                  }
+
+                  // Add Button (+)
+                  val addInteraction = remember { MutableInteractionSource() }
+                  val isAddPressed by addInteraction.collectIsPressedAsState()
+                  val addScale by animateFloatAsState(
+                    targetValue = if (isAddPressed) 0.88f else 1.0f,
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                    label = "addHeroScale"
+                  )
+
+                  Box(
+                    modifier = Modifier
+                      .scale(addScale)
+                      .size(42.dp)
+                      .clip(RoundedCornerShape(12.dp))
+                      .background(Color(0x28FFFFFF))
+                      .border(0.75.dp, Color(0x35FFFFFF), RoundedCornerShape(12.dp))
+                      .clickable(
+                        interactionSource = addInteraction,
+                        indication = null
+                      ) { /* Watchlist */ },
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                  }
+                } else {
+                  // Quick Stream Link button in welcome mode
+                  val quickInteraction = remember { MutableInteractionSource() }
+                  val isQuickPressed by quickInteraction.collectIsPressedAsState()
+                  val quickScale by animateFloatAsState(
+                    targetValue = if (isQuickPressed) 0.92f else 1.0f,
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                    label = "quickHeroScale"
+                  )
+
+                  Box(
+                    modifier = Modifier
+                      .scale(quickScale)
+                      .height(44.dp)
+                      .clip(RoundedCornerShape(14.dp))
+                      .background(Color(0x2EFFFFFF))
+                      .border(1.dp, Color(0x55FFFFFF), RoundedCornerShape(14.dp))
+                      .clickable(
+                        interactionSource = quickInteraction,
+                        indication = null,
+                        onClick = onOpenQuickLink
+                      )
+                      .padding(horizontal = 14.dp),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Row(
+                      verticalAlignment = Alignment.CenterVertically,
+                      horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                      activeHero.channel?.let { onPlayChannel(it, allChannels, "Hero Replay") }
-                    },
-                  contentAlignment = Alignment.Center
-                ) {
-                  Icon(Icons.Default.Refresh, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                      Icon(Icons.Default.Bolt, contentDescription = null, tint = Color(0xFF00E5FF), modifier = Modifier.size(18.dp))
+                      Text(
+                        text = "⚡ رابط مباشر",
+                        color = Color.White,
+                        fontSize = 12.5.sp,
+                        fontFamily = ThmanyahFontFamily,
+                        fontWeight = FontWeight.Bold
+                      )
+                    }
+                  }
                 }
 
-                // Add Button (+)
-                val addInteraction = remember { MutableInteractionSource() }
-                val isAddPressed by addInteraction.collectIsPressedAsState()
-                val addScale by animateFloatAsState(
-                  targetValue = if (isAddPressed) 0.88f else 1.0f,
-                  animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-                  label = "addHeroScale"
-                )
-
-                Box(
-                  modifier = Modifier
-                    .scale(addScale)
-                    .size(42.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0x28FFFFFF))
-                    .border(0.75.dp, Color(0x35FFFFFF), RoundedCornerShape(12.dp))
-                    .clickable(
-                      interactionSource = addInteraction,
-                      indication = null
-                    ) { /* Watchlist */ },
-                  contentAlignment = Alignment.Center
-                ) {
-                  Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
-                }
-
-                // Apple-Style Primary Action Button: "تابع الآن ▶"
+                // Apple-Style Primary Action Button
                 val playInteraction = remember { MutableInteractionSource() }
                 val isPlayPressed by playInteraction.collectIsPressedAsState()
                 val playScale by animateFloatAsState(
@@ -910,12 +956,13 @@ fun TodHomeScreen(
                     Text(
                       text = activeHero.primaryButtonLabel,
                       color = Color.Black,
-                      fontSize = 14.5.sp,
+                      fontSize = 14.sp,
+                      fontFamily = ThmanyahFontFamily,
                       fontWeight = FontWeight.Black
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Icon(
-                      Icons.Default.PlayArrow,
+                      imageVector = if (activeHero.channel != null) Icons.Default.PlayArrow else Icons.Default.Dns,
                       contentDescription = null,
                       tint = Color.Black,
                       modifier = Modifier.size(20.dp)
@@ -956,70 +1003,24 @@ fun TodHomeScreen(
           }
           Spacer(modifier = Modifier.height(12.dp))
         }
+      }
 
-        // If no channels yet, show clean connection card
-        if (allChannels.isEmpty() && !isLoading) {
-          item(key = "empty_conn_card") {
-            Box(
-              modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color(0xFF131318))
-                .border(1.dp, TodGold.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
-                .padding(20.dp)
-            ) {
-              Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-              ) {
-                Icon(Icons.Default.Dns, contentDescription = null, tint = TodGold, modifier = Modifier.size(38.dp))
-                Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                  "لم يتم توصيل سيرفر بعد",
-                  color = Color.White,
-                  fontSize = 17.sp,
-                  fontWeight = FontWeight.Bold,
-                  textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                  "أضف بيانات سيرفر Xtream Codes أو رابط M3U لعرض مجموعات وقنوات اشتراكك مباشرةً بهوية TOD الذكية.",
-                  color = DarkTextSecondary,
-                  fontSize = 12.5.sp,
-                  textAlign = TextAlign.Center,
-                  lineHeight = 18.sp
-                )
-                Spacer(modifier = Modifier.height(14.dp))
-                Button(
-                  onClick = onOpenProfile,
-                  colors = ButtonDefaults.buttonColors(containerColor = TodGold),
-                  shape = RoundedCornerShape(10.dp),
-                  modifier = Modifier.fillMaxWidth(0.85f)
-                ) {
-                  Text("إضافة السيرفر الآن", color = Color.Black, fontWeight = FontWeight.Black)
-                }
-              }
-            }
-          }
+      // Real Live Channels Rail directly from Xtream ("تابع الآن على الهواء")
+      if (allChannels.isNotEmpty()) {
+        item(key = "live_now_rail") {
+          DynamicChannelRail(
+            sectionTitle = "تابع الآن على الهواء",
+            actionLabel = "عرض الكل",
+            channels = allChannels.take(20),
+            allChannels = allChannels,
+            onActionClick = { selectedCategoryId = "ALL" },
+            onPlayChannel = onPlayChannel
+          )
+          Spacer(modifier = Modifier.height(18.dp))
         }
+      }
 
-        // 4. "تابع الآن على الهواء" Quick Live Channels Rail
-        if (allChannels.isNotEmpty()) {
-          item(key = "live_now_rail") {
-            DynamicChannelRail(
-              sectionTitle = "تابع الآن على الهواء",
-              actionLabel = "عرض الكل",
-              channels = allChannels.take(15),
-              allChannels = allChannels,
-              onActionClick = { selectedCategoryId = "ALL" },
-              onPlayChannel = onPlayChannel
-            )
-            Spacer(modifier = Modifier.height(18.dp))
-          }
-        }
-
-        // 5. Dynamic Xtream Category Rails (Show top 15 rails on home feed with lazy composition)
+      // Dynamic Categorized Xtream Category Rails (Organized & Ordered)
         items(
           items = homeRails,
           key = { (category, _) -> "rail_${category.categoryId}" }
@@ -1051,6 +1052,204 @@ fun TodHomeScreen(
               onPlayChannel = onPlayChannel
             )
             Spacer(modifier = Modifier.height(18.dp))
+          }
+        }
+
+        // iOS 18 Translucent Glass Showcase when no channels are loaded yet
+        if (allChannels.isEmpty() && !isLoading) {
+          item(key = "empty_channels_state") {
+            Column(
+              modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+              verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+              Text(
+                text = "استكشف إمكانيات TOD Pro",
+                color = Color.White,
+                fontSize = 16.5.sp,
+                fontFamily = ThmanyahFontFamily,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
+              )
+
+              // Card 1: Xtream Server
+              val card1Interaction = remember { MutableInteractionSource() }
+              val isCard1Pressed by card1Interaction.collectIsPressedAsState()
+              val card1Scale by animateFloatAsState(
+                targetValue = if (isCard1Pressed) 0.97f else 1.0f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                label = "card1Scale"
+              )
+
+              Box(
+                modifier = Modifier
+                  .scale(card1Scale)
+                  .fillMaxWidth()
+                  .clip(RoundedCornerShape(20.dp))
+                  .background(TodGradients.CardGlass)
+                  .border(1.dp, TodGradients.SpecularCardBorder, RoundedCornerShape(20.dp))
+                  .clickable(
+                    interactionSource = card1Interaction,
+                    indication = null,
+                    onClick = onOpenProfile
+                  )
+                  .padding(16.dp)
+              ) {
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                  Box(
+                    modifier = Modifier
+                      .size(46.dp)
+                      .clip(RoundedCornerShape(14.dp))
+                      .background(Brush.linearGradient(listOf(Color(0xFFFFD54F), Color(0xFFF59E0B))))
+                      .border(1.dp, Color(0x55FFFFFF), RoundedCornerShape(14.dp)),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Icon(Icons.Default.Dns, contentDescription = null, tint = Color.Black, modifier = Modifier.size(24.dp))
+                  }
+
+                  Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                      text = "ربط اشتراك الاكستريم (Xtream)",
+                      color = Color.White,
+                      fontSize = 14.5.sp,
+                      fontFamily = ThmanyahFontFamily,
+                      fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                      text = "أدخل بيانات خادمك للوصول إلى آلاف القنوات الرياضية والعالمية",
+                      color = DarkTextSecondary,
+                      fontSize = 11.5.sp,
+                      fontFamily = ThmanyahFontFamily,
+                      lineHeight = 16.sp
+                    )
+                  }
+
+                  Icon(
+                    Icons.Default.KeyboardArrowLeft,
+                    contentDescription = null,
+                    tint = TodGold,
+                    modifier = Modifier.size(20.dp)
+                  )
+                }
+              }
+
+              // Card 2: Quick Direct Link
+              val card2Interaction = remember { MutableInteractionSource() }
+              val isCard2Pressed by card2Interaction.collectIsPressedAsState()
+              val card2Scale by animateFloatAsState(
+                targetValue = if (isCard2Pressed) 0.97f else 1.0f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                label = "card2Scale"
+              )
+
+              Box(
+                modifier = Modifier
+                  .scale(card2Scale)
+                  .fillMaxWidth()
+                  .clip(RoundedCornerShape(20.dp))
+                  .background(TodGradients.CardGlass)
+                  .border(1.dp, TodGradients.SpecularCardBorder, RoundedCornerShape(20.dp))
+                  .clickable(
+                    interactionSource = card2Interaction,
+                    indication = null,
+                    onClick = onOpenQuickLink
+                  )
+                  .padding(16.dp)
+              ) {
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                  Box(
+                    modifier = Modifier
+                      .size(46.dp)
+                      .clip(RoundedCornerShape(14.dp))
+                      .background(Brush.linearGradient(listOf(Color(0xFF00E5FF), Color(0xFF0284C7))))
+                      .border(1.dp, Color(0x55FFFFFF), RoundedCornerShape(14.dp)),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Icon(Icons.Default.Bolt, contentDescription = null, tint = Color.Black, modifier = Modifier.size(24.dp))
+                  }
+
+                  Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                      text = "تشغيل رابط بث سريع (M3U8)",
+                      color = Color.White,
+                      fontSize = 14.5.sp,
+                      fontFamily = ThmanyahFontFamily,
+                      fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                      text = "شاهد أي بث مباشر فوري بدون تسجيل وبجودة فائقة",
+                      color = DarkTextSecondary,
+                      fontSize = 11.5.sp,
+                      fontFamily = ThmanyahFontFamily,
+                      lineHeight = 16.sp
+                    )
+                  }
+
+                  Icon(
+                    Icons.Default.KeyboardArrowLeft,
+                    contentDescription = null,
+                    tint = Color(0xFF00E5FF),
+                    modifier = Modifier.size(20.dp)
+                  )
+                }
+              }
+
+              // Card 3: Performance Engine
+              Box(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .clip(RoundedCornerShape(20.dp))
+                  .background(TodGradients.CardGlass)
+                  .border(1.dp, TodGradients.SpecularCardBorder, RoundedCornerShape(20.dp))
+                  .padding(16.dp)
+              ) {
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                  Box(
+                    modifier = Modifier
+                      .size(46.dp)
+                      .clip(RoundedCornerShape(14.dp))
+                      .background(Brush.linearGradient(listOf(Color(0xFF30D158), Color(0xFF0E8A38))))
+                      .border(1.dp, Color(0x55FFFFFF), RoundedCornerShape(14.dp)),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Icon(Icons.Default.Speed, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+                  }
+
+                  Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                      text = "محرك مانع التقطيع الذكي",
+                      color = Color.White,
+                      fontSize = 14.5.sp,
+                      fontFamily = ThmanyahFontFamily,
+                      fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                      text = "معالجة فورية وتخزين مؤقت سلس لتشغيل خالٍ من التوقفات",
+                      color = DarkTextSecondary,
+                      fontSize = 11.5.sp,
+                      fontFamily = ThmanyahFontFamily,
+                      lineHeight = 16.sp
+                    )
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -1087,15 +1286,15 @@ fun CorporateChannelGridCard(
     modifier = Modifier
       .scale(scale)
       .fillMaxWidth()
-      .height(138.dp)
-      .clip(RoundedCornerShape(16.dp))
+      .height(142.dp)
+      .clip(RoundedCornerShape(20.dp))
       .background(TodGradients.CardGlass)
-      .border(1.dp, TodGradients.SpecularCardBorder, RoundedCornerShape(16.dp))
+      .border(1.dp, TodGradients.SpecularCardBorder, RoundedCornerShape(20.dp))
       .clickable(
         interactionSource = interactionSource,
         indication = null
       ) { onPlayChannel(channel, allChannels, categoryName) }
-      .padding(12.dp)
+      .padding(13.dp)
   ) {
     Column(
       modifier = Modifier.fillMaxSize(),
@@ -1107,13 +1306,13 @@ fun CorporateChannelGridCard(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
       ) {
-        // Channel Icon Container (Always 38dp x 38dp)
+        // Channel Icon Container in Glass frame
         Box(
           modifier = Modifier
-            .size(38.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(Color(0xFF1E1E28))
-            .border(0.75.dp, Color(0xFF383848), RoundedCornerShape(10.dp)),
+            .size(42.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0x28FFFFFF))
+            .border(1.dp, Color(0x35FFFFFF), RoundedCornerShape(12.dp)),
           contentAlignment = Alignment.Center
         ) {
           if (!channel.iconUrl.isNullOrBlank()) {
@@ -1122,7 +1321,7 @@ fun CorporateChannelGridCard(
               contentDescription = null,
               modifier = Modifier
                 .fillMaxSize()
-                .padding(3.dp),
+                .padding(4.dp),
               contentScale = ContentScale.Fit
             )
           } else {
@@ -1130,7 +1329,7 @@ fun CorporateChannelGridCard(
               imageVector = Icons.Default.PlayArrow,
               contentDescription = null,
               tint = TodGold,
-              modifier = Modifier.size(18.dp)
+              modifier = Modifier.size(20.dp)
             )
           }
         }
@@ -1143,7 +1342,8 @@ fun CorporateChannelGridCard(
       Text(
         text = cleanChannelName(channel.name),
         color = Color.White,
-        fontSize = 12.5.sp,
+        fontSize = 13.sp,
+        fontFamily = ThmanyahFontFamily,
         fontWeight = FontWeight.Bold,
         maxLines = 2,
         overflow = TextOverflow.Ellipsis,
@@ -1163,7 +1363,8 @@ fun CorporateChannelGridCard(
         Text(
           text = categoryName.take(16),
           color = DarkTextTertiary,
-          fontSize = 10.sp,
+          fontSize = 10.5.sp,
+          fontFamily = ThmanyahFontFamily,
           maxLines = 1,
           overflow = TextOverflow.Ellipsis
         )
@@ -1201,15 +1402,15 @@ fun CorporateChannelListRow(
     modifier = Modifier
       .scale(scale)
       .fillMaxWidth()
-      .height(68.dp)
-      .clip(RoundedCornerShape(14.dp))
+      .height(72.dp)
+      .clip(RoundedCornerShape(18.dp))
       .background(TodGradients.CardGlass)
-      .border(1.dp, TodGradients.SpecularCardBorder, RoundedCornerShape(14.dp))
+      .border(1.dp, TodGradients.SpecularCardBorder, RoundedCornerShape(18.dp))
       .clickable(
         interactionSource = interactionSource,
         indication = null
       ) { onPlayChannel(channel, allChannels, categoryName) }
-      .padding(horizontal = 12.dp, vertical = 8.dp),
+      .padding(horizontal = 14.dp, vertical = 8.dp),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.SpaceBetween
   ) {
@@ -1219,18 +1420,19 @@ fun CorporateChannelListRow(
     ) {
       Text(
         text = String.format("%02d", channelIndex),
-        color = DarkTextTertiary,
+        color = TodGold,
         fontSize = 12.sp,
+        fontFamily = ThmanyahFontFamily,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.width(26.dp)
       )
 
       Box(
         modifier = Modifier
-          .size(42.dp)
-          .clip(RoundedCornerShape(10.dp))
-          .background(Color(0xFF1E1E28))
-          .border(0.75.dp, Color(0xFF383848), RoundedCornerShape(10.dp)),
+          .size(44.dp)
+          .clip(RoundedCornerShape(12.dp))
+          .background(Color(0x28FFFFFF))
+          .border(1.dp, Color(0x35FFFFFF), RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center
       ) {
         if (!channel.iconUrl.isNullOrBlank()) {
@@ -1241,7 +1443,7 @@ fun CorporateChannelListRow(
             contentScale = ContentScale.Fit
           )
         } else {
-          Icon(Icons.Default.PlayArrow, contentDescription = null, tint = TodGold, modifier = Modifier.size(18.dp))
+          Icon(Icons.Default.PlayArrow, contentDescription = null, tint = TodGold, modifier = Modifier.size(20.dp))
         }
       }
 
@@ -1252,6 +1454,7 @@ fun CorporateChannelListRow(
           text = cleanChannelName(channel.name),
           color = Color.White,
           fontSize = 13.5.sp,
+          fontFamily = ThmanyahFontFamily,
           fontWeight = FontWeight.Bold,
           maxLines = 1,
           overflow = TextOverflow.Ellipsis
@@ -1261,6 +1464,7 @@ fun CorporateChannelListRow(
           text = categoryName,
           color = DarkTextSecondary,
           fontSize = 11.sp,
+          fontFamily = ThmanyahFontFamily,
           maxLines = 1,
           overflow = TextOverflow.Ellipsis
         )
@@ -1275,6 +1479,12 @@ fun CorporateChannelListRow(
     ) {
       VideoQualityBadge(qualityText = qualityLabel)
       PulsingLiveBadge()
+      Icon(
+        Icons.Default.KeyboardArrowLeft,
+        contentDescription = null,
+        tint = Color(0x66FFFFFF),
+        modifier = Modifier.size(16.dp)
+      )
     }
   }
 }
@@ -1312,8 +1522,8 @@ fun DynamicChannelRail(
         modifier = Modifier
           .scale(actionScale)
           .clip(RoundedCornerShape(12.dp))
-          .background(Color(0x18FFFFFF))
-          .border(0.5.dp, Color(0x22FFFFFF), RoundedCornerShape(12.dp))
+          .background(Color(0x22FFFFFF))
+          .border(0.75.dp, Color(0x35FFFFFF), RoundedCornerShape(12.dp))
           .clickable(
             interactionSource = actionInteraction,
             indication = null,
@@ -1333,6 +1543,7 @@ fun DynamicChannelRail(
           text = actionLabel,
           color = TodGold,
           fontSize = 11.5.sp,
+          fontFamily = ThmanyahFontFamily,
           fontWeight = FontWeight.Bold
         )
       }
@@ -1341,6 +1552,7 @@ fun DynamicChannelRail(
         text = sectionTitle,
         color = Color.White,
         fontSize = 18.sp,
+        fontFamily = ThmanyahFontFamily,
         fontWeight = FontWeight.Bold,
         letterSpacing = 0.2.sp
       )
@@ -1371,22 +1583,16 @@ fun DynamicChannelRail(
         Box(
           modifier = Modifier
             .scale(scale)
-            .width(176.dp)
-            .height(130.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .width(182.dp)
+            .height(134.dp)
+            .clip(RoundedCornerShape(20.dp))
             .background(TodGradients.CardGlass)
-            .border(
-              width = 1.dp,
-              brush = Brush.verticalGradient(
-                colors = listOf(Color(0x35FFFFFF), Color(0x10FFFFFF))
-              ),
-              shape = RoundedCornerShape(16.dp)
-            )
+            .border(1.dp, TodGradients.SpecularCardBorder, RoundedCornerShape(20.dp))
             .clickable(
               interactionSource = interactionSource,
               indication = null
             ) { onPlayChannel(channel, allChannels, sectionTitle) }
-            .padding(11.dp)
+            .padding(12.dp)
         ) {
           Column(
             modifier = Modifier.fillMaxSize(),
@@ -1400,21 +1606,21 @@ fun DynamicChannelRail(
             ) {
               Box(
                 modifier = Modifier
-                  .size(36.dp)
-                  .clip(RoundedCornerShape(10.dp))
-                  .background(Color(0xFF1E1E28))
-                  .border(0.75.dp, Color(0xFF383848), RoundedCornerShape(10.dp)),
+                  .size(38.dp)
+                  .clip(RoundedCornerShape(11.dp))
+                  .background(Color(0x28FFFFFF))
+                  .border(1.dp, Color(0x35FFFFFF), RoundedCornerShape(11.dp)),
                 contentAlignment = Alignment.Center
               ) {
                 if (!channel.iconUrl.isNullOrBlank()) {
                   AsyncImage(
                     model = channel.iconUrl,
                     contentDescription = null,
-                    modifier = Modifier.fillMaxSize().padding(2.5.dp),
+                    modifier = Modifier.fillMaxSize().padding(3.dp),
                     contentScale = ContentScale.Fit
                   )
                 } else {
-                  Icon(Icons.Default.PlayArrow, contentDescription = null, tint = TodGold, modifier = Modifier.size(16.dp))
+                  Icon(Icons.Default.PlayArrow, contentDescription = null, tint = TodGold, modifier = Modifier.size(18.dp))
                 }
               }
 
@@ -1425,7 +1631,8 @@ fun DynamicChannelRail(
             Text(
               text = cleanChannelName(channel.name),
               color = Color.White,
-              fontSize = 12.sp,
+              fontSize = 12.5.sp,
+              fontFamily = ThmanyahFontFamily,
               fontWeight = FontWeight.Bold,
               maxLines = 2,
               overflow = TextOverflow.Ellipsis,

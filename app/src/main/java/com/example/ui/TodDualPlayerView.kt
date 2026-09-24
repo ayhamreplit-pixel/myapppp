@@ -21,13 +21,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeMute
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material.icons.filled.VolumeMute
 import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.filled.Window
 import androidx.compose.material3.CircularProgressIndicator
@@ -586,7 +586,7 @@ private fun SingleStreamSlot(
         ) {
           Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-              imageVector = if (isAudioActive) Icons.AutoMirrored.Filled.VolumeUp else Icons.Default.VolumeMute,
+              imageVector = if (isAudioActive) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeMute,
               contentDescription = "Audio status",
               tint = if (isAudioActive) themePrimary else Color(0xFF7A8B9E),
               modifier = Modifier.size(13.dp)

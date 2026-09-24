@@ -430,7 +430,7 @@ class XtreamRepository(context: Context) {
         val allResBody = allRes.body
         if (allResBody != null) {
           val allChannels = parseStreamsStreaming(allResBody, cleanServer, cleanUser, cleanPass, preferredFormat)
-          list = if (categoryId != null && categoryId != "ALL") allChannels.filter { it.categoryId == categoryId } else allChannels
+          list = if (isFilterRequested) allChannels.filter { it.categoryId == categoryId } else allChannels
         }
       }
 
@@ -484,6 +484,7 @@ class XtreamRepository(context: Context) {
     preferredFormat: String
   ): List<XtreamChannel> {
     val list = ArrayList<XtreamChannel>(2048)
+    val maxChannels = 35000
     try {
       responseBody.byteStream().use { inputStream ->
         val source = inputStream.source().buffer()
@@ -494,6 +495,10 @@ class XtreamRepository(context: Context) {
         if (token == JsonReader.Token.BEGIN_ARRAY) {
           reader.beginArray()
           while (reader.hasNext()) {
+            if (list.size >= maxChannels) {
+              reader.skipValue()
+              continue
+            }
             if (reader.peek() == JsonReader.Token.BEGIN_OBJECT) {
               val ch = parseSingleChannelStreaming(reader, cleanServer, cleanUser, cleanPass, preferredFormat)
               if (ch != null) {
@@ -508,6 +513,10 @@ class XtreamRepository(context: Context) {
           reader.beginObject()
           while (reader.hasNext()) {
             reader.nextName() // object key
+            if (list.size >= maxChannels) {
+              reader.skipValue()
+              continue
+            }
             if (reader.peek() == JsonReader.Token.BEGIN_OBJECT) {
               val ch = parseSingleChannelStreaming(reader, cleanServer, cleanUser, cleanPass, preferredFormat)
               if (ch != null) {
@@ -743,15 +752,17 @@ class XtreamRepository(context: Context) {
             }
 
             val name = currentName ?: "قناة ${channels.size + 1}"
-            channels.add(
-              XtreamChannel(
-                streamId = (channels.size + 1).toString(),
-                name = name,
-                iconUrl = currentLogo,
-                categoryId = currentGroup ?: "عام",
-                playUrl = playUrl
+            if (channels.size < 35000) {
+              channels.add(
+                XtreamChannel(
+                  streamId = (channels.size + 1).toString(),
+                  name = name,
+                  iconUrl = currentLogo,
+                  categoryId = currentGroup ?: "عام",
+                  playUrl = playUrl
+                )
               )
-            )
+            }
 
             // Reset per-stream state
             currentName = null
@@ -1075,6 +1086,15 @@ class XtreamRepository(context: Context) {
     prefs.edit().putString("app_theme_id", themeId).apply()
   }
 
+  private val channelCacheDir by lazy {
+    java.io.File(context.cacheDir, "channel_cache").apply { mkdirs() }
+  }
+
+  private fun getCacheFile(cacheKey: String): java.io.File {
+    val safeName = cacheKey.replace(Regex("[^a-zA-Z0-9_-]"), "_").take(60)
+    return java.io.File(channelCacheDir, "streams_$safeName.gz")
+  }
+
   // Instant 0ms Disk Cache for Categories and Streams
   fun getCachedCategories(cacheKey: String): List<XtreamCategory> {
     val json = prefs.getString("disk_categories_$cacheKey", null) ?: return emptyList()
@@ -1112,49 +1132,96 @@ class XtreamRepository(context: Context) {
   }
 
   fun getCachedStreams(cacheKey: String): List<XtreamChannel> {
-    val json = prefs.getString("disk_streams_$cacheKey", null) ?: return emptyList()
-    return try {
-      val array = JSONArray(json)
-      val list = mutableListOf<XtreamChannel>()
-      for (i in 0 until array.length()) {
-        val obj = array.getJSONObject(i)
-        list.add(
-          XtreamChannel(
-            streamId = obj.optString("streamId"),
-            name = obj.optString("name"),
-            iconUrl = obj.optString("iconUrl").takeIf { it.isNotEmpty() },
-            categoryId = obj.optString("categoryId").takeIf { it.isNotEmpty() },
-            playUrl = obj.optString("playUrl")
-          )
-        )
+    val file = getCacheFile(cacheKey)
+    if (!file.exists() || file.length() == 0L) {
+      // Check legacy SharedPreferences once
+      val legacy = prefs.getString("disk_streams_$cacheKey", null)
+      if (!legacy.isNullOrBlank()) {
+        try {
+          val array = JSONArray(legacy)
+          val list = mutableListOf<XtreamChannel>()
+          for (i in 0 until array.length()) {
+            val obj = array.getJSONObject(i)
+            list.add(
+              XtreamChannel(
+                streamId = obj.optString("streamId"),
+                name = obj.optString("name"),
+                iconUrl = obj.optString("iconUrl").takeIf { it.isNotEmpty() },
+                categoryId = obj.optString("categoryId").takeIf { it.isNotEmpty() },
+                playUrl = obj.optString("playUrl")
+              )
+            )
+          }
+          saveCachedStreams(cacheKey, list)
+          return list
+        } catch (ignored: Exception) {}
       }
-      list
-    } catch (e: Exception) {
-      emptyList()
+      return emptyList()
     }
+
+    val list = ArrayList<XtreamChannel>(1024)
+    try {
+      java.util.zip.GZIPInputStream(java.io.FileInputStream(file).buffered(16384)).use { gz ->
+        val reader = gz.bufferedReader(Charsets.UTF_8)
+        var line: String? = reader.readLine()
+        while (line != null) {
+          if (line.isNotEmpty()) {
+            val parts = line.split("\t")
+            if (parts.size >= 5) {
+              list.add(
+                XtreamChannel(
+                  streamId = parts[0],
+                  name = parts[1],
+                  iconUrl = parts[2].takeIf { it.isNotEmpty() },
+                  categoryId = parts[3].takeIf { it.isNotEmpty() },
+                  playUrl = parts[4]
+                )
+              )
+            }
+          }
+          line = reader.readLine()
+        }
+      }
+    } catch (e: Exception) {
+      Log.e("XtreamRepository", "Error reading compressed stream cache", e)
+    }
+    return list
   }
 
   fun saveCachedStreams(cacheKey: String, channels: List<XtreamChannel>) {
     try {
-      val array = JSONArray()
-      // Cache up to 1000 top channels to disk for instant zero-latency instant resume
-      val toSave = channels.take(1000)
-      for (ch in toSave) {
-        val obj = JSONObject()
-        obj.put("streamId", ch.streamId)
-        obj.put("name", ch.name)
-        obj.put("iconUrl", ch.iconUrl ?: "")
-        obj.put("categoryId", ch.categoryId ?: "")
-        obj.put("playUrl", ch.playUrl)
-        array.put(obj)
+      val file = getCacheFile(cacheKey)
+      // Save top 5000 channels compressed to GZIP (takes ~150-250KB only on disk!)
+      val toSave = channels.take(5000)
+      java.util.zip.GZIPOutputStream(java.io.FileOutputStream(file).buffered(16384)).use { gz ->
+        val writer = gz.bufferedWriter(Charsets.UTF_8)
+        for (ch in toSave) {
+          writer.write(ch.streamId.replace("\t", " "))
+          writer.write("\t")
+          writer.write(ch.name.replace("\t", " ").replace("\n", " "))
+          writer.write("\t")
+          writer.write(ch.iconUrl?.replace("\t", " ") ?: "")
+          writer.write("\t")
+          writer.write(ch.categoryId?.replace("\t", " ") ?: "")
+          writer.write("\t")
+          writer.write(ch.playUrl.replace("\t", " ").replace("\n", " "))
+          writer.newLine()
+        }
+        writer.flush()
       }
-      prefs.edit().putString("disk_streams_$cacheKey", array.toString()).apply()
-    } catch (ignored: Exception) {}
+      // Remove any heavy string from SharedPreferences to keep app storage super light
+      prefs.edit().remove("disk_streams_$cacheKey").apply()
+    } catch (e: Exception) {
+      Log.e("XtreamRepository", "Error writing compressed stream cache", e)
+    }
   }
 
   fun clearAllCache(): Int {
     val count = streamCache.size
     clearMemoryCache()
+    try {
+      channelCacheDir.listFiles()?.forEach { it.delete() }
+    } catch (ignored: Exception) {}
     val allKeys = prefs.all.keys.filter { it.startsWith("disk_streams_") || it.startsWith("disk_categories_") }
     val editor = prefs.edit()
     allKeys.forEach { editor.remove(it) }

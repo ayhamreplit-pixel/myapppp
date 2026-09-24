@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.theme.ThmanyahFontFamily
 import com.example.ui.theme.TodGold
 import com.example.ui.theme.TodGradients
 
@@ -153,13 +154,27 @@ fun IosListGroup(
   Box(
     modifier = modifier
       .fillMaxWidth()
-      .clip(RoundedCornerShape(16.dp))
+      .clip(RoundedCornerShape(20.dp))
       .background(
         Brush.verticalGradient(
-          colors = listOf(Color(0xFF1C1C22), Color(0xFF14141A))
+          colors = listOf(
+            Color(0x28FFFFFF),
+            Color(0x14FFFFFF),
+            Color(0x0C121724)
+          )
         )
       )
-      .border(1.dp, TodGradients.SpecularCardBorder, RoundedCornerShape(16.dp))
+      .border(
+        width = 1.dp,
+        brush = Brush.verticalGradient(
+          colors = listOf(
+            Color(0x55FFFFFF),
+            Color(0x1CFFFFFF),
+            Color(0x0AFFFFFF)
+          )
+        ),
+        shape = RoundedCornerShape(20.dp)
+      )
   ) {
     Column(
       modifier = Modifier.fillMaxWidth(),
@@ -211,7 +226,7 @@ fun IosListRow(
     Row(
       modifier = Modifier
         .fillMaxWidth()
-        .background(if (isPressed && onClick != null) Color(0x18FFFFFF) else Color.Transparent)
+        .background(if (isPressed && onClick != null) Color(0x20FFFFFF) else Color.Transparent)
         .padding(horizontal = 16.dp, vertical = 13.dp),
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.SpaceBetween
@@ -229,6 +244,7 @@ fun IosListRow(
             text = title,
             color = if (destructive) Color(0xFFFF453A) else Color.White,
             fontSize = 15.sp,
+            fontFamily = ThmanyahFontFamily,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -239,6 +255,7 @@ fun IosListRow(
               text = subtitle,
               color = Color(0xFF8E8E93),
               fontSize = 12.sp,
+              fontFamily = ThmanyahFontFamily,
               maxLines = 2,
               overflow = TextOverflow.Ellipsis,
               lineHeight = 16.sp
@@ -257,6 +274,7 @@ fun IosListRow(
             text = value,
             color = valueColor,
             fontSize = 13.5.sp,
+            fontFamily = ThmanyahFontFamily,
             fontWeight = FontWeight.Medium,
             textAlign = if (isRtl) TextAlign.Start else TextAlign.End
           )
@@ -280,7 +298,7 @@ fun IosListRow(
       HorizontalDivider(
         modifier = Modifier.padding(start = dividerStart, end = 0.dp),
         thickness = 0.5.dp,
-        color = Color(0x1FFFFFFF)
+        color = Color(0x18FFFFFF)
       )
     }
   }
@@ -414,6 +432,7 @@ fun IosSectionHeader(
         text = title,
         color = Color(0xFF98989F),
         fontSize = 13.sp,
+        fontFamily = ThmanyahFontFamily,
         fontWeight = FontWeight.Bold,
         letterSpacing = 0.3.sp
       )
@@ -424,6 +443,7 @@ fun IosSectionHeader(
         text = actionText,
         color = Color(0xFF0A84FF),
         fontSize = 12.5.sp,
+        fontFamily = ThmanyahFontFamily,
         fontWeight = FontWeight.SemiBold,
         modifier = Modifier.clickable { onActionClick() }
       )

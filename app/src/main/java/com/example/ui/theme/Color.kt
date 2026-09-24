@@ -64,10 +64,10 @@ object TodGradients {
     listOf(Color(0xFFFF1744), Color(0xFFD50000))
   )
   val CardGlass = Brush.verticalGradient(
-    listOf(Color(0xFF161622), Color(0xFF0C0C14))
+    listOf(Color(0x28FFFFFF), Color(0x14FFFFFF), Color(0x0C121624))
   )
   val SpecularCardBorder = Brush.verticalGradient(
-    listOf(Color(0x77FDB913), Color(0x2236364A), Color(0x05000000))
+    listOf(Color(0x55FFFFFF), Color(0x20FFFFFF), Color(0x0AFFFFFF))
   )
   val SpecularGlowBorder = Brush.verticalGradient(
     listOf(Color(0xAAFDB913), Color(0x33FDB913), Color(0x00000000))

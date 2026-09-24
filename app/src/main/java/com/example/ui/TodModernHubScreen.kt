@@ -161,7 +161,7 @@ fun TodModernHubScreen(
 
   // Categories & Channels
   val xtreamCategories = remember { mutableStateListOf<XtreamCategory>() }
-  val allChannels = remember { mutableStateListOf<XtreamChannel>() }
+  var allChannels by remember { mutableStateOf<List<XtreamChannel>>(emptyList()) }
 
   // Modals & Dialogs
   var showPlaylistsManagerModal by remember { mutableStateOf(false) }
@@ -208,8 +208,7 @@ fun TodModernHubScreen(
         val cachedDiskChannels = xtreamRepo.getCachedStreams(cacheKey)
         val cachedDiskCategories = xtreamRepo.getCachedCategories(cacheKey)
         if (cachedDiskChannels.isNotEmpty()) {
-          allChannels.clear()
-          allChannels.addAll(cachedDiskChannels)
+          allChannels = cachedDiskChannels
 
           xtreamCategories.clear()
           xtreamCategories.add(XtreamCategory("ALL", "جميع القنوات", cachedDiskChannels.size))
@@ -234,8 +233,7 @@ fun TodModernHubScreen(
       if (config.isM3u) {
         val res = xtreamRepo.parseM3uPlaylist(config.m3uUrl)
         res.onSuccess { streams ->
-          allChannels.clear()
-          allChannels.addAll(streams)
+          allChannels = streams
 
           val groupMap = streams.groupBy { it.categoryId ?: "عام" }
           xtreamCategories.clear()
@@ -280,8 +278,7 @@ fun TodModernHubScreen(
 
         if (streamsRes.isSuccess && streamsRes.getOrDefault(emptyList()).isNotEmpty()) {
           val streams = streamsRes.getOrDefault(emptyList())
-          allChannels.clear()
-          allChannels.addAll(streams)
+          allChannels = streams
 
           // Set Account Info from login or create dynamic active profile
           xtreamAccount = loginRes.getOrNull() ?: XtreamAccountInfo(
@@ -291,7 +288,15 @@ fun TodModernHubScreen(
             serverUrl = config.serverUrl
           )
 
-          // Build categories with robust trimming and fallback
+          // Build categories with robust single-pass frequency counting
+          val countMap = HashMap<String, Int>()
+          for (ch in streams) {
+            val cId = ch.categoryId?.trim()?.lowercase() ?: ""
+            if (cId.isNotEmpty()) {
+              countMap[cId] = (countMap[cId] ?: 0) + 1
+            }
+          }
+
           val cats = catsRes.getOrDefault(emptyList())
           xtreamCategories.clear()
           xtreamCategories.add(XtreamCategory("ALL", "جميع القنوات", streams.size))
@@ -299,11 +304,7 @@ fun TodModernHubScreen(
           if (cats.isNotEmpty()) {
             cats.forEach { cat ->
               val catId = cat.categoryId.trim()
-              val count = streams.count { ch ->
-                val chCat = ch.categoryId?.trim() ?: ""
-                chCat.equals(catId, ignoreCase = true) ||
-                (chCat.toIntOrNull() != null && catId.toIntOrNull() != null && chCat.toInt() == catId.toInt())
-              }
+              val count = countMap[catId.lowercase()] ?: 0
               if (count > 0) {
                 xtreamCategories.add(XtreamCategory(catId, cat.categoryName.trim(), count))
               }
@@ -354,7 +355,7 @@ fun TodModernHubScreen(
     }
   }
 
-  // Build high-performance playback list
+  // Build high-performance playback list with logos and full channel context
   val buildOptimizedPlaybackList: (XtreamChannel, List<XtreamChannel>, String) -> Pair<BroadcastStream, List<BroadcastStream>> =
     { clickedChannel, channelList, categoryName ->
       val targetStream = BroadcastStream(
@@ -363,17 +364,20 @@ fun TodModernHubScreen(
         subtitle = categoryName,
         category = categoryName,
         streamUrl = clickedChannel.playUrl,
-        isLive = true
+        isLive = true,
+        logoUrl = clickedChannel.iconUrl
       )
 
-      val fullStreams = channelList.map { ch ->
+      val effectiveList = if (channelList.size > 1) channelList else allChannels
+      val fullStreams = effectiveList.map { ch ->
         BroadcastStream(
           id = ch.streamId,
           title = ch.name,
           subtitle = categoryName,
           category = categoryName,
           streamUrl = ch.playUrl,
-          isLive = true
+          isLive = true,
+          logoUrl = ch.iconUrl
         )
       }
 
@@ -385,9 +389,7 @@ fun TodModernHubScreen(
     color = DarkBg
   ) {
     Box(
-      modifier = Modifier
-        .fillMaxSize()
-        .statusBarsPadding()
+      modifier = Modifier.fillMaxSize()
     ) {
       // ========================================================
       // MAIN SCREEN SWITCHER
