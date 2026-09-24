@@ -62,6 +62,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
@@ -117,37 +118,38 @@ fun TodLogo(
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.Center
   ) {
-    // Elegant Logo Icon Emblem
+    // Elegant Apple Liquid Glass Logo Icon Emblem
     Box(
       modifier = Modifier
         .size((fontSize + 12).dp)
-        .clip(RoundedCornerShape(8.dp))
+        .shadow(6.dp, RoundedCornerShape(10.dp), spotColor = Color(0xFF007AFF).copy(alpha = 0.4f))
+        .clip(RoundedCornerShape(10.dp))
         .background(
           Brush.linearGradient(
-            listOf(TodGold, Color(0xFFFF9800))
+            listOf(Color(0xFF0A84FF), Color(0xFF0055D4))
           )
         )
-        .border(1.dp, TodGoldGlow.copy(alpha = 0.8f), RoundedCornerShape(8.dp))
+        .border(1.dp, Color(0x66FFFFFF), RoundedCornerShape(10.dp))
         .padding(2.dp),
       contentAlignment = Alignment.Center
     ) {
       Image(
         painter = painterResource(id = R.drawable.jawwy_icon),
-        contentDescription = "Jawwy TV Logo",
-        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)),
+        contentDescription = "IPTV Logo",
+        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
         contentScale = ContentScale.Crop
       )
     }
 
     Spacer(modifier = Modifier.width(8.dp))
 
-    // Jawwy TV Text
+    // Modern IPTV Brand Text
     Row(
       verticalAlignment = Alignment.CenterVertically
     ) {
       Text(
-        text = "Jawwy",
-        color = TodGold,
+        text = "IPTV",
+        color = Color.White,
         fontSize = fontSize.sp,
         fontWeight = FontWeight.Black,
         letterSpacing = 0.5.sp,
@@ -155,9 +157,9 @@ fun TodLogo(
       )
       Spacer(modifier = Modifier.width(4.dp))
       Text(
-        text = "TV",
-        color = Color.White,
-        fontSize = fontSize.sp,
+        text = "PRO",
+        color = Color(0xFF64D2FF),
+        fontSize = (fontSize - 2).sp,
         fontWeight = FontWeight.Black,
         letterSpacing = 0.5.sp,
         fontFamily = AppFontFamily
@@ -179,26 +181,27 @@ enum class TodNavTab {
 fun TodHomeNavIcon(
   isSelected: Boolean,
   activeColor: Color = Color(0xFFFFB800),
-  inactiveColor: Color = Color(0xFF9E9EA8),
+  inactiveColor: Color = Color(0xFFB0B0BC),
   modifier: Modifier = Modifier
 ) {
   Box(
     modifier = modifier
-      .size(40.dp)
+      .size(42.dp)
+      .shadow(if (isSelected) 6.dp else 2.dp, RoundedCornerShape(14.dp), spotColor = if (isSelected) TodGold.copy(alpha = 0.5f) else Color.Black.copy(alpha = 0.3f))
       .clip(RoundedCornerShape(14.dp))
       .then(
         if (isSelected) {
           Modifier
             .background(
-              Brush.linearGradient(
-                listOf(Color(0x35FFAE00), Color(0x18FFAE00))
+              Brush.verticalGradient(
+                listOf(Color(0x60FFAE00), Color(0x30FFAE00), Color(0x15FFAE00))
               )
             )
-            .border(1.dp, Color(0x66FFAE00), RoundedCornerShape(14.dp))
+            .border(1.dp, Brush.verticalGradient(listOf(Color(0xFFFFDF7A), Color(0x40FFAE00))), RoundedCornerShape(14.dp))
         } else {
           Modifier
-            .background(Color(0x15FFFFFF))
-            .border(0.5.dp, Color(0x1AFFFFFF), RoundedCornerShape(14.dp))
+            .background(Brush.verticalGradient(listOf(Color(0x30FFFFFF), Color(0x10FFFFFF))))
+            .border(0.75.dp, Color(0x30FFFFFF), RoundedCornerShape(14.dp))
         }
       ),
     contentAlignment = Alignment.Center
@@ -216,26 +219,27 @@ fun TodHomeNavIcon(
 fun TodSearchNavIcon(
   isSelected: Boolean,
   activeColor: Color = Color(0xFFFFB800),
-  inactiveColor: Color = Color(0xFF9E9EA8),
+  inactiveColor: Color = Color(0xFFB0B0BC),
   modifier: Modifier = Modifier
 ) {
   Box(
     modifier = modifier
-      .size(40.dp)
+      .size(42.dp)
+      .shadow(if (isSelected) 6.dp else 2.dp, RoundedCornerShape(14.dp), spotColor = if (isSelected) TodGold.copy(alpha = 0.5f) else Color.Black.copy(alpha = 0.3f))
       .clip(RoundedCornerShape(14.dp))
       .then(
         if (isSelected) {
           Modifier
             .background(
-              Brush.linearGradient(
-                listOf(Color(0x35FFAE00), Color(0x18FFAE00))
+              Brush.verticalGradient(
+                listOf(Color(0x60FFAE00), Color(0x30FFAE00), Color(0x15FFAE00))
               )
             )
-            .border(1.dp, Color(0x66FFAE00), RoundedCornerShape(14.dp))
+            .border(1.dp, Brush.verticalGradient(listOf(Color(0xFFFFDF7A), Color(0x40FFAE00))), RoundedCornerShape(14.dp))
         } else {
           Modifier
-            .background(Color(0x15FFFFFF))
-            .border(0.5.dp, Color(0x1AFFFFFF), RoundedCornerShape(14.dp))
+            .background(Brush.verticalGradient(listOf(Color(0x30FFFFFF), Color(0x10FFFFFF))))
+            .border(0.75.dp, Color(0x30FFFFFF), RoundedCornerShape(14.dp))
         }
       ),
     contentAlignment = Alignment.Center
@@ -253,26 +257,27 @@ fun TodSearchNavIcon(
 fun TodMoreNavIcon(
   isSelected: Boolean,
   activeColor: Color = Color(0xFFFFB800),
-  inactiveColor: Color = Color(0xFF9E9EA8),
+  inactiveColor: Color = Color(0xFFB0B0BC),
   modifier: Modifier = Modifier
 ) {
   Box(
     modifier = modifier
-      .size(40.dp)
+      .size(42.dp)
+      .shadow(if (isSelected) 6.dp else 2.dp, RoundedCornerShape(14.dp), spotColor = if (isSelected) TodGold.copy(alpha = 0.5f) else Color.Black.copy(alpha = 0.3f))
       .clip(RoundedCornerShape(14.dp))
       .then(
         if (isSelected) {
           Modifier
             .background(
-              Brush.linearGradient(
-                listOf(Color(0x35FFAE00), Color(0x18FFAE00))
+              Brush.verticalGradient(
+                listOf(Color(0x60FFAE00), Color(0x30FFAE00), Color(0x15FFAE00))
               )
             )
-            .border(1.dp, Color(0x66FFAE00), RoundedCornerShape(14.dp))
+            .border(1.dp, Brush.verticalGradient(listOf(Color(0xFFFFDF7A), Color(0x40FFAE00))), RoundedCornerShape(14.dp))
         } else {
           Modifier
-            .background(Color(0x15FFFFFF))
-            .border(0.5.dp, Color(0x1AFFFFFF), RoundedCornerShape(14.dp))
+            .background(Brush.verticalGradient(listOf(Color(0x30FFFFFF), Color(0x10FFFFFF))))
+            .border(0.75.dp, Color(0x30FFFFFF), RoundedCornerShape(14.dp))
         }
       ),
     contentAlignment = Alignment.Center
@@ -287,13 +292,7 @@ fun TodMoreNavIcon(
 }
 
 /**
- * Modern iOS 18 Ultra-Sleek Floating Navigation Dock (Icon-Only Minimalist Dock)
- * Features:
- * - Clean floating rounded capsule geometry (RoundedCornerShape(32.dp))
- * - Translucent acrylic backdrop with subtle hairline reflection
- * - Physics-based iOS Spring bounce on press (scales to 0.88x) with indication = null (NO white flash)
- * - Luminous active capsule indicator with smooth animated scale and glow
- * - Dynamic icon morphing and zero clutter (No text labels)
+ * Modern iOS Liquid Glass Floating Navigation Dock (Inspired by Images 6, 8, 9)
  */
 @Composable
 fun TodBottomNavBar(
@@ -304,40 +303,26 @@ fun TodBottomNavBar(
   Box(
     modifier = modifier
       .fillMaxWidth()
-      .padding(horizontal = 24.dp, vertical = 6.dp),
+      .padding(horizontal = 20.dp, vertical = 6.dp),
     contentAlignment = Alignment.Center
   ) {
     Box(
       modifier = Modifier
         .widthIn(max = 380.dp)
         .fillMaxWidth()
-        .height(58.dp)
+        .height(64.dp)
         .shadow(
-          elevation = 24.dp,
-          shape = RoundedCornerShape(29.dp),
-          spotColor = Color(0xBB000000),
-          ambientColor = Color(0x77000000)
+          elevation = 28.dp,
+          shape = RoundedCornerShape(32.dp),
+          spotColor = Color(0xD0000000),
+          ambientColor = Color(0x80000000)
         )
-        .clip(RoundedCornerShape(29.dp))
-        .background(
-          Brush.verticalGradient(
-            colors = listOf(
-              Color(0xF0181822),
-              Color(0xFA0E0E14)
-            )
-          )
+        .liquidGlassEffect(
+          shape = RoundedCornerShape(32.dp),
+          isElevated = true,
+          showTopGlare = true
         )
-        .border(
-          width = 0.75.dp,
-          brush = Brush.verticalGradient(
-            colors = listOf(
-              Color(0x40FFFFFF),
-              Color(0x10FFFFFF)
-            )
-          ),
-          shape = RoundedCornerShape(29.dp)
-        )
-        .padding(horizontal = 8.dp, vertical = 6.dp),
+        .padding(horizontal = 10.dp, vertical = 6.dp),
       contentAlignment = Alignment.Center
     ) {
       Row(
@@ -451,24 +436,19 @@ fun TodIosFloatingMiniPlayer(
   onClose: (() -> Unit)? = null,
   modifier: Modifier = Modifier
 ) {
-  Surface(
+  Box(
     modifier = modifier
       .fillMaxWidth()
       .padding(horizontal = 16.dp, vertical = 4.dp)
-      .height(60.dp)
-      .shadow(12.dp, shape = RoundedCornerShape(26.dp), spotColor = Color.Black.copy(alpha = 0.5f))
-      .clickable(onClick = onClick),
-    shape = RoundedCornerShape(26.dp),
-    color = Color(0xEC22222E),
-    border = androidx.compose.foundation.BorderStroke(
-      1.dp,
-      Brush.verticalGradient(listOf(Color(0x45FFFFFF), Color(0x12FFFFFF)))
-    )
+      .height(64.dp)
+      .shadow(16.dp, shape = RoundedCornerShape(28.dp), spotColor = Color(0xBB000000))
+      .liquidGlassEffect(shape = RoundedCornerShape(28.dp), isElevated = true)
+      .clickable(onClick = onClick)
   ) {
     Row(
       modifier = Modifier
         .fillMaxSize()
-        .padding(horizontal = 10.dp),
+        .padding(horizontal = 12.dp),
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -479,9 +459,11 @@ fun TodIosFloatingMiniPlayer(
       ) {
         Box(
           modifier = Modifier
-            .size(42.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(Color(0xFF2C2C38)),
+            .size(44.dp)
+            .shadow(4.dp, RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFF2C2C38))
+            .border(0.75.dp, Color(0x40FFFFFF), RoundedCornerShape(12.dp)),
           contentAlignment = Alignment.Center
         ) {
           if (!stream.logoUrl.isNullOrBlank()) {
@@ -496,12 +478,12 @@ fun TodIosFloatingMiniPlayer(
               imageVector = Icons.Default.Tv,
               contentDescription = null,
               tint = TodGold,
-              modifier = Modifier.size(22.dp)
+              modifier = Modifier.size(24.dp)
             )
           }
         }
 
-        Spacer(modifier = Modifier.width(10.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
         // Center: Title + Subtitle
         Column(
@@ -511,15 +493,15 @@ fun TodIosFloatingMiniPlayer(
           Text(
             text = stream.title.ifBlank { "بث مباشر نشط" },
             color = Color.White,
-            fontSize = 13.5.sp,
+            fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
           )
           Text(
             text = stream.subtitle.ifBlank { if (stream.isLive) "بث مباشر الآن" else "جاهز للتشغيل" },
-            color = Color(0xFFAAAAAA),
-            fontSize = 11.5.sp,
+            color = Color(0xFFB0B0BC),
+            fontSize = 12.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
           )
@@ -529,26 +511,30 @@ fun TodIosFloatingMiniPlayer(
       // Right: Play/Pause & Skip 30s Buttons (from images (5).jpeg)
       Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
       ) {
         Box(
           modifier = Modifier
             .iosBounceClick(scaleDown = 0.85f) { onTogglePlayPause() }
-            .size(36.dp),
+            .size(38.dp)
+            .liquidGlassEffect(shape = CircleShape)
+            .border(0.75.dp, Color(0x55FFFFFF), CircleShape),
           contentAlignment = Alignment.Center
         ) {
           Icon(
             imageVector = if (isPlaying) Icons.Default.Close else Icons.Default.PlayArrow,
             contentDescription = if (isPlaying) "إيقاف مؤقت" else "تشغيل",
             tint = Color.White,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(22.dp)
           )
         }
 
         Box(
           modifier = Modifier
             .iosBounceClick(scaleDown = 0.85f) { onSeekForward30() }
-            .size(36.dp),
+            .size(38.dp)
+            .liquidGlassEffect(shape = CircleShape)
+            .border(0.75.dp, Color(0x55FFFFFF), CircleShape),
           contentAlignment = Alignment.Center
         ) {
           Box(contentAlignment = Alignment.Center) {
@@ -572,8 +558,7 @@ fun TodIosFloatingMiniPlayer(
 }
 
 /**
- * iOS Liquid Slider (Bottom of images (5).jpeg)
- * Features an authentic liquid smooth pill thumb and dynamic glowing track.
+ * iOS Liquid Slider (Matching WWDC25 Liquid Glass Slider in Image 6)
  */
 @Composable
 fun IosLiquidSlider(
@@ -588,7 +573,7 @@ fun IosLiquidSlider(
   BoxWithConstraints(
     modifier = modifier
       .fillMaxWidth()
-      .height(28.dp)
+      .height(34.dp)
       .pointerInput(Unit) {
         detectHorizontalDragGestures(
           onDragStart = { offset ->
@@ -616,45 +601,69 @@ fun IosLiquidSlider(
     val totalWidth = maxWidth
     val currentX = totalWidth * value.coerceIn(0f, 1f)
 
-    // Base Track
+    // Base Translucent Track with Specular Reflection
     Box(
       modifier = Modifier
         .fillMaxWidth()
-        .height(4.5.dp)
-        .clip(RoundedCornerShape(3.dp))
-        .background(trackColor)
+        .height(8.dp)
+        .clip(RoundedCornerShape(4.dp))
+        .background(
+          Brush.verticalGradient(
+            listOf(Color(0x50FFFFFF), Color(0x20FFFFFF), Color(0x10000000))
+          )
+        )
+        .border(0.5.dp, Color(0x35FFFFFF), RoundedCornerShape(4.dp))
     )
 
-    // Active Filled Track
+    // Active Liquid Glowing Filled Track
     Box(
       modifier = Modifier
         .width(currentX)
-        .height(4.5.dp)
-        .clip(RoundedCornerShape(3.dp))
+        .height(8.dp)
+        .clip(RoundedCornerShape(4.dp))
         .background(
           Brush.horizontalGradient(
             listOf(progressColor.copy(alpha = 0.85f), progressColor)
           )
         )
+        .drawBehind {
+          // Inner gloss shine
+          drawRoundRect(
+            brush = Brush.verticalGradient(
+              listOf(Color(0x80FFFFFF), Color.Transparent)
+            ),
+            cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
+          )
+        }
     )
 
-    // Smooth Liquid Pill Thumb (from images (5).jpeg)
+    // Smooth Liquid Pill Thumb with Specular Arc (Matching WWDC25 Liquid Glass)
     Box(
       modifier = Modifier
-        .padding(start = (currentX - 18.dp).coerceAtLeast(0.dp))
-        .width(36.dp)
-        .height(18.dp)
-        .shadow(8.dp, shape = RoundedCornerShape(9.dp), spotColor = progressColor.copy(alpha = 0.5f))
-        .clip(RoundedCornerShape(9.dp))
+        .padding(start = (currentX - 20.dp).coerceAtLeast(0.dp))
+        .width(40.dp)
+        .height(24.dp)
+        .shadow(10.dp, shape = RoundedCornerShape(12.dp), spotColor = progressColor.copy(alpha = 0.6f))
+        .clip(RoundedCornerShape(12.dp))
         .background(
           Brush.verticalGradient(
             listOf(
               Color(0xFFFFFFFF),
-              Color(0xFFE0E5F0)
+              Color(0xFFE8EEF8)
             )
           )
         )
-        .border(1.dp, Color(0x60FFFFFF), RoundedCornerShape(9.dp))
+        .drawBehind {
+          drawRoundRect(
+            brush = Brush.verticalGradient(
+              listOf(Color(0xAAFFFFFF), Color.Transparent),
+              startY = 0f,
+              endY = drawContext.size.height * 0.5f
+            ),
+            cornerRadius = CornerRadius(12.dp.toPx(), 12.dp.toPx())
+          )
+        }
+        .border(1.dp, Color(0x80FFFFFF), RoundedCornerShape(12.dp))
     )
   }
 }

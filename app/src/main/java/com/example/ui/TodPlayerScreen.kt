@@ -146,12 +146,10 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
     }
   }
 
-  Box(
-    modifier = modifier
-      .fillMaxSize()
-      .background(Color.Black)
-  ) {
-    when (screenDestination) {
+    FluidMeshBackground(
+      modifier = modifier.fillMaxSize()
+    ) {
+      when (screenDestination) {
       ScreenDestination.START_INPUT -> {
         // 1. Redesigned Hub with Xtream Codes & Direct Streams (No Presets)
         TodModernHubScreen(

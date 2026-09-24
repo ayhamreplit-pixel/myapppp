@@ -83,7 +83,6 @@ import com.example.model.BroadcastStream
 import com.example.model.StreamFormat
 import com.example.model.StreamUrlParser
 import com.example.player.XtreamRepository
-import com.example.ui.theme.IosDarkBackground
 import com.example.ui.theme.IosGlassBorderSubtle
 import com.example.ui.theme.IosLabelPrimary
 import com.example.ui.theme.IosLabelSecondary
@@ -200,56 +199,33 @@ fun TodQuickLinkScreen(
     onPlayStream(stream, listOf(stream))
   }
 
-  Box(
-    modifier = modifier
-      .fillMaxSize()
-      .background(Color(0xFF000000))
-  ) {
-    // Ambient iOS Specular Glow Circles in background
-    Box(
-      modifier = Modifier
-        .size(340.dp)
-        .align(Alignment.TopEnd)
-        .background(
-          Brush.radialGradient(
-            colors = listOf(Color(0x280A84FF), Color.Transparent)
-          )
-        )
-    )
-    Box(
-      modifier = Modifier
-        .size(280.dp)
-        .align(Alignment.BottomStart)
-        .background(
-          Brush.radialGradient(
-            colors = listOf(Color(0x1C5E5CE6), Color.Transparent)
-          )
-        )
-    )
-
-    Column(
-      modifier = Modifier
-        .fillMaxSize()
-        .navigationBarsPadding()
+    FluidMeshBackground(
+      modifier = modifier.fillMaxSize(),
+      ambientAlpha = 0.70f
     ) {
-      // ==========================================
-      // 1. Apple iOS Seamless Navigation Bar (Continuous Edge-to-Edge)
-      // ==========================================
       Column(
         modifier = Modifier
-          .fillMaxWidth()
-          .background(
-            Brush.verticalGradient(
-              colors = listOf(
-                Color(0xEE12131C),
-                Color(0x880D0E15),
-                Color.Transparent
+          .fillMaxSize()
+          .navigationBarsPadding()
+      ) {
+        // ==========================================
+        // 1. Apple iOS Seamless Navigation Bar (Continuous Edge-to-Edge Liquid Glass)
+        // ==========================================
+        Column(
+          modifier = Modifier
+            .fillMaxWidth()
+            .background(
+              Brush.verticalGradient(
+                colors = listOf(
+                  Color(0x40FFFFFF),
+                  Color(0x18FFFFFF),
+                  Color.Transparent
+                )
               )
             )
-          )
-          .statusBarsPadding()
-          .padding(horizontal = 16.dp, vertical = 8.dp)
-      ) {
+            .statusBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
         Row(
           modifier = Modifier.fillMaxWidth(),
           verticalAlignment = Alignment.CenterVertically,

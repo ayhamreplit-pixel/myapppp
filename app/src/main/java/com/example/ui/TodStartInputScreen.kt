@@ -144,10 +144,9 @@ fun TodStartInputScreen(
     }
   }
 
-  Box(
-    modifier = modifier
-      .fillMaxSize()
-      .background(DarkBg)
+  FluidMeshBackground(
+    modifier = modifier.fillMaxSize(),
+    ambientAlpha = 0.35f
   ) {
     Column(
       modifier = Modifier
@@ -156,56 +155,70 @@ fun TodStartInputScreen(
         .navigationBarsPadding()
         .imePadding()
     ) {
-      // Top App Bar (Styled after Screenshot 1: terracotta/warm header with back button)
+      // Top App Bar (Liquid Glass Modern Header)
       Box(
         modifier = Modifier
           .fillMaxWidth()
-          .background(
-            Brush.horizontalGradient(
-              colors = listOf(Color(0xFF9E4738), Color(0xFFB85949), Color(0xFF8D3E32))
-            )
+          .liquidGlassEffect(
+            shape = RoundedCornerShape(bottomStart = 22.dp, bottomEnd = 22.dp),
+            isElevated = true
           )
-          .padding(horizontal = 8.dp, vertical = 10.dp)
+          .padding(horizontal = 14.dp, vertical = 12.dp)
       ) {
         Row(
           verticalAlignment = Alignment.CenterVertically,
           modifier = Modifier.fillMaxWidth()
         ) {
-          IconButton(onClick = { onOpenPresetCatalog() }) {
+          Box(
+            modifier = Modifier
+              .iosBounceClick(scaleDown = 0.88f) { onOpenPresetCatalog() }
+              .size(38.dp)
+              .clip(CircleShape)
+              .background(Color(0x28FFFFFF)),
+            contentAlignment = Alignment.Center
+          ) {
             Icon(
               imageVector = Icons.AutoMirrored.Filled.ArrowBack,
               contentDescription = "Catalog",
-              tint = Color.White
+              tint = Color.White,
+              modifier = Modifier.size(20.dp)
             )
           }
-          Spacer(modifier = Modifier.width(8.dp))
-          Text(
-            text = "Media3 Simple",
-            color = Color.White,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-          )
+          Spacer(modifier = Modifier.width(10.dp))
+          Column {
+            Text(
+              text = "Media3 Live Stream",
+              color = Color.White,
+              fontSize = 18.sp,
+              fontWeight = FontWeight.Bold
+            )
+            Text(
+              text = "مشغل البث المباشر والروابط السريعة",
+              color = Color(0xFF8E8E93),
+              fontSize = 11.sp,
+              fontWeight = FontWeight.Medium
+            )
+          }
 
           Spacer(modifier = Modifier.weight(1f))
 
           // Quick Preset Catalog Button
           Box(
             modifier = Modifier
-              .clip(RoundedCornerShape(20.dp))
-              .background(Color(0x33000000))
-              .clickable { onOpenPresetCatalog() }
-              .padding(horizontal = 12.dp, vertical = 6.dp)
+              .iosBounceClick(scaleDown = 0.92f) { onOpenPresetCatalog() }
+              .liquidGlassEffect(shape = RoundedCornerShape(20.dp))
+              .padding(horizontal = 12.dp, vertical = 7.dp)
           ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
               Icon(
                 Icons.Default.Tv,
                 contentDescription = null,
-                tint = Color.White,
+                tint = Color(0xFF0A84FF),
                 modifier = Modifier.size(16.dp)
               )
               Spacer(modifier = Modifier.width(6.dp))
               Text(
-                text = "قنوات Jawwy TV",
+                text = "قنوات TOD & beIN",
                 color = Color.White,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold
@@ -414,11 +427,11 @@ private fun FormInputField(
   Column(modifier = Modifier.fillMaxWidth()) {
     Text(
       text = label,
-      color = Color(0xFF6B8299),
-      fontSize = 14.sp,
+      color = Color(0xFF8E8E93),
+      fontSize = 13.sp,
       fontWeight = FontWeight.SemiBold,
-      letterSpacing = 0.5.sp,
-      modifier = Modifier.padding(bottom = 2.dp, start = 2.dp)
+      letterSpacing = 0.4.sp,
+      modifier = Modifier.padding(bottom = 4.dp, start = 4.dp)
     )
 
     TextField(
@@ -426,16 +439,21 @@ private fun FormInputField(
       onValueChange = onValueChange,
       modifier = Modifier
         .fillMaxWidth()
-        .clip(RoundedCornerShape(6.dp))
-        .border(1.dp, Color(0xFF2C3E50), RoundedCornerShape(6.dp)),
+        .liquidGlassEffect(
+          shape = RoundedCornerShape(14.dp),
+          glassColor = Color(0x18FFFFFF),
+          borderBrush = Brush.verticalGradient(
+            listOf(Color(0x50FFFFFF), Color(0x15FFFFFF))
+          )
+        ),
       placeholder = {
-        Text(placeholder, color = Color(0xFF5A6E82), fontSize = 13.sp)
+        Text(placeholder, color = Color(0xFF636366), fontSize = 13.sp)
       },
       trailingIcon = {
         Row(verticalAlignment = Alignment.CenterVertically) {
           if (value.isNotEmpty()) {
             IconButton(onClick = { onValueChange("") }, modifier = Modifier.size(32.dp)) {
-              Icon(Icons.Default.Clear, contentDescription = "Clear", tint = Color(0xFF8B9BAE), modifier = Modifier.size(16.dp))
+              Icon(Icons.Default.Clear, contentDescription = "Clear", tint = Color(0xFF8E8E93), modifier = Modifier.size(16.dp))
             }
           }
           trailingAction?.invoke()
@@ -448,13 +466,13 @@ private fun FormInputField(
         imeAction = ImeAction.Next
       ),
       colors = TextFieldDefaults.colors(
-        focusedContainerColor = Color(0xFF131B2A),
-        unfocusedContainerColor = Color(0xFF111724),
+        focusedContainerColor = Color.Transparent,
+        unfocusedContainerColor = Color.Transparent,
         focusedTextColor = Color.White,
         unfocusedTextColor = Color(0xFFE2E8F0),
-        focusedIndicatorColor = Color(0xFFA55B4B),
-        unfocusedIndicatorColor = Color(0xFF2C3E50),
-        cursorColor = Color(0xFFA55B4B)
+        focusedIndicatorColor = Color.Transparent,
+        unfocusedIndicatorColor = Color.Transparent,
+        cursorColor = Color(0xFF0A84FF)
       )
     )
   }
@@ -465,22 +483,26 @@ private fun SamplePresetButton(
   label: String,
   onClick: () -> Unit
 ) {
-  Button(
-    onClick = onClick,
+  Box(
     modifier = Modifier
       .fillMaxWidth()
-      .height(48.dp),
-    shape = RoundedCornerShape(6.dp),
-    colors = ButtonDefaults.buttonColors(
-      containerColor = Color(0xFFC7CDD3)
-    )
+      .height(48.dp)
+      .iosBounceClick(scaleDown = 0.96f, onClick = onClick)
+      .liquidGlassEffect(
+        shape = RoundedCornerShape(14.dp),
+        glassColor = Color(0x24FFFFFF),
+        borderBrush = Brush.verticalGradient(
+          listOf(Color(0x60FFFFFF), Color(0x20FFFFFF))
+        )
+      ),
+    contentAlignment = Alignment.Center
   ) {
     Text(
       text = label,
-      color = Color(0xFF232A32),
-      fontSize = 14.sp,
+      color = Color.White,
+      fontSize = 13.5.sp,
       fontWeight = FontWeight.Bold,
-      letterSpacing = 0.5.sp
+      letterSpacing = 0.3.sp
     )
   }
 }

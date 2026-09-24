@@ -40,8 +40,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -53,6 +55,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.theme.IosSystemBlue
+import com.example.ui.theme.IosSystemGreen
 import com.example.ui.theme.ThmanyahFontFamily
 import com.example.ui.theme.TodGold
 import com.example.ui.theme.TodGradients
@@ -62,14 +66,20 @@ import com.example.ui.theme.TodGradients
  */
 object IosBadgeColors {
   val Blue = Brush.linearGradient(listOf(Color(0xFF0A84FF), Color(0xFF0055D4)))
+  val Cyan = Brush.linearGradient(listOf(Color(0xFF00F0FF), Color(0xFF0091FF)))
   val Green = Brush.linearGradient(listOf(Color(0xFF30D158), Color(0xFF1E8238)))
+  val Mint = Brush.linearGradient(listOf(Color(0xFF00C7BE), Color(0xFF007A75)))
   val Orange = Brush.linearGradient(listOf(Color(0xFFFF9F0A), Color(0xFFD66000)))
   val Red = Brush.linearGradient(listOf(Color(0xFFFF453A), Color(0xFFC0150D)))
   val Purple = Brush.linearGradient(listOf(Color(0xFFBF5AF2), Color(0xFF7A24A6)))
   val Indigo = Brush.linearGradient(listOf(Color(0xFF5E5CE6), Color(0xFF3835B3)))
   val Teal = Brush.linearGradient(listOf(Color(0xFF64D2FF), Color(0xFF0E85B8)))
   val Pink = Brush.linearGradient(listOf(Color(0xFFFF375F), Color(0xFFB80B32)))
+  val Rose = Brush.linearGradient(listOf(Color(0xFFFF2D55), Color(0xFF990022)))
+  val Sunset = Brush.linearGradient(listOf(Color(0xFFFF6B6B), Color(0xFFFF8E53)))
+  val Amber = Brush.linearGradient(listOf(Color(0xFFFFB300), Color(0xFFE65100)))
   val Slate = Brush.linearGradient(listOf(Color(0xFF8E8E93), Color(0xFF48484A)))
+  val Charcoal = Brush.linearGradient(listOf(Color(0xFF3A3A3C), Color(0xFF1C1C1E)))
   val Gold = TodGradients.LiquidGold
 }
 
@@ -78,7 +88,7 @@ object IosBadgeColors {
  */
 fun Modifier.iosBounceClick(
   scaleDown: Float = 0.94f,
-  alphaDown: Float = 0.80f,
+  alphaDown: Float = 0.85f,
   onClick: (() -> Unit)? = null
 ): Modifier = composed {
   val interactionSource = remember { MutableInteractionSource() }
@@ -91,7 +101,7 @@ fun Modifier.iosBounceClick(
     ),
     label = "iosBounceScale"
   )
-  val alpha by animateFloatAsState(
+  val alphaVal by animateFloatAsState(
     targetValue = if (isPressed) alphaDown else 1.0f,
     animationSpec = spring(
       dampingRatio = Spring.DampingRatioNoBouncy,
@@ -100,22 +110,21 @@ fun Modifier.iosBounceClick(
     label = "iosBounceAlpha"
   )
 
-  this
-    .scale(scale)
-    .alpha(alpha)
-    .then(
-      if (onClick != null) {
-        Modifier.clickable(
-          interactionSource = interactionSource,
-          indication = null,
-          onClick = onClick
-        )
-      } else Modifier
+  val clickModifier: Modifier = if (onClick != null) {
+    Modifier.clickable(
+      interactionSource = interactionSource,
+      indication = null,
+      onClick = onClick
     )
+  } else {
+    Modifier
+  }
+
+  this.scale(scale).alpha(alphaVal).then(clickModifier)
 }
 
 /**
- * iOS Iconic Rounded Squircle Icon Badge
+ * iOS Liquid Glass Iconic Rounded Squircle Icon Badge
  */
 @Composable
 fun IosIconBadge(
@@ -123,15 +132,27 @@ fun IosIconBadge(
   background: Brush,
   modifier: Modifier = Modifier,
   tint: Color = Color.White,
-  size: Dp = 32.dp,
+  size: Dp = 34.dp,
   iconSize: Dp = 19.dp
 ) {
   Box(
     modifier = modifier
       .size(size)
-      .clip(RoundedCornerShape(8.dp))
+      .shadow(4.dp, RoundedCornerShape(10.dp), spotColor = Color.Black.copy(alpha = 0.4f))
+      .clip(RoundedCornerShape(10.dp))
       .background(background)
-      .border(0.5.dp, Color(0x33FFFFFF), RoundedCornerShape(8.dp)),
+      .drawBehind {
+        // Top specular glare curve
+        drawRoundRect(
+          brush = Brush.verticalGradient(
+            colors = listOf(Color(0x77FFFFFF), Color.Transparent),
+            startY = 0f,
+            endY = drawContext.size.height * 0.45f
+          ),
+          cornerRadius = CornerRadius(10.dp.toPx(), 10.dp.toPx())
+        )
+      }
+      .border(0.75.dp, Color(0x66FFFFFF), RoundedCornerShape(10.dp)),
     contentAlignment = Alignment.Center
   ) {
     Icon(
@@ -144,7 +165,7 @@ fun IosIconBadge(
 }
 
 /**
- * Apple iOS Inset Grouped Card Container
+ * Apple iOS Inset Grouped Liquid Glass Container
  */
 @Composable
 fun IosListGroup(
@@ -154,27 +175,8 @@ fun IosListGroup(
   Box(
     modifier = modifier
       .fillMaxWidth()
-      .clip(RoundedCornerShape(20.dp))
-      .background(
-        Brush.verticalGradient(
-          colors = listOf(
-            Color(0x28FFFFFF),
-            Color(0x14FFFFFF),
-            Color(0x0C121724)
-          )
-        )
-      )
-      .border(
-        width = 1.dp,
-        brush = Brush.verticalGradient(
-          colors = listOf(
-            Color(0x55FFFFFF),
-            Color(0x1CFFFFFF),
-            Color(0x0AFFFFFF)
-          )
-        ),
-        shape = RoundedCornerShape(20.dp)
-      )
+      .shadow(12.dp, RoundedCornerShape(24.dp), spotColor = Color(0x60000000))
+      .liquidGlassEffect(shape = RoundedCornerShape(24.dp), isElevated = true)
   ) {
     Column(
       modifier = Modifier.fillMaxWidth(),
@@ -184,7 +186,7 @@ fun IosListGroup(
 }
 
 /**
- * Apple iOS Inset Grouped List Row
+ * Apple iOS Inset Grouped Liquid Glass List Row
  */
 @Composable
 fun IosListRow(
@@ -192,7 +194,7 @@ fun IosListRow(
   modifier: Modifier = Modifier,
   subtitle: String? = null,
   value: String? = null,
-  valueColor: Color = Color(0xFF8E8E93),
+  valueColor: Color = Color(0xFF9E9EA7),
   iconBadge: (@Composable () -> Unit)? = null,
   trailing: (@Composable () -> Unit)? = null,
   showChevron: Boolean = true,
@@ -226,7 +228,7 @@ fun IosListRow(
     Row(
       modifier = Modifier
         .fillMaxWidth()
-        .background(if (isPressed && onClick != null) Color(0x20FFFFFF) else Color.Transparent)
+        .background(if (isPressed && onClick != null) Color(0x28FFFFFF) else Color.Transparent)
         .padding(horizontal = 16.dp, vertical = 13.dp),
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.SpaceBetween
@@ -286,7 +288,7 @@ fun IosListRow(
           Icon(
             imageVector = if (isRtl) Icons.AutoMirrored.Filled.KeyboardArrowLeft else Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
-            tint = Color(0xFF5C5C62),
+            tint = Color(0xFF6C6C75),
             modifier = Modifier.size(18.dp)
           )
         }
@@ -294,18 +296,18 @@ fun IosListRow(
     }
 
     if (showDivider) {
-      val dividerStart = if (iconBadge != null) 58.dp else 16.dp
+      val dividerStart = if (iconBadge != null) 60.dp else 16.dp
       HorizontalDivider(
         modifier = Modifier.padding(start = dividerStart, end = 0.dp),
         thickness = 0.5.dp,
-        color = Color(0x18FFFFFF)
+        color = Color(0x20FFFFFF)
       )
     }
   }
 }
 
 /**
- * Apple iOS Toggle Switch
+ * Apple iOS Liquid Glass Toggle Switch (Solid smooth thumb & glowing capsule track)
  */
 @Composable
 fun IosSwitch(
@@ -322,10 +324,37 @@ fun IosSwitch(
 
   Box(
     modifier = modifier
-      .width(51.dp)
-      .height(31.dp)
+      .width(52.dp)
+      .height(32.dp)
+      .shadow(4.dp, CircleShape, spotColor = if (checked) activeTrackColor.copy(alpha = 0.5f) else Color.Black.copy(alpha = 0.3f))
       .clip(CircleShape)
-      .background(if (checked) activeTrackColor else Color(0xFF39393D))
+      .background(
+        if (checked) {
+          Brush.verticalGradient(
+            listOf(activeTrackColor, activeTrackColor.copy(alpha = 0.85f))
+          )
+        } else {
+          Brush.verticalGradient(
+            listOf(Color(0x55FFFFFF), Color(0x20FFFFFF), Color(0x101C1C26))
+          )
+        }
+      )
+      .drawBehind {
+        // Specular top highlight
+        drawRoundRect(
+          brush = Brush.verticalGradient(
+            colors = listOf(Color(0x88FFFFFF), Color.Transparent),
+            startY = 0f,
+            endY = size.height * 0.45f
+          ),
+          cornerRadius = CornerRadius(16.dp.toPx(), 16.dp.toPx())
+        )
+      }
+      .border(
+        width = 1.dp,
+        brush = if (checked) LiquidGlassTheme.LiquidGoldBorder else LiquidGlassTheme.LiquidSpecularBorder,
+        shape = CircleShape
+      )
       .clickable { onCheckedChange(!checked) }
       .padding(vertical = 2.dp),
     contentAlignment = Alignment.CenterStart
@@ -333,16 +362,21 @@ fun IosSwitch(
     Box(
       modifier = Modifier
         .offset(x = thumbOffset)
-        .size(27.dp)
-        .shadow(4.dp, CircleShape)
+        .size(28.dp)
+        .shadow(6.dp, CircleShape)
         .clip(CircleShape)
-        .background(Color.White)
+        .background(
+          Brush.verticalGradient(
+            listOf(Color.White, Color(0xFFF0F0F5))
+          )
+        )
+        .border(0.5.dp, Color(0x40FFFFFF), CircleShape)
     )
   }
 }
 
 /**
- * Apple iOS Segmented Control
+ * Apple iOS Liquid Glass Segmented Control
  */
 @Composable
 fun IosSegmentedControl(
@@ -354,10 +388,9 @@ fun IosSegmentedControl(
   Box(
     modifier = modifier
       .fillMaxWidth()
-      .height(38.dp)
-      .clip(RoundedCornerShape(10.dp))
-      .background(Color(0xFF1E1E26))
-      .border(0.5.dp, Color(0x22FFFFFF), RoundedCornerShape(10.dp))
+      .height(40.dp)
+      .shadow(8.dp, RoundedCornerShape(12.dp), spotColor = Color(0x40000000))
+      .liquidGlassEffect(shape = RoundedCornerShape(12.dp))
       .padding(3.dp)
   ) {
     Row(
@@ -372,25 +405,47 @@ fun IosSegmentedControl(
           label = "iosSegmentScale_$index"
         )
 
+        val selectedModifier = if (isSelected) {
+          Modifier
+            .drawBehind {
+              drawRoundRect(
+                brush = Brush.verticalGradient(
+                  colors = listOf(Color(0x99FFFFFF), Color.Transparent),
+                  startY = 0f,
+                  endY = drawContext.size.height * 0.45f
+                ),
+                cornerRadius = CornerRadius(9.dp.toPx(), 9.dp.toPx())
+              )
+            }
+            .border(0.75.dp, Color(0x88FFFFFF), RoundedCornerShape(9.dp))
+        } else {
+          Modifier
+        }
+
         Box(
           modifier = Modifier
             .weight(1f)
             .fillMaxHeight()
             .scale(itemScale)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(9.dp))
             .background(
-              if (isSelected) Color(0xFF2C2C36) else Color.Transparent
+              if (isSelected) {
+                Brush.verticalGradient(
+                  listOf(Color(0x60FFFFFF), Color(0x35FFFFFF))
+                )
+              } else {
+                Brush.verticalGradient(
+                  listOf(Color.Transparent, Color.Transparent)
+                )
+              }
             )
-            .then(
-              if (isSelected) Modifier.border(0.5.dp, Color(0x33FFFFFF), RoundedCornerShape(8.dp))
-              else Modifier
-            )
+            .then(selectedModifier)
             .clickable { onSelect(index) },
           contentAlignment = Alignment.Center
         ) {
           Text(
             text = title,
-            color = if (isSelected) Color.White else Color(0xFF8E8E93),
+            color = if (isSelected) Color.White else Color(0xFF9E9EA7),
             fontSize = 13.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
           )
@@ -419,18 +474,18 @@ fun IosSectionHeader(
   ) {
     Row(
       verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(6.dp)
+      horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
       Box(
         modifier = Modifier
-          .width(3.dp)
-          .height(13.dp)
+          .width(3.5.dp)
+          .height(14.dp)
           .clip(RoundedCornerShape(2.dp))
-          .background(Color(0xFFFDB913))
+          .background(Color(0xFF0A84FF))
       )
       Text(
         text = title,
-        color = Color(0xFF98989F),
+        color = Color(0xFFA5A5B0),
         fontSize = 13.sp,
         fontFamily = ThmanyahFontFamily,
         fontWeight = FontWeight.Bold,
@@ -461,7 +516,7 @@ fun IosSectionFooter(
 ) {
   Text(
     text = text,
-    color = Color(0xFF636366),
+    color = Color(0xFF707078),
     fontSize = 12.sp,
     lineHeight = 16.sp,
     modifier = modifier
@@ -471,7 +526,7 @@ fun IosSectionFooter(
 }
 
 /**
- * Apple iOS Ultra-Modern Seamless Navigation Bar (Continuous Edge-to-Edge)
+ * Apple iOS Ultra-Modern Liquid Glass Navigation Bar (Continuous Edge-to-Edge with optical refraction)
  */
 @Composable
 fun IosNavigationBar(
@@ -489,8 +544,8 @@ fun IosNavigationBar(
       .background(
         Brush.verticalGradient(
           colors = listOf(
-            Color(0xEE12131C),
-            Color(0xAA0D0E15),
+            Color(0x40FFFFFF),
+            Color(0x18FFFFFF),
             Color.Transparent
           )
         )
@@ -503,25 +558,26 @@ fun IosNavigationBar(
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.SpaceBetween
     ) {
-      // Left: Back Button with iOS Spring Tap
+      // Left: Back Button with Liquid Glass Spring Tap
       if (onBack != null) {
         Box(
           modifier = Modifier
             .iosBounceClick(scaleDown = 0.88f, onClick = onBack)
-            .size(38.dp)
-            .clip(CircleShape)
-            .background(Color(0x28FFFFFF)),
+            .size(40.dp)
+            .shadow(6.dp, CircleShape, spotColor = Color.Black.copy(alpha = 0.4f))
+            .liquidGlassEffect(shape = CircleShape)
+            .border(1.dp, Color(0x55FFFFFF), CircleShape),
           contentAlignment = Alignment.Center
         ) {
           Icon(
             imageVector = if (isRtl) Icons.AutoMirrored.Filled.KeyboardArrowRight else Icons.AutoMirrored.Filled.KeyboardArrowLeft,
             contentDescription = "رجوع",
             tint = Color.White,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(21.dp)
           )
         }
       } else {
-        Spacer(modifier = Modifier.size(38.dp))
+        Spacer(modifier = Modifier.size(40.dp))
       }
 
       // Center: Title & Subtitle with Luxury iOS SF Pro Typography
@@ -544,7 +600,7 @@ fun IosNavigationBar(
           Spacer(modifier = Modifier.height(2.dp))
           Text(
             text = subtitle,
-            color = Color(0xFF8E8E93),
+            color = Color(0xFF9E9EA7),
             fontSize = 11.5.sp,
             fontWeight = FontWeight.Medium,
             maxLines = 1,
@@ -557,7 +613,7 @@ fun IosNavigationBar(
       if (trailing != null) {
         trailing()
       } else {
-        Spacer(modifier = Modifier.size(38.dp))
+        Spacer(modifier = Modifier.size(40.dp))
       }
     }
   }
@@ -614,7 +670,7 @@ fun IosTextFieldRow(
             if (value.isEmpty()) {
               Text(
                 text = placeholder,
-                color = Color(0xFF636366),
+                color = Color(0xFF707078),
                 fontSize = 14.5.sp
               )
             }
@@ -626,16 +682,16 @@ fun IosTextFieldRow(
 
     if (showDivider) {
       HorizontalDivider(
-        modifier = Modifier.padding(start = if (iconBadge != null) 56.dp else 16.dp),
+        modifier = Modifier.padding(start = if (iconBadge != null) 60.dp else 16.dp),
         thickness = 0.5.dp,
-        color = Color(0x1FFFFFFF)
+        color = Color(0x20FFFFFF)
       )
     }
   }
 }
 
 /**
- * Apple iOS Sheet Top Grabber Pill
+ * Apple iOS Sheet Top Grabber Pill with specular reflection
  */
 @Composable
 fun IosGrabber(
@@ -649,10 +705,16 @@ fun IosGrabber(
   ) {
     Box(
       modifier = Modifier
-        .width(38.dp)
-        .height(5.dp)
-        .clip(RoundedCornerShape(2.5.dp))
-        .background(Color(0x55FFFFFF))
+        .width(42.dp)
+        .height(5.5.dp)
+        .shadow(2.dp, RoundedCornerShape(3.dp))
+        .clip(RoundedCornerShape(3.dp))
+        .background(
+          Brush.verticalGradient(
+            listOf(Color(0x88FFFFFF), Color(0x40FFFFFF))
+          )
+        )
+        .border(0.5.dp, Color(0x40FFFFFF), RoundedCornerShape(3.dp))
     )
   }
 }

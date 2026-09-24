@@ -127,11 +127,13 @@ fun TodSearchScreen(
     }.take(80)
   }
 
-  Column(
-    modifier = modifier
-      .fillMaxSize()
-      .background(TodGradients.ObsidianCanvas)
+  FluidMeshBackground(
+    modifier = modifier.fillMaxSize(),
+    ambientAlpha = 0.25f
   ) {
+    Column(
+      modifier = Modifier.fillMaxSize()
+    ) {
     // ==========================================
     // 1. Apple iOS 18 Seamless Glass Header (Connected Edge-to-Edge)
     // ==========================================
@@ -141,8 +143,8 @@ fun TodSearchScreen(
         .background(
           Brush.verticalGradient(
             listOf(
-              Color(0xEE11121B),
-              Color(0xCC0D0E16),
+              Color(0x40FFFFFF),
+              Color(0x18FFFFFF),
               Color.Transparent
             )
           )
@@ -272,13 +274,13 @@ fun TodSearchScreen(
           singleLine = true,
           shape = RoundedCornerShape(16.dp),
           colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = Color(0x331C1D2B),
-            unfocusedContainerColor = Color(0x22161724),
-            focusedBorderColor = TodGold,
-            unfocusedBorderColor = Color(0x30FFFFFF),
+            focusedContainerColor = Color(0x40FFFFFF),
+            unfocusedContainerColor = Color(0x22FFFFFF),
+            focusedBorderColor = Color(0xCCFFFFFF),
+            unfocusedBorderColor = Color(0x40FFFFFF),
             focusedTextColor = Color.White,
             unfocusedTextColor = Color.White,
-            cursorColor = TodGold
+            cursorColor = Color(0xFF007AFF)
           )
         )
 
@@ -732,6 +734,7 @@ fun TodSearchScreen(
     }
   }
 }
+}
 
 /**
  * Modern iOS 18 Capsule Filter Pill
@@ -881,9 +884,12 @@ private fun IosChannelSearchRow(
     modifier = Modifier
       .scale(scale)
       .fillMaxWidth()
-      .clip(RoundedCornerShape(14.dp))
-      .background(Color(0x1C1D2A))
-      .border(0.75.dp, Color(0x30FFFFFF), RoundedCornerShape(14.dp))
+      .liquidGlassEffect(
+        shape = RoundedCornerShape(16.dp),
+        borderBrush = Brush.verticalGradient(
+          listOf(Color(0x55FFFFFF), Color(0x1AFFFFFF))
+        )
+      )
       .clickable(
         interactionSource = interaction,
         indication = null

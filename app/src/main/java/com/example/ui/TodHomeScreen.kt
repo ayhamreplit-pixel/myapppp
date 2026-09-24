@@ -81,8 +81,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -232,15 +234,15 @@ fun TodHomeScreen(
       listOf(
         DynamicTodHeroItem(
           id = "welcome_hero_pro",
-          title = "مرحباً بك في TOD Pro",
-          subtitle = "بث فوري بدون تقطيع لكافة القنوات الرياضية والعالمية بجودة 4K UHD",
-          categoryName = "TOD by beIN",
+          title = "مشغل IPTV الذكي 4K",
+          subtitle = "بث فوري مباشر لكافة القنوات العالمية والرياضية بأعلى جودة وبدون تقطيع",
+          categoryName = "البث المباشر الذكي",
           channel = null,
-          isLive = false,
+          isLive = true,
           backdropGradient = Brush.verticalGradient(
-            listOf(Color(0xFF2E1A48), Color(0xFF16192E), Color(0xFF07080F))
+            listOf(Color(0xFF0A84FF), Color(0xFF0055D4), Color(0xFF080D20))
           ),
-          tags = listOf("🏆 TOD by beIN", "✨ 4K UHD", "⚡ مانع التقطيع", "بث فوري"),
+          tags = listOf("🌟 IPTV 4K", "⚡ فائق السرعة", "🏆 مانع التقطيع", "🔥 مباشر"),
           primaryButtonLabel = "تسجيل الدخول إلى سيرفرك"
         )
       )
@@ -263,112 +265,123 @@ fun TodHomeScreen(
     dynamicHeroItems.getOrNull(currentHeroIndex.coerceIn(0, dynamicHeroItems.size - 1))
   } else null
 
-  Column(
-    modifier = modifier
-      .fillMaxSize()
-      .background(TodGradients.ObsidianCanvas)
+  FluidMeshBackground(
+    modifier = modifier.fillMaxSize(),
+    ambientAlpha = 0.70f
   ) {
-    // 1. Ultra-Clean Modern iOS Seamless Navigation Header (Continuous Edge-to-Edge)
     Column(
-      modifier = Modifier
-        .fillMaxWidth()
-        .background(
-          Brush.verticalGradient(
-            colors = listOf(
-              Color(0xF211121A),
-              Color(0xD80D0E15),
-              Color.Transparent
-            )
-          )
-        )
-        .statusBarsPadding()
-        .padding(top = 2.dp, bottom = 4.dp)
+      modifier = Modifier.fillMaxSize()
     ) {
-      // Top Row: Avatar + Brand + Quick Link Action
-      Row(
+      // 1. Ultra-Clean Modern iOS Liquid Glass Seamless Navigation Header
+      Column(
         modifier = Modifier
           .fillMaxWidth()
-          .padding(horizontal = 16.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+          .background(
+            Brush.verticalGradient(
+              colors = listOf(
+                Color(0x40FFFFFF),
+                Color(0x18FFFFFF),
+                Color.Transparent
+              )
+            )
+          )
+          .statusBarsPadding()
+          .padding(top = 2.dp, bottom = 6.dp)
       ) {
-        // User Avatar with iOS Press Feedback
-        val avatarInteraction = remember { MutableInteractionSource() }
-        val isAvatarPressed by avatarInteraction.collectIsPressedAsState()
-        val avatarScale by animateFloatAsState(
-          targetValue = if (isAvatarPressed) 0.88f else 1.0f,
-          animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-          label = "avatarPressScale"
-        )
-
-        Box(
+        // Top Row: Avatar + Brand + Quick Link Action
+        Row(
           modifier = Modifier
-            .scale(avatarScale)
-            .size(36.dp)
-            .clip(CircleShape)
-            .background(
-              Brush.linearGradient(listOf(TodGold, Color(0xFFFF9500)))
-            )
-            .border(1.5.dp, Color(0x55FFFFFF), CircleShape)
-            .clickable(
-              interactionSource = avatarInteraction,
-              indication = null,
-              onClick = onOpenProfile
-            ),
-          contentAlignment = Alignment.Center
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically
         ) {
-          Text("M", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 15.sp)
-        }
+          // User Avatar with iOS Press Feedback
+          val avatarInteraction = remember { MutableInteractionSource() }
+          val isAvatarPressed by avatarInteraction.collectIsPressedAsState()
+          val avatarScale by animateFloatAsState(
+            targetValue = if (isAvatarPressed) 0.88f else 1.0f,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+            label = "avatarPressScale"
+          )
 
-        // Clean Official TOD by beIN Logo
-        Box(
-          contentAlignment = Alignment.Center
-        ) {
-          TodLogo(fontSize = 22, showSubtext = true)
-        }
-
-        // Modern Apple iOS Glass Pill Button: Quick Link Player
-        val quickInteraction = remember { MutableInteractionSource() }
-        val isQuickPressed by quickInteraction.collectIsPressedAsState()
-        val quickScale by animateFloatAsState(
-          targetValue = if (isQuickPressed) 0.90f else 1.0f,
-          animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-          label = "quickPressScale"
-        )
-
-        Box(
-          modifier = Modifier
-            .scale(quickScale)
-            .clip(RoundedCornerShape(18.dp))
-            .background(Color(0x220A84FF))
-            .border(1.dp, Color(0x450A84FF), RoundedCornerShape(18.dp))
-            .clickable(
-              interactionSource = quickInteraction,
-              indication = null,
-              onClick = onOpenQuickLink
-            )
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-          contentAlignment = Alignment.Center
-        ) {
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(5.dp)
+          Box(
+            modifier = Modifier
+              .scale(avatarScale)
+              .size(38.dp)
+              .shadow(6.dp, CircleShape, spotColor = TodGold.copy(alpha = 0.5f))
+              .clip(CircleShape)
+              .background(
+                Brush.linearGradient(listOf(TodGold, Color(0xFFFF9500)))
+              )
+              .drawBehind {
+                drawRoundRect(
+                  brush = Brush.verticalGradient(listOf(Color(0x80FFFFFF), Color.Transparent)),
+                  cornerRadius = CornerRadius(19.dp.toPx(), 19.dp.toPx())
+                )
+              }
+              .border(1.5.dp, Color(0x66FFFFFF), CircleShape)
+              .clickable(
+                interactionSource = avatarInteraction,
+                indication = null,
+                onClick = onOpenProfile
+              ),
+            contentAlignment = Alignment.Center
           ) {
-            Icon(
-              imageVector = Icons.Default.Bolt,
-              contentDescription = "رابط سريع",
-              tint = Color(0xFF0A84FF),
-              modifier = Modifier.size(15.dp)
-            )
-            Text(
-              text = "رابط سريع",
-              color = Color.White,
-              fontSize = 11.5.sp,
-              fontWeight = FontWeight.Bold
-            )
+            Text("M", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 16.sp)
+          }
+
+          // Clean Official Jawwy / TOD Logo
+          Box(
+            contentAlignment = Alignment.Center
+          ) {
+            TodLogo(fontSize = 22, showSubtext = true)
+          }
+
+          // Modern Apple iOS Liquid Glass Pill Button: Quick Link Player
+          val quickInteraction = remember { MutableInteractionSource() }
+          val isQuickPressed by quickInteraction.collectIsPressedAsState()
+          val quickScale by animateFloatAsState(
+            targetValue = if (isQuickPressed) 0.90f else 1.0f,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+            label = "quickPressScale"
+          )
+
+          Box(
+            modifier = Modifier
+              .scale(quickScale)
+              .shadow(6.dp, RoundedCornerShape(20.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.4f))
+              .liquidGlassEffect(
+                shape = RoundedCornerShape(20.dp),
+                glowTint = Color(0xFF0A84FF)
+              )
+              .clickable(
+                interactionSource = quickInteraction,
+                indication = null,
+                onClick = onOpenQuickLink
+              )
+              .padding(horizontal = 14.dp, vertical = 7.dp),
+            contentAlignment = Alignment.Center
+          ) {
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+              Icon(
+                imageVector = Icons.Default.Bolt,
+                contentDescription = "رابط سريع",
+                tint = Color(0xFF0A84FF),
+                modifier = Modifier.size(16.dp)
+              )
+              Text(
+                text = "رابط سريع",
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+              )
+            }
           }
         }
-      }
 
       Spacer(modifier = Modifier.height(6.dp))
 
@@ -475,7 +488,6 @@ fun TodHomeScreen(
       Column(
         modifier = Modifier
           .fillMaxSize()
-          .background(DarkBg)
       ) {
         // Apple iOS Seamless Category Navigation Header (Continuous Edge-to-Edge)
         Column(
@@ -484,8 +496,8 @@ fun TodHomeScreen(
             .background(
               Brush.verticalGradient(
                 colors = listOf(
-                  Color(0xEE12131C),
-                  Color(0x880D0E15),
+                  Color(0x40FFFFFF),
+                  Color(0x18FFFFFF),
                   Color.Transparent
                 )
               )
@@ -1256,6 +1268,7 @@ fun TodHomeScreen(
     }
   }
 }
+}
 
 /**
  * iOS-Fidelity Corporate Channel Card for Grid View with Rock-Solid Fixed Alignment
@@ -1286,10 +1299,9 @@ fun CorporateChannelGridCard(
     modifier = Modifier
       .scale(scale)
       .fillMaxWidth()
-      .height(142.dp)
-      .clip(RoundedCornerShape(20.dp))
-      .background(TodGradients.CardGlass)
-      .border(1.dp, TodGradients.SpecularCardBorder, RoundedCornerShape(20.dp))
+      .height(148.dp)
+      .shadow(8.dp, RoundedCornerShape(22.dp), spotColor = Color(0x60000000))
+      .liquidGlassEffect(shape = RoundedCornerShape(22.dp), isElevated = true)
       .clickable(
         interactionSource = interactionSource,
         indication = null
@@ -1402,10 +1414,9 @@ fun CorporateChannelListRow(
     modifier = Modifier
       .scale(scale)
       .fillMaxWidth()
-      .height(72.dp)
-      .clip(RoundedCornerShape(18.dp))
-      .background(TodGradients.CardGlass)
-      .border(1.dp, TodGradients.SpecularCardBorder, RoundedCornerShape(18.dp))
+      .height(74.dp)
+      .shadow(6.dp, RoundedCornerShape(20.dp), spotColor = Color(0x50000000))
+      .liquidGlassEffect(shape = RoundedCornerShape(20.dp), isElevated = true)
       .clickable(
         interactionSource = interactionSource,
         indication = null

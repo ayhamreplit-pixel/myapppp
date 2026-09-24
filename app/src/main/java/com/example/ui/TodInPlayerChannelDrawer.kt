@@ -150,35 +150,25 @@ fun TodInPlayerChannelDrawer(
         )
     ) {
       // iOS 18 Frosted Glass Side Sheet Container
+      val drawerShape = if (isRtl) RoundedCornerShape(topEnd = 28.dp, bottomEnd = 28.dp)
+                        else RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp)
+
       Box(
         modifier = Modifier
           .align(if (isRtl) Alignment.CenterStart else Alignment.CenterEnd)
           .fillMaxHeight()
           .widthIn(min = 340.dp, max = 390.dp)
-          .clip(
-            if (isRtl) RoundedCornerShape(topEnd = 28.dp, bottomEnd = 28.dp)
-            else RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp)
-          )
-          .background(
-            Brush.verticalGradient(
+          .liquidGlassEffect(
+            shape = drawerShape,
+            glassColor = Color(0xF20F1322),
+            borderBrush = Brush.verticalGradient(
               listOf(
-                Color(0xF0121626),
-                Color(0xFA0F1220),
-                Color(0xFC080A12)
-              )
-            )
-          )
-          .border(
-            width = 1.dp,
-            brush = Brush.verticalGradient(
-              listOf(
-                Color(0x66FFFFFF),
-                Color(0x22FFFFFF),
-                Color(0x08FFFFFF)
+                Color(0x88FFFFFF),
+                Color(0x28FFFFFF),
+                Color(0x0AFFFFFF)
               )
             ),
-            shape = if (isRtl) RoundedCornerShape(topEnd = 28.dp, bottomEnd = 28.dp)
-                    else RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp)
+            isElevated = true
           )
           .clickable(
             interactionSource = remember { MutableInteractionSource() },
@@ -474,15 +464,17 @@ fun TodInPlayerChannelDrawer(
                   modifier = Modifier
                     .scale(rowScale)
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(
-                      if (isPlaying) Color(0x30FEBC11)
-                      else Color(0x18FFFFFF)
-                    )
-                    .border(
-                      width = 1.dp,
-                      color = if (isPlaying) TodGold else Color(0x22FFFFFF),
-                      shape = RoundedCornerShape(16.dp)
+                    .liquidGlassEffect(
+                      shape = RoundedCornerShape(16.dp),
+                      glassColor = if (isPlaying) Color(0x35FEBC11) else Color(0x1EFFFFFF),
+                      borderBrush = Brush.verticalGradient(
+                        if (isPlaying) {
+                          listOf(Color(0xFFFEBC11), Color(0x80FEBC11))
+                        } else {
+                          listOf(Color(0x60FFFFFF), Color(0x18FFFFFF))
+                        }
+                      ),
+                      isElevated = isPlaying
                     )
                     .clickable(
                       interactionSource = rowInteraction,
