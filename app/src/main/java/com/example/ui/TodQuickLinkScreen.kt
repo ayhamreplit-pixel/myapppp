@@ -628,14 +628,11 @@ fun TodQuickLinkScreen(
             val isCurrent = urlInput == sampleUrl
             Box(
               modifier = Modifier
-                .clip(RoundedCornerShape(14.dp))
-                .background(
-                  if (isCurrent) Color(0x330A84FF) else Color(0xFF191920)
-                )
-                .border(
-                  0.5.dp,
-                  if (isCurrent) IosSystemBlue else Color(0x24FFFFFF),
-                  RoundedCornerShape(14.dp)
+                .shadow(if (isCurrent) 6.dp else 2.dp, RoundedCornerShape(16.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
+                .liquidGlassEffect(
+                  shape = RoundedCornerShape(16.dp),
+                  glowTint = Color(0xFF0A84FF),
+                  isElevated = isCurrent
                 )
                 .clickable {
                   titleInput = name

@@ -35,6 +35,18 @@ class AppSettings private constructor(context: Context) {
   var defaultAspectRatio by mutableStateOf(prefs.getString("aspect_ratio", "16:9 قياسي") ?: "16:9 قياسي")
     private set
 
+  var videoDecoderEngine by mutableStateOf(prefs.getString("video_decoder", "ExoPlayer عتادي فائق") ?: "ExoPlayer عتادي فائق")
+    private set
+
+  var lowLatencyMode by mutableStateOf(prefs.getBoolean("low_latency_mode", true))
+    private set
+
+  var streamDiagnosticHud by mutableStateOf(prefs.getBoolean("stream_diagnostic_hud", false))
+    private set
+
+  var customUserAgent by mutableStateOf(prefs.getString("custom_user_agent", "تلقائي IPTV") ?: "تلقائي IPTV")
+    private set
+
   // 2. Audio & Speech
   var audioBoostEnabled by mutableStateOf(prefs.getBoolean("audio_boost_enabled", true))
     private set
@@ -43,6 +55,9 @@ class AppSettings private constructor(context: Context) {
     private set
 
   var defaultAudioBoostPercent by mutableIntStateOf(prefs.getInt("audio_boost_pct", 50))
+    private set
+
+  var soundProfile by mutableStateOf(prefs.getString("sound_profile", "معلق رياضي نقي") ?: "معلق رياضي نقي")
     private set
 
   // 3. Player UI & Gestures
@@ -56,6 +71,9 @@ class AppSettings private constructor(context: Context) {
     private set
 
   var bufferProfile by mutableStateOf(prefs.getString("buffer_profile", "متوازن ذكي (10 ثوان)") ?: "متوازن ذكي (10 ثوان)")
+    private set
+
+  var sleepTimerMinutes by mutableIntStateOf(prefs.getInt("sleep_timer_minutes", 0))
     private set
 
   // 4. Subtitles Engine
@@ -133,6 +151,26 @@ class AppSettings private constructor(context: Context) {
     prefs.edit().putString("aspect_ratio", ratio).apply()
   }
 
+  fun setVideoDecoder(engine: String) {
+    videoDecoderEngine = engine
+    prefs.edit().putString("video_decoder", engine).apply()
+  }
+
+  fun setLowLatency(enabled: Boolean) {
+    lowLatencyMode = enabled
+    prefs.edit().putBoolean("low_latency_mode", enabled).apply()
+  }
+
+  fun setDiagnosticHud(enabled: Boolean) {
+    streamDiagnosticHud = enabled
+    prefs.edit().putBoolean("stream_diagnostic_hud", enabled).apply()
+  }
+
+  fun setUserAgent(ua: String) {
+    customUserAgent = ua
+    prefs.edit().putString("custom_user_agent", ua).apply()
+  }
+
   fun setAudioBoost(enabled: Boolean) {
     audioBoostEnabled = enabled
     prefs.edit().putBoolean("audio_boost_enabled", enabled).apply()
@@ -146,6 +184,11 @@ class AppSettings private constructor(context: Context) {
   fun setAudioBoostPercent(pct: Int) {
     defaultAudioBoostPercent = pct
     prefs.edit().putInt("audio_boost_pct", pct).apply()
+  }
+
+  fun setSoundMode(mode: String) {
+    soundProfile = mode
+    prefs.edit().putString("sound_profile", mode).apply()
   }
 
   fun setSwipeGesturesEnabled(enabled: Boolean) {
@@ -166,6 +209,11 @@ class AppSettings private constructor(context: Context) {
   fun setBuffer(profile: String) {
     bufferProfile = profile
     prefs.edit().putString("buffer_profile", profile).apply()
+  }
+
+  fun setSleepTimer(minutes: Int) {
+    sleepTimerMinutes = minutes
+    prefs.edit().putInt("sleep_timer_minutes", minutes).apply()
   }
 
   fun setSubtitles(enabled: Boolean) {
@@ -240,13 +288,19 @@ class AppSettings private constructor(context: Context) {
     setDataSaverModeEnabled(false)
     setKeepScreenOnEnabled(true)
     setAspectRatio("16:9 قياسي")
+    setVideoDecoder("ExoPlayer عتادي فائق")
+    setLowLatency(true)
+    setDiagnosticHud(false)
+    setUserAgent("تلقائي IPTV")
     setAudioBoost(true)
     setVocalClarityEnabled(true)
     setAudioBoostPercent(50)
+    setSoundMode("معلق رياضي نقي")
     setSwipeGesturesEnabled(true)
     setShowClock(true)
     setFastZapping(true)
     setBuffer("متوازن ذكي (10 ثوان)")
+    setSleepTimer(0)
     setSubtitles(true)
     setSubtitleSize(18)
     setSubtitleEnc("UTF-8 تلقائي")

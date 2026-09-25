@@ -30,6 +30,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.shadow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -292,12 +293,12 @@ fun TodSearchScreen(
         ) {
           Text(
             text = "إلغاء",
-            color = TodGold,
+            color = Color(0xFF64D2FF),
             fontSize = 14.sp,
             fontFamily = ThmanyahFontFamily,
             fontWeight = FontWeight.Bold,
             modifier = Modifier
-              .clickable {
+              .iosBounceClick {
                 searchQuery = ""
                 selectedCategoryId = null
                 quickTagFilter = null
@@ -419,7 +420,7 @@ fun TodSearchScreen(
                   fontSize = 12.sp,
                   fontFamily = ThmanyahFontFamily,
                   fontWeight = FontWeight.Medium,
-                  modifier = Modifier.clickable { recentSearches.clear() }
+                  modifier = Modifier.iosBounceClick { recentSearches.clear() }
                 )
                 Row(
                   verticalAlignment = Alignment.CenterVertically,
@@ -453,15 +454,14 @@ fun TodSearchScreen(
                 recentSearches.forEach { tag ->
                   Box(
                     modifier = Modifier
-                      .clip(RoundedCornerShape(12.dp))
-                      .background(Color(0x22FFFFFF))
-                      .border(0.75.dp, Color(0x30FFFFFF), RoundedCornerShape(12.dp))
-                      .clickable { searchQuery = tag }
-                      .padding(horizontal = 12.dp, vertical = 7.dp)
+                      .shadow(4.dp, RoundedCornerShape(14.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.30f))
+                      .liquidGlassEffect(shape = RoundedCornerShape(14.dp), glowTint = Color(0xFF0A84FF))
+                      .iosBounceClick { searchQuery = tag }
+                      .padding(horizontal = 14.dp, vertical = 7.dp)
                   ) {
                     Text(
                       text = tag,
-                      color = Color(0xFFE0E0E8),
+                      color = Color.White,
                       fontSize = 12.5.sp,
                       fontFamily = ThmanyahFontFamily
                     )
@@ -572,15 +572,14 @@ fun TodSearchScreen(
               Column(
                 modifier = Modifier
                   .fillMaxWidth()
-                  .clip(RoundedCornerShape(16.dp))
-                  .background(Color(0x1AFFFFFF))
-                  .border(0.75.dp, Color(0x25FFFFFF), RoundedCornerShape(16.dp))
+                  .shadow(8.dp, RoundedCornerShape(18.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
+                  .liquidGlassEffect(shape = RoundedCornerShape(18.dp), isElevated = true, glowTint = Color(0xFF0A84FF))
               ) {
                 xtreamCategories.take(6).forEachIndexed { index, cat ->
                   Row(
                     modifier = Modifier
                       .fillMaxWidth()
-                      .clickable { selectedCategoryId = cat.categoryId }
+                      .iosBounceClick { selectedCategoryId = cat.categoryId }
                       .padding(horizontal = 14.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -756,21 +755,11 @@ private fun IosSearchPill(
   Box(
     modifier = Modifier
       .scale(scale)
-      .clip(RoundedCornerShape(16.dp))
-      .then(
-        if (isSelected) {
-          Modifier
-            .background(
-              Brush.linearGradient(
-                listOf(Color(0xFFFFAE00), Color(0xFFFF8C00))
-              )
-            )
-            .border(1.dp, Color(0xFFFFD54F), RoundedCornerShape(16.dp))
-        } else {
-          Modifier
-            .background(Color(0x18FFFFFF))
-            .border(0.75.dp, Color(0x28FFFFFF), RoundedCornerShape(16.dp))
-        }
+      .shadow(6.dp, RoundedCornerShape(20.dp), spotColor = Color(0xFF0A84FF).copy(alpha = if (isSelected) 0.50f else 0.25f))
+      .liquidGlassEffect(
+        shape = RoundedCornerShape(20.dp),
+        glowTint = Color(0xFF0A84FF),
+        isElevated = isSelected
       )
       .clickable(
         interactionSource = interaction,
@@ -781,10 +770,10 @@ private fun IosSearchPill(
   ) {
     Text(
       text = title,
-      color = if (isSelected) Color.Black else Color.White,
+      color = Color.White,
       fontSize = 12.sp,
       fontFamily = ThmanyahFontFamily,
-      fontWeight = if (isSelected) FontWeight.Black else FontWeight.SemiBold
+      fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
     )
   }
 }
@@ -968,9 +957,8 @@ private fun IosChannelSearchRow(
         Box(
           modifier = Modifier
             .size(44.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(Color(0x22000000))
-            .border(0.5.dp, Color(0x22FFFFFF), RoundedCornerShape(10.dp))
+            .shadow(4.dp, RoundedCornerShape(12.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
+            .liquidGlassEffect(shape = RoundedCornerShape(12.dp), glowTint = Color(0xFF0A84FF))
             .padding(3.dp),
           contentAlignment = Alignment.Center
         ) {
@@ -985,13 +973,13 @@ private fun IosChannelSearchRow(
         Box(
           modifier = Modifier
             .size(44.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(Color(0x33FFAE00)),
+            .shadow(4.dp, RoundedCornerShape(12.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
+            .liquidGlassEffect(shape = RoundedCornerShape(12.dp), glowTint = Color(0xFF0A84FF)),
           contentAlignment = Alignment.Center
         ) {
           Text(
             text = channel.name.take(2).uppercase(),
-            color = TodGold,
+            color = Color(0xFF64D2FF),
             fontSize = 14.sp,
             fontWeight = FontWeight.Black
           )

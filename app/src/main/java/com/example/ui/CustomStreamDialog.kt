@@ -119,7 +119,7 @@ fun CustomStreamDialog(
               modifier = Modifier
                 .clip(RoundedCornerShape(6.dp))
                 .background(DarkSurfaceElevated)
-                .clickable {
+                .iosBounceClick {
                   title = preset.first
                   url = preset.second
                   selectedFormat = preset.third
@@ -188,7 +188,7 @@ fun CustomStreamDialog(
                 .weight(1f)
                 .clip(RoundedCornerShape(6.dp))
                 .background(if (isSelected) TodCyan else DarkSurfaceElevated)
-                .clickable { selectedFormat = fmt }
+                .iosBounceClick { selectedFormat = fmt }
                 .padding(vertical = 6.dp),
               contentAlignment = Alignment.Center
             ) {

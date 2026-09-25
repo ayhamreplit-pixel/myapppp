@@ -85,6 +85,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -324,13 +325,14 @@ fun TodMoreScreen(
           Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
-              .clickable { onOpenXtreamForm() }
+              .iosBounceClick { onOpenXtreamForm() }
               .padding(horizontal = 2.dp)
           ) {
             Box(
               modifier = Modifier
                 .size(66.dp)
-                .liquidGlassEffect(shape = RoundedCornerShape(20.dp), isElevated = true),
+                .shadow(6.dp, RoundedCornerShape(20.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
+                .liquidGlassEffect(shape = RoundedCornerShape(20.dp), isElevated = true, glowTint = Color(0xFF0A84FF)),
               contentAlignment = Alignment.Center
             ) {
               Icon(Icons.Default.Add, contentDescription = "إضافة اشتراك", tint = Color.White, modifier = Modifier.size(28.dp))
@@ -348,17 +350,18 @@ fun TodMoreScreen(
             Column(
               horizontalAlignment = Alignment.CenterHorizontally,
               modifier = Modifier
-                .clickable { onSelectPlaylist(config) }
+                .iosBounceClick { onSelectPlaylist(config) }
                 .padding(horizontal = 2.dp)
             ) {
               Box(
                 modifier = Modifier
                   .size(66.dp)
+                  .shadow(if (isActive) 8.dp else 4.dp, RoundedCornerShape(20.dp), spotColor = Color(0xFF0A84FF).copy(alpha = if (isActive) 0.5f else 0.25f))
                   .clip(RoundedCornerShape(20.dp))
                   .background(grad)
                   .then(
-                    if (isActive) Modifier.border(2.5.dp, Color.White, RoundedCornerShape(20.dp))
-                    else Modifier.border(1.dp, Color(0x40FFFFFF), RoundedCornerShape(20.dp))
+                    if (isActive) Modifier.border(2.dp, Color(0xFF0A84FF), RoundedCornerShape(20.dp))
+                    else Modifier.border(1.dp, Color(0x35FFFFFF), RoundedCornerShape(20.dp))
                   ),
                 contentAlignment = Alignment.Center
               ) {
@@ -617,6 +620,57 @@ fun TodMoreScreen(
             }
           )
 
+          // Video Decoder Engine Selector
+          val decoderOptions = listOf("ExoPlayer عتادي فائق", "ExoPlayer برمجيات", "زمن منخفض للمباريات")
+          val selectedDecIdx = decoderOptions.indexOf(appSettings.videoDecoderEngine).takeIf { it >= 0 } ?: 0
+          IosListRow(
+            title = "محرك فك تشفير الفيديو",
+            subtitle = "تحديد معالج الفيديو المستخدم للبث (عتادي HW+ فائق السرعة)",
+            value = appSettings.videoDecoderEngine,
+            valueColor = Color(0xFF64D2FF),
+            iconBadge = {
+              IosIconBadge(icon = Icons.Default.Tune, background = IosBadgeColors.Cyan)
+            },
+            onClick = {
+              val next = (selectedDecIdx + 1) % decoderOptions.size
+              appSettings.setVideoDecoder(decoderOptions[next])
+            }
+          )
+
+          // Match Refresh Rate
+          IosListRow(
+            title = "مزامنة معدل التحديث (Match 50/60Hz)",
+            subtitle = "مزامنة الشاشة مع إطارات البث لمنع التقطيع في المباريات الحية",
+            iconBadge = {
+              IosIconBadge(icon = Icons.Default.Speed, background = IosBadgeColors.Green)
+            },
+            trailing = {
+              IosSwitch(
+                checked = appSettings.lowLatencyMode,
+                onCheckedChange = { appSettings.setLowLatency(it) }
+              )
+            },
+            showChevron = false,
+            onClick = { appSettings.setLowLatency(!appSettings.lowLatencyMode) }
+          )
+
+          // Diagnostic HUD
+          IosListRow(
+            title = "شاشة البيانات الفنية للبث (Diagnostic HUD)",
+            subtitle = "عرض معلومات الـ FPS والترميز وسرعة البت الحقيقية على الشاشة",
+            iconBadge = {
+              IosIconBadge(icon = Icons.Default.Info, background = IosBadgeColors.Amber)
+            },
+            trailing = {
+              IosSwitch(
+                checked = appSettings.streamDiagnosticHud,
+                onCheckedChange = { appSettings.setDiagnosticHud(it) }
+              )
+            },
+            showChevron = false,
+            onClick = { appSettings.setDiagnosticHud(!appSettings.streamDiagnosticHud) }
+          )
+
           // Toggle 3: Data Saver
           IosListRow(
             title = "وضع توفير باقة الإنترنت (Data Saver)",
@@ -735,6 +789,24 @@ fun TodMoreScreen(
               onSelect = { appSettings.setAudioBoostPercent(gainOptions[it]) }
             )
           }
+
+          // Equalizer Profile
+          val soundProfiles = listOf("معلق رياضي نقي", "محيطي ملاعب وسينما", "صوت جهير Bass", "قياسي طبيعي")
+          val selectedSoundIdx = soundProfiles.indexOf(appSettings.soundProfile).takeIf { it >= 0 } ?: 0
+          IosListRow(
+            title = "نمط معالجة الصوت (EQ Profile)",
+            subtitle = "تخصيص ترددات الصوت للمباريات أو الأفلام",
+            value = appSettings.soundProfile,
+            valueColor = Color(0xFF64D2FF),
+            iconBadge = {
+              IosIconBadge(icon = Icons.Default.GraphicEq, background = IosBadgeColors.Teal)
+            },
+            showDivider = false,
+            onClick = {
+              val next = (selectedSoundIdx + 1) % soundProfiles.size
+              appSettings.setSoundMode(soundProfiles[next])
+            }
+          )
         }
 
         // SECTION 7: SUBTITLE & CLOSED CAPTION STUDIO
@@ -862,8 +934,52 @@ fun TodMoreScreen(
               )
             },
             showChevron = false,
-            showDivider = false,
             onClick = { appSettings.setFastZapping(!appSettings.fastChannelZapping) }
+          )
+
+          // Sleep Timer
+          val sleepMinutes = listOf(0, 15, 30, 45, 60, 90, 120)
+          val sleepLabels = listOf("معطل", "15 دقيقة", "30 دقيقة", "45 دقيقة", "ساعة", "ساعة ونصف", "ساعتان")
+          val selectedSleepIdx = sleepMinutes.indexOf(appSettings.sleepTimerMinutes).takeIf { it >= 0 } ?: 0
+          IosListRow(
+            title = "مؤقت النوم الذكي (Sleep Timer)",
+            subtitle = "إيقاف تشغيل البث تلقائياً وتوفير البطارية",
+            value = sleepLabels[selectedSleepIdx],
+            valueColor = if (appSettings.sleepTimerMinutes > 0) IosSystemGreen else Color(0xFF8E8E93),
+            iconBadge = {
+              IosIconBadge(icon = Icons.Default.Schedule, background = IosBadgeColors.Indigo)
+            },
+            showDivider = false,
+            onClick = {
+              val next = (selectedSleepIdx + 1) % sleepMinutes.size
+              appSettings.setSleepTimer(sleepMinutes[next])
+            }
+          )
+        }
+
+        // SECTION: THEME ACCENT & AMBIENT AURA
+        IosSectionHeader(title = "المظهر والوهج اللوني (Theme Ambient Aura)")
+        IosListGroup {
+          val accentOptions = listOf("أزرق ملكي", "أزرق سماوي", "زمردي رياضي", "أرجواني ملكي", "ذهبي سائل", "تيتانيوم هادئ")
+          val selectedAccentIdx = accentOptions.indexOf(appSettings.themeAccentName).takeIf { it >= 0 } ?: 0
+          IosListRow(
+            title = "نمط الوهج والزجاجيات في التطبيق",
+            subtitle = "تخصيص لون الإضاءة المحيطة المنسابة خلف القوائم والأزرار",
+            value = appSettings.themeAccentName,
+            valueColor = Color(0xFF64D2FF),
+            iconBadge = {
+              IosIconBadge(icon = Icons.Default.Tune, background = IosBadgeColors.Blue)
+            },
+            showDivider = false,
+            onClick = {
+              val next = (selectedAccentIdx + 1) % accentOptions.size
+              appSettings.setThemeAccent(accentOptions[next])
+              noticeMessage = "تم تعيين مظهر: ${accentOptions[next]}"
+              scope.launch {
+                delay(2000)
+                noticeMessage = null
+              }
+            }
           )
         }
 

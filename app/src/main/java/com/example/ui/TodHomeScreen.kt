@@ -328,7 +328,7 @@ fun TodHomeScreen(
               ),
             contentAlignment = Alignment.Center
           ) {
-            Text("M", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 16.sp)
+            Text("M", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
           }
 
           // Clean Official Jawwy / TOD Logo
@@ -407,15 +407,11 @@ fun TodHomeScreen(
         Box(
           modifier = Modifier
             .scale(allScale)
-            .clip(RoundedCornerShape(20.dp))
-            .background(
-              if (isAllSelected) TodGradients.LiquidGold
-              else Brush.horizontalGradient(listOf(Color(0x18FFFFFF), Color(0x10FFFFFF)))
-            )
-            .border(
-              width = 1.dp,
-              color = if (isAllSelected) Color(0xFFFFD54F) else Color(0x22FFFFFF),
-              shape = RoundedCornerShape(20.dp)
+            .shadow(6.dp, RoundedCornerShape(20.dp), spotColor = Color(0xFF0A84FF).copy(alpha = if (isAllSelected) 0.50f else 0.25f))
+            .liquidGlassEffect(
+              shape = RoundedCornerShape(20.dp),
+              glowTint = Color(0xFF0A84FF),
+              isElevated = isAllSelected
             )
             .clickable(
               interactionSource = allInteraction,
@@ -426,9 +422,9 @@ fun TodHomeScreen(
         ) {
           Text(
             text = "الكل (${allChannels.size})",
-            color = if (isAllSelected) Color.Black else Color.White,
+            color = Color.White,
             fontSize = 12.sp,
-            fontWeight = if (isAllSelected) FontWeight.Black else FontWeight.SemiBold
+            fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Medium
           )
         }
 
@@ -446,33 +442,29 @@ fun TodHomeScreen(
           Box(
             modifier = Modifier
               .scale(catScale)
-              .clip(RoundedCornerShape(20.dp))
-              .background(
-                if (isSelected) TodGradients.LiquidGold
-                else Brush.horizontalGradient(listOf(Color(0x18FFFFFF), Color(0x10FFFFFF)))
-              )
-              .border(
-                width = 1.dp,
-                color = if (isSelected) Color(0xFFFFD54F) else Color(0x22FFFFFF),
-                shape = RoundedCornerShape(20.dp)
-              )
-              .clickable(
-                interactionSource = catInteraction,
-                indication = null
-              ) {
-                selectedCategoryId = category.categoryId
-              }
-              .padding(horizontal = 15.dp, vertical = 7.dp),
-            contentAlignment = Alignment.Center
-          ) {
-            Text(
-              text = if (category.channelCount > 0) "${category.categoryName} (${category.channelCount})" else category.categoryName,
-              color = if (isSelected) Color.Black else Color.White,
-              fontSize = 12.sp,
-              fontWeight = if (isSelected) FontWeight.Black else FontWeight.SemiBold
+              .shadow(6.dp, RoundedCornerShape(20.dp), spotColor = Color(0xFF0A84FF).copy(alpha = if (isSelected) 0.50f else 0.25f))
+            .liquidGlassEffect(
+              shape = RoundedCornerShape(20.dp),
+              glowTint = Color(0xFF0A84FF),
+              isElevated = isSelected
             )
-          }
+            .clickable(
+              interactionSource = catInteraction,
+              indication = null
+            ) {
+              selectedCategoryId = category.categoryId
+            }
+            .padding(horizontal = 15.dp, vertical = 7.dp),
+          contentAlignment = Alignment.Center
+        ) {
+          Text(
+            text = if (category.channelCount > 0) "${category.categoryName} (${category.channelCount})" else category.categoryName,
+            color = Color.White,
+            fontSize = 12.sp,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+          )
         }
+      }
       }
     }
 
@@ -520,9 +512,11 @@ fun TodHomeScreen(
             Row(
               modifier = Modifier
                 .scale(catBackScale)
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color(0x28FFFFFF))
-                .border(0.75.dp, Color(0x35FFFFFF), RoundedCornerShape(16.dp))
+                .shadow(6.dp, RoundedCornerShape(16.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
+                .liquidGlassEffect(
+                  shape = RoundedCornerShape(16.dp),
+                  glowTint = Color(0xFF0A84FF)
+                )
                 .clickable(
                   interactionSource = catBackInteraction,
                   indication = null
@@ -533,11 +527,11 @@ fun TodHomeScreen(
               Icon(
                 imageVector = Icons.Default.KeyboardArrowLeft,
                 contentDescription = "رجوع للرئيسية",
-                tint = TodGold,
+                tint = Color(0xFF0A84FF),
                 modifier = Modifier.size(18.dp)
               )
               Spacer(modifier = Modifier.width(4.dp))
-              Text("الرئيسية", color = TodGold, fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+              Text("الرئيسية", color = Color.White, fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
             }
 
             Column(horizontalAlignment = Alignment.End) {
@@ -583,38 +577,40 @@ fun TodHomeScreen(
 
             Row(
               modifier = Modifier
-                .clip(RoundedCornerShape(10.dp))
-                .background(Color(0x24FFFFFF))
-                .border(0.75.dp, Color(0x28FFFFFF), RoundedCornerShape(10.dp))
+                .shadow(6.dp, RoundedCornerShape(14.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
+                .liquidGlassEffect(
+                  shape = RoundedCornerShape(14.dp),
+                  glowTint = Color(0xFF0A84FF)
+                )
                 .padding(3.dp),
               verticalAlignment = Alignment.CenterVertically
             ) {
               Box(
                 modifier = Modifier
-                  .clip(RoundedCornerShape(8.dp))
-                  .background(if (!isListView) TodGold else Color.Transparent)
-                  .clickable { isListView = false }
-                  .padding(horizontal = 12.dp, vertical = 5.dp),
+                  .clip(RoundedCornerShape(11.dp))
+                  .background(if (!isListView) Color(0xFF0A84FF) else Color.Transparent)
+                  .iosBounceClick { isListView = false }
+                  .padding(horizontal = 12.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center
               ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                  Icon(Icons.Default.GridView, contentDescription = null, tint = if (!isListView) Color.Black else Color.White, modifier = Modifier.size(13.dp))
+                  Icon(Icons.Default.GridView, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
                   Spacer(modifier = Modifier.width(4.dp))
-                  Text("شبكة", color = if (!isListView) Color.Black else Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                  Text("شبكة", color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                 }
               }
               Box(
                 modifier = Modifier
-                  .clip(RoundedCornerShape(8.dp))
-                  .background(if (isListView) TodGold else Color.Transparent)
-                  .clickable { isListView = true }
-                  .padding(horizontal = 12.dp, vertical = 5.dp),
+                  .clip(RoundedCornerShape(11.dp))
+                  .background(if (isListView) Color(0xFF0A84FF) else Color.Transparent)
+                  .iosBounceClick { isListView = true }
+                  .padding(horizontal = 12.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center
               ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                  Icon(Icons.Default.ViewAgenda, contentDescription = null, tint = if (isListView) Color.Black else Color.White, modifier = Modifier.size(13.dp))
+                  Icon(Icons.Default.ViewAgenda, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
                   Spacer(modifier = Modifier.width(4.dp))
-                  Text("قائمة", color = if (isListView) Color.Black else Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                  Text("قائمة", color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                 }
               }
             }
@@ -685,19 +681,13 @@ fun TodHomeScreen(
                 .padding(horizontal = 14.dp, vertical = 6.dp)
                 .height(310.dp)
               .shadow(
-                elevation = 20.dp,
+                elevation = 16.dp,
                 shape = RoundedCornerShape(24.dp),
-                spotColor = Color(0xCC000000),
-                ambientColor = Color(0x66000000)
+                spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f),
+                ambientColor = Color.Transparent
               )
               .clip(RoundedCornerShape(24.dp))
-              .border(
-                width = 1.dp,
-                brush = Brush.verticalGradient(
-                  colors = listOf(Color(0x45FFFFFF), Color(0x10FFFFFF))
-                ),
-                shape = RoundedCornerShape(24.dp)
-              )
+              .liquidGlassEffect(shape = RoundedCornerShape(24.dp), glowTint = Color(0xFF0A84FF))
           ) {
             // Gradient backdrop
             Box(
@@ -719,9 +709,8 @@ fun TodHomeScreen(
               modifier = Modifier
                 .padding(top = 14.dp, start = 14.dp)
                 .size(36.dp)
-                .clip(CircleShape)
-                .background(Color(0x88000000))
-                .border(0.75.dp, Color(0x33FFFFFF), CircleShape)
+                .shadow(4.dp, CircleShape, spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
+                .liquidGlassEffect(shape = CircleShape, glowTint = Color(0xFF0A84FF))
                 .align(Alignment.TopStart)
             ) {
               Icon(
@@ -813,9 +802,8 @@ fun TodHomeScreen(
                       Box(
                         modifier = Modifier
                           .size(48.dp)
-                          .clip(RoundedCornerShape(12.dp))
-                          .background(Color(0x99181824))
-                          .border(1.dp, TodGold.copy(alpha = 0.7f), RoundedCornerShape(12.dp))
+                          .shadow(4.dp, RoundedCornerShape(14.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
+                          .liquidGlassEffect(shape = RoundedCornerShape(14.dp), glowTint = Color(0xFF0A84FF))
                           .padding(4.dp),
                         contentAlignment = Alignment.Center
                       ) {
@@ -853,9 +841,8 @@ fun TodHomeScreen(
                     modifier = Modifier
                       .scale(replayScale)
                       .size(42.dp)
-                      .clip(RoundedCornerShape(12.dp))
-                      .background(Color(0x28FFFFFF))
-                      .border(0.75.dp, Color(0x35FFFFFF), RoundedCornerShape(12.dp))
+                      .shadow(4.dp, RoundedCornerShape(14.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
+                      .liquidGlassEffect(shape = RoundedCornerShape(14.dp), glowTint = Color(0xFF0A84FF))
                       .clickable(
                         interactionSource = replayInteraction,
                         indication = null
@@ -880,9 +867,8 @@ fun TodHomeScreen(
                     modifier = Modifier
                       .scale(addScale)
                       .size(42.dp)
-                      .clip(RoundedCornerShape(12.dp))
-                      .background(Color(0x28FFFFFF))
-                      .border(0.75.dp, Color(0x35FFFFFF), RoundedCornerShape(12.dp))
+                      .shadow(4.dp, RoundedCornerShape(14.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
+                      .liquidGlassEffect(shape = RoundedCornerShape(14.dp), glowTint = Color(0xFF0A84FF))
                       .clickable(
                         interactionSource = addInteraction,
                         indication = null
@@ -946,8 +932,9 @@ fun TodHomeScreen(
                     .weight(1f)
                     .scale(playScale)
                     .height(44.dp)
+                    .shadow(8.dp, RoundedCornerShape(14.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.45f))
                     .clip(RoundedCornerShape(14.dp))
-                    .background(TodGradients.LiquidGold)
+                    .background(Brush.linearGradient(listOf(Color(0xFF0A84FF), Color(0xFF0055D4))))
                     .border(1.dp, Color(0x66FFFFFF), RoundedCornerShape(14.dp))
                     .clickable(
                       interactionSource = playInteraction,
@@ -967,16 +954,16 @@ fun TodHomeScreen(
                   ) {
                     Text(
                       text = activeHero.primaryButtonLabel,
-                      color = Color.Black,
+                      color = Color.White,
                       fontSize = 14.sp,
                       fontFamily = ThmanyahFontFamily,
-                      fontWeight = FontWeight.Black
+                      fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Icon(
                       imageVector = if (activeHero.channel != null) Icons.Default.PlayArrow else Icons.Default.Dns,
                       contentDescription = null,
-                      tint = Color.Black,
+                      tint = Color.White,
                       modifier = Modifier.size(20.dp)
                     )
                   }
@@ -1098,9 +1085,11 @@ fun TodHomeScreen(
                 modifier = Modifier
                   .scale(card1Scale)
                   .fillMaxWidth()
-                  .clip(RoundedCornerShape(20.dp))
-                  .background(TodGradients.CardGlass)
-                  .border(1.dp, TodGradients.SpecularCardBorder, RoundedCornerShape(20.dp))
+                  .shadow(8.dp, RoundedCornerShape(20.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
+                  .liquidGlassEffect(
+                    shape = RoundedCornerShape(20.dp),
+                    glowTint = Color(0xFF0A84FF)
+                  )
                   .clickable(
                     interactionSource = card1Interaction,
                     indication = null,
@@ -1121,7 +1110,7 @@ fun TodHomeScreen(
                       .border(1.dp, Color(0x55FFFFFF), RoundedCornerShape(14.dp)),
                     contentAlignment = Alignment.Center
                   ) {
-                    Icon(Icons.Default.Dns, contentDescription = null, tint = Color.Black, modifier = Modifier.size(24.dp))
+                    Icon(Icons.Default.Dns, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
                   }
 
                   Column(modifier = Modifier.weight(1f)) {
@@ -1145,7 +1134,7 @@ fun TodHomeScreen(
                   Icon(
                     Icons.Default.KeyboardArrowLeft,
                     contentDescription = null,
-                    tint = TodGold,
+                    tint = Color(0xFF0A84FF),
                     modifier = Modifier.size(20.dp)
                   )
                 }
@@ -1164,9 +1153,11 @@ fun TodHomeScreen(
                 modifier = Modifier
                   .scale(card2Scale)
                   .fillMaxWidth()
-                  .clip(RoundedCornerShape(20.dp))
-                  .background(TodGradients.CardGlass)
-                  .border(1.dp, TodGradients.SpecularCardBorder, RoundedCornerShape(20.dp))
+                  .shadow(8.dp, RoundedCornerShape(20.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
+                  .liquidGlassEffect(
+                    shape = RoundedCornerShape(20.dp),
+                    glowTint = Color(0xFF0A84FF)
+                  )
                   .clickable(
                     interactionSource = card2Interaction,
                     indication = null,
@@ -1187,7 +1178,7 @@ fun TodHomeScreen(
                       .border(1.dp, Color(0x55FFFFFF), RoundedCornerShape(14.dp)),
                     contentAlignment = Alignment.Center
                   ) {
-                    Icon(Icons.Default.Bolt, contentDescription = null, tint = Color.Black, modifier = Modifier.size(24.dp))
+                    Icon(Icons.Default.Bolt, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
                   }
 
                   Column(modifier = Modifier.weight(1f)) {
@@ -1221,9 +1212,11 @@ fun TodHomeScreen(
               Box(
                 modifier = Modifier
                   .fillMaxWidth()
-                  .clip(RoundedCornerShape(20.dp))
-                  .background(TodGradients.CardGlass)
-                  .border(1.dp, TodGradients.SpecularCardBorder, RoundedCornerShape(20.dp))
+                  .shadow(8.dp, RoundedCornerShape(20.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
+                  .liquidGlassEffect(
+                    shape = RoundedCornerShape(20.dp),
+                    glowTint = Color(0xFF0A84FF)
+                  )
                   .padding(16.dp)
               ) {
                 Row(
@@ -1300,8 +1293,8 @@ fun CorporateChannelGridCard(
       .scale(scale)
       .fillMaxWidth()
       .height(148.dp)
-      .shadow(8.dp, RoundedCornerShape(22.dp), spotColor = Color(0x60000000))
-      .liquidGlassEffect(shape = RoundedCornerShape(22.dp), isElevated = true)
+      .shadow(8.dp, RoundedCornerShape(22.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
+      .liquidGlassEffect(shape = RoundedCornerShape(22.dp), glowTint = Color(0xFF0A84FF), isElevated = true)
       .clickable(
         interactionSource = interactionSource,
         indication = null
@@ -1322,9 +1315,8 @@ fun CorporateChannelGridCard(
         Box(
           modifier = Modifier
             .size(42.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0x28FFFFFF))
-            .border(1.dp, Color(0x35FFFFFF), RoundedCornerShape(12.dp)),
+            .shadow(4.dp, RoundedCornerShape(12.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
+            .liquidGlassEffect(shape = RoundedCornerShape(12.dp), glowTint = Color(0xFF0A84FF)),
           contentAlignment = Alignment.Center
         ) {
           if (!channel.iconUrl.isNullOrBlank()) {
@@ -1340,7 +1332,7 @@ fun CorporateChannelGridCard(
             Icon(
               imageVector = Icons.Default.PlayArrow,
               contentDescription = null,
-              tint = TodGold,
+              tint = Color(0xFF0A84FF),
               modifier = Modifier.size(20.dp)
             )
           }
@@ -1415,8 +1407,8 @@ fun CorporateChannelListRow(
       .scale(scale)
       .fillMaxWidth()
       .height(74.dp)
-      .shadow(6.dp, RoundedCornerShape(20.dp), spotColor = Color(0x50000000))
-      .liquidGlassEffect(shape = RoundedCornerShape(20.dp), isElevated = true)
+      .shadow(6.dp, RoundedCornerShape(20.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.30f))
+      .liquidGlassEffect(shape = RoundedCornerShape(20.dp), glowTint = Color(0xFF0A84FF), isElevated = true)
       .clickable(
         interactionSource = interactionSource,
         indication = null
@@ -1431,7 +1423,7 @@ fun CorporateChannelListRow(
     ) {
       Text(
         text = String.format("%02d", channelIndex),
-        color = TodGold,
+        color = Color(0xFF0A84FF),
         fontSize = 12.sp,
         fontFamily = ThmanyahFontFamily,
         fontWeight = FontWeight.Bold,
@@ -1441,9 +1433,8 @@ fun CorporateChannelListRow(
       Box(
         modifier = Modifier
           .size(44.dp)
-          .clip(RoundedCornerShape(12.dp))
-          .background(Color(0x28FFFFFF))
-          .border(1.dp, Color(0x35FFFFFF), RoundedCornerShape(12.dp)),
+          .shadow(4.dp, RoundedCornerShape(12.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
+          .liquidGlassEffect(shape = RoundedCornerShape(12.dp), glowTint = Color(0xFF0A84FF)),
         contentAlignment = Alignment.Center
       ) {
         if (!channel.iconUrl.isNullOrBlank()) {
@@ -1454,7 +1445,7 @@ fun CorporateChannelListRow(
             contentScale = ContentScale.Fit
           )
         } else {
-          Icon(Icons.Default.PlayArrow, contentDescription = null, tint = TodGold, modifier = Modifier.size(20.dp))
+          Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color(0xFF0A84FF), modifier = Modifier.size(20.dp))
         }
       }
 
@@ -1532,9 +1523,11 @@ fun DynamicChannelRail(
       Row(
         modifier = Modifier
           .scale(actionScale)
-          .clip(RoundedCornerShape(12.dp))
-          .background(Color(0x22FFFFFF))
-          .border(0.75.dp, Color(0x35FFFFFF), RoundedCornerShape(12.dp))
+          .shadow(4.dp, RoundedCornerShape(14.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.30f))
+          .liquidGlassEffect(
+            shape = RoundedCornerShape(14.dp),
+            glowTint = Color(0xFF0A84FF)
+          )
           .clickable(
             interactionSource = actionInteraction,
             indication = null,
@@ -1547,12 +1540,12 @@ fun DynamicChannelRail(
         Icon(
           imageVector = Icons.Default.KeyboardArrowLeft,
           contentDescription = null,
-          tint = TodGold,
+          tint = Color(0xFF0A84FF),
           modifier = Modifier.size(15.dp)
         )
         Text(
           text = actionLabel,
-          color = TodGold,
+          color = Color.White,
           fontSize = 11.5.sp,
           fontFamily = ThmanyahFontFamily,
           fontWeight = FontWeight.Bold
@@ -1596,9 +1589,8 @@ fun DynamicChannelRail(
             .scale(scale)
             .width(182.dp)
             .height(134.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(TodGradients.CardGlass)
-            .border(1.dp, TodGradients.SpecularCardBorder, RoundedCornerShape(20.dp))
+            .shadow(8.dp, RoundedCornerShape(20.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
+            .liquidGlassEffect(shape = RoundedCornerShape(20.dp), glowTint = Color(0xFF0A84FF))
             .clickable(
               interactionSource = interactionSource,
               indication = null
@@ -1618,9 +1610,8 @@ fun DynamicChannelRail(
               Box(
                 modifier = Modifier
                   .size(38.dp)
-                  .clip(RoundedCornerShape(11.dp))
-                  .background(Color(0x28FFFFFF))
-                  .border(1.dp, Color(0x35FFFFFF), RoundedCornerShape(11.dp)),
+                  .shadow(4.dp, RoundedCornerShape(11.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
+                  .liquidGlassEffect(shape = RoundedCornerShape(11.dp), glowTint = Color(0xFF0A84FF)),
                 contentAlignment = Alignment.Center
               ) {
                 if (!channel.iconUrl.isNullOrBlank()) {
@@ -1631,7 +1622,7 @@ fun DynamicChannelRail(
                     contentScale = ContentScale.Fit
                   )
                 } else {
-                  Icon(Icons.Default.PlayArrow, contentDescription = null, tint = TodGold, modifier = Modifier.size(18.dp))
+                  Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color(0xFF0A84FF), modifier = Modifier.size(18.dp))
                 }
               }
 
