@@ -454,7 +454,6 @@ fun TodSearchScreen(
                 recentSearches.forEach { tag ->
                   Box(
                     modifier = Modifier
-                      .shadow(4.dp, RoundedCornerShape(14.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.30f))
                       .liquidGlassEffect(shape = RoundedCornerShape(14.dp), glowTint = Color(0xFF0A84FF))
                       .iosBounceClick { searchQuery = tag }
                       .padding(horizontal = 14.dp, vertical = 7.dp)
@@ -572,7 +571,6 @@ fun TodSearchScreen(
               Column(
                 modifier = Modifier
                   .fillMaxWidth()
-                  .shadow(8.dp, RoundedCornerShape(18.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
                   .liquidGlassEffect(shape = RoundedCornerShape(18.dp), isElevated = true, glowTint = Color(0xFF0A84FF))
               ) {
                 xtreamCategories.take(6).forEachIndexed { index, cat ->
@@ -718,7 +716,7 @@ fun TodSearchScreen(
           LazyColumn(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(bottom = 36.dp)
+            contentPadding = PaddingValues(bottom = 100.dp)
           ) {
             items(searchResults) { channel ->
               IosChannelSearchRow(
@@ -755,7 +753,6 @@ private fun IosSearchPill(
   Box(
     modifier = Modifier
       .scale(scale)
-      .shadow(6.dp, RoundedCornerShape(20.dp), spotColor = Color(0xFF0A84FF).copy(alpha = if (isSelected) 0.50f else 0.25f))
       .liquidGlassEffect(
         shape = RoundedCornerShape(20.dp),
         glowTint = Color(0xFF0A84FF),
@@ -957,7 +954,6 @@ private fun IosChannelSearchRow(
         Box(
           modifier = Modifier
             .size(44.dp)
-            .shadow(4.dp, RoundedCornerShape(12.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
             .liquidGlassEffect(shape = RoundedCornerShape(12.dp), glowTint = Color(0xFF0A84FF))
             .padding(3.dp),
           contentAlignment = Alignment.Center
@@ -973,7 +969,6 @@ private fun IosChannelSearchRow(
         Box(
           modifier = Modifier
             .size(44.dp)
-            .shadow(4.dp, RoundedCornerShape(12.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
             .liquidGlassEffect(shape = RoundedCornerShape(12.dp), glowTint = Color(0xFF0A84FF)),
           contentAlignment = Alignment.Center
         ) {

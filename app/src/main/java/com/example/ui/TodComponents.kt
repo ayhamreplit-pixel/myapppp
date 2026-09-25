@@ -122,7 +122,6 @@ fun TodLogo(
     Box(
       modifier = Modifier
         .size((fontSize + 12).dp)
-        .shadow(6.dp, RoundedCornerShape(10.dp), spotColor = Color(0xFF007AFF).copy(alpha = 0.4f))
         .clip(RoundedCornerShape(10.dp))
         .background(
           Brush.linearGradient(
@@ -187,7 +186,6 @@ fun TodHomeNavIcon(
   Box(
     modifier = modifier
       .size(42.dp)
-      .shadow(if (isSelected) 6.dp else 2.dp, RoundedCornerShape(14.dp), spotColor = if (isSelected) TodGold.copy(alpha = 0.5f) else Color.Black.copy(alpha = 0.3f))
       .clip(RoundedCornerShape(14.dp))
       .then(
         if (isSelected) {
@@ -225,7 +223,6 @@ fun TodSearchNavIcon(
   Box(
     modifier = modifier
       .size(42.dp)
-      .shadow(if (isSelected) 6.dp else 2.dp, RoundedCornerShape(14.dp), spotColor = if (isSelected) TodGold.copy(alpha = 0.5f) else Color.Black.copy(alpha = 0.3f))
       .clip(RoundedCornerShape(14.dp))
       .then(
         if (isSelected) {
@@ -263,7 +260,6 @@ fun TodMoreNavIcon(
   Box(
     modifier = modifier
       .size(42.dp)
-      .shadow(if (isSelected) 6.dp else 2.dp, RoundedCornerShape(14.dp), spotColor = if (isSelected) TodGold.copy(alpha = 0.5f) else Color.Black.copy(alpha = 0.3f))
       .clip(RoundedCornerShape(14.dp))
       .then(
         if (isSelected) {
@@ -311,12 +307,6 @@ fun TodBottomNavBar(
         .widthIn(max = 380.dp)
         .fillMaxWidth()
         .height(64.dp)
-        .shadow(
-          elevation = 28.dp,
-          shape = RoundedCornerShape(32.dp),
-          spotColor = Color(0xD0000000),
-          ambientColor = Color(0x80000000)
-        )
         .liquidGlassEffect(
           shape = RoundedCornerShape(32.dp),
           isElevated = true,
@@ -441,8 +431,7 @@ fun TodIosFloatingMiniPlayer(
       .fillMaxWidth()
       .padding(horizontal = 16.dp, vertical = 4.dp)
       .height(64.dp)
-      .shadow(16.dp, shape = RoundedCornerShape(28.dp), spotColor = Color(0xBB000000))
-      .liquidGlassEffect(shape = RoundedCornerShape(28.dp), isElevated = true)
+      .liquidGlassEffect(shape = RoundedCornerShape(28.dp), isElevated = true, glowTint = Color(0xFF0A84FF))
       .clickable(onClick = onClick)
   ) {
     Row(
@@ -460,7 +449,6 @@ fun TodIosFloatingMiniPlayer(
         Box(
           modifier = Modifier
             .size(44.dp)
-            .shadow(4.dp, RoundedCornerShape(12.dp))
             .clip(RoundedCornerShape(12.dp))
             .background(Color(0xFF2C2C38))
             .border(0.75.dp, Color(0x40FFFFFF), RoundedCornerShape(12.dp)),
@@ -630,7 +618,7 @@ fun IosLiquidSlider(
           // Inner gloss shine
           drawRoundRect(
             brush = Brush.verticalGradient(
-              listOf(Color(0x80FFFFFF), Color.Transparent)
+              listOf(Color(0x80FFFFFF), Color(0x00FFFFFF))
             ),
             cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
           )
@@ -643,7 +631,6 @@ fun IosLiquidSlider(
         .padding(start = (currentX - 20.dp).coerceAtLeast(0.dp))
         .width(40.dp)
         .height(24.dp)
-        .shadow(10.dp, shape = RoundedCornerShape(12.dp), spotColor = progressColor.copy(alpha = 0.6f))
         .clip(RoundedCornerShape(12.dp))
         .background(
           Brush.verticalGradient(
@@ -656,7 +643,7 @@ fun IosLiquidSlider(
         .drawBehind {
           drawRoundRect(
             brush = Brush.verticalGradient(
-              listOf(Color(0xAAFFFFFF), Color.Transparent),
+              listOf(Color(0xAAFFFFFF), Color(0x00FFFFFF)),
               startY = 0f,
               endY = drawContext.size.height * 0.5f
             ),
@@ -802,7 +789,7 @@ fun TodMatchDetailSheet(
             .fillMaxSize()
             .background(
               Brush.verticalGradient(
-                listOf(Color(0x55000000), Color.Transparent, Color(0xFF000000))
+                listOf(Color(0x55000000), Color(0x00000000), Color(0xFF000000))
               )
             )
         )

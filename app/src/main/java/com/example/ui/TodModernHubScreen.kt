@@ -442,8 +442,7 @@ fun TodModernHubScreen(
                   modifier = Modifier
                     .scale(setScale)
                     .size(44.dp)
-                    .shadow(10.dp, CircleShape, spotColor = Color(0xFF007AFF).copy(alpha = 0.35f))
-                    .liquidGlassEffect(shape = CircleShape, isElevated = true)
+                    .liquidGlassEffect(shape = CircleShape, isElevated = true, glowTint = Color(0xFF007AFF))
                     .clickable(
                       interactionSource = setInteraction,
                       indication = null
@@ -453,12 +452,7 @@ fun TodModernHubScreen(
                     },
                   contentAlignment = Alignment.Center
                 ) {
-                  Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = "الإعدادات",
-                    tint = Color.White,
-                    modifier = Modifier.size(22.dp)
-                  )
+                  TodSettingsWheelIcon(modifier = Modifier.size(24.dp))
                 }
 
                 // Apple Dynamic Island Pill Badge (Center/Right)
@@ -466,14 +460,12 @@ fun TodModernHubScreen(
                   verticalAlignment = Alignment.CenterVertically,
                   horizontalArrangement = Arrangement.spacedBy(10.dp),
                   modifier = Modifier
-                    .shadow(8.dp, RoundedCornerShape(24.dp), spotColor = Color(0xFF007AFF).copy(alpha = 0.3f))
-                    .liquidGlassEffect(shape = RoundedCornerShape(24.dp))
+                    .liquidGlassEffect(shape = RoundedCornerShape(24.dp), glowTint = Color(0xFF007AFF))
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
                   Box(
                     modifier = Modifier
                       .size(8.dp)
-                      .shadow(4.dp, CircleShape, spotColor = Color(0xFF34C759))
                       .clip(CircleShape)
                       .background(Color(0xFF34C759))
                   )
@@ -493,7 +485,6 @@ fun TodModernHubScreen(
                 modifier = Modifier
                   .fillMaxWidth()
                   .height(185.dp)
-                  .shadow(16.dp, RoundedCornerShape(26.dp), spotColor = Color(0xFF007AFF).copy(alpha = 0.35f))
                   .clip(RoundedCornerShape(26.dp))
                   .border(1.2.dp, LiquidGlassTheme.LiquidSpecularBorder, RoundedCornerShape(26.dp))
               ) {
@@ -531,7 +522,6 @@ fun TodModernHubScreen(
                     ) {
                       Box(
                         modifier = Modifier
-                          .shadow(6.dp, RoundedCornerShape(16.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
                           .liquidGlassEffect(shape = RoundedCornerShape(16.dp), glowTint = Color(0xFF0A84FF))
                           .padding(horizontal = 10.dp, vertical = 4.dp)
                       ) {
@@ -546,7 +536,6 @@ fun TodModernHubScreen(
 
                       Box(
                         modifier = Modifier
-                          .shadow(6.dp, RoundedCornerShape(16.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
                           .liquidGlassEffect(shape = RoundedCornerShape(16.dp), glowTint = Color(0xFF0A84FF))
                           .padding(horizontal = 12.dp, vertical = 4.dp)
                       ) {
@@ -642,7 +631,6 @@ fun TodModernHubScreen(
                             activeNavTab = TodNavTab.HOME
                             loadPlaylistData(pl, xtreamRepo.shouldRefreshPlaylist(pl))
                           }
-                          .shadow(8.dp, RoundedCornerShape(18.dp), spotColor = Color(0xFF0A84FF).copy(alpha = if (isPlActive) 0.45f else 0.25f))
                           .liquidGlassEffect(
                             shape = RoundedCornerShape(18.dp),
                             isElevated = isPlActive,
@@ -655,11 +643,15 @@ fun TodModernHubScreen(
                           horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                           IosCircularControlBadge(
-                            icon = if (pl.isM3u) Icons.Default.LiveTv else Icons.Default.Dns,
                             background = if (pl.isM3u) IosBadgeColors.Purple else IosBadgeColors.Blue,
-                            size = 36.dp,
-                            iconSize = 18.dp
-                          )
+                            size = 36.dp
+                          ) {
+                            if (pl.isM3u) {
+                              TodM3uPlaylistIcon(modifier = Modifier.size(20.dp))
+                            } else {
+                              TodXtreamServerArtIcon(modifier = Modifier.size(20.dp))
+                            }
+                          }
                           Column(horizontalAlignment = Alignment.End) {
                             Text(
                               text = pl.playlistName,
@@ -695,7 +687,6 @@ fun TodModernHubScreen(
                 modifier = Modifier
                   .fillMaxWidth()
                   .scale(xtreamScale)
-                  .shadow(16.dp, RoundedCornerShape(26.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.40f))
                   .liquidGlassEffect(
                     shape = RoundedCornerShape(26.dp),
                     isElevated = true,
@@ -719,7 +710,6 @@ fun TodModernHubScreen(
                   Box(
                     modifier = Modifier
                       .size(40.dp)
-                      .shadow(4.dp, CircleShape, spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
                       .liquidGlassEffect(shape = CircleShape, glowTint = Color(0xFF0A84FF)),
                     contentAlignment = Alignment.Center
                   ) {
@@ -756,11 +746,11 @@ fun TodModernHubScreen(
 
                     // Apple Electric Blue Circular Control Badge
                     IosCircularControlBadge(
-                      icon = Icons.Default.Dns,
                       background = IosBadgeColors.Blue,
-                      size = 54.dp,
-                      iconSize = 27.dp
-                    )
+                      size = 54.dp
+                    ) {
+                      TodXtreamServerArtIcon(modifier = Modifier.size(30.dp))
+                    }
                   }
                 }
               }
@@ -784,7 +774,6 @@ fun TodModernHubScreen(
                     .weight(1f)
                     .scale(quickScale)
                     .height(170.dp)
-                    .shadow(14.dp, RoundedCornerShape(24.dp), spotColor = Color(0xFF00F0FF).copy(alpha = 0.35f))
                     .liquidGlassEffect(
                       shape = RoundedCornerShape(24.dp),
                       isElevated = true,
@@ -802,11 +791,11 @@ fun TodModernHubScreen(
                     verticalArrangement = Arrangement.SpaceBetween
                   ) {
                     IosCircularControlBadge(
-                      icon = Icons.Default.Bolt,
                       background = IosBadgeColors.Cyan,
-                      size = 50.dp,
-                      iconSize = 26.dp
-                    )
+                      size = 50.dp
+                    ) {
+                      TodQuickLinkArtIcon(modifier = Modifier.size(28.dp))
+                    }
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                       Text(
@@ -843,7 +832,6 @@ fun TodModernHubScreen(
                     .weight(1f)
                     .scale(m3uScale)
                     .height(170.dp)
-                    .shadow(14.dp, RoundedCornerShape(24.dp), spotColor = Color(0xFFA855F7).copy(alpha = 0.35f))
                     .liquidGlassEffect(
                       shape = RoundedCornerShape(24.dp),
                       isElevated = true,
@@ -864,11 +852,11 @@ fun TodModernHubScreen(
                     verticalArrangement = Arrangement.SpaceBetween
                   ) {
                     IosCircularControlBadge(
-                      icon = Icons.Default.LiveTv,
                       background = IosBadgeColors.Purple,
-                      size = 50.dp,
-                      iconSize = 26.dp
-                    )
+                      size = 50.dp
+                    ) {
+                      TodM3uPlaylistIcon(modifier = Modifier.size(28.dp))
+                    }
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                       Text(
@@ -900,7 +888,6 @@ fun TodModernHubScreen(
                     viewMode = HubViewMode.CATEGORIES
                     activeNavTab = TodNavTab.HOME
                   }
-                  .shadow(12.dp, RoundedCornerShape(22.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
                   .liquidGlassEffect(shape = RoundedCornerShape(22.dp), isElevated = true, glowTint = Color(0xFF0A84FF))
                   .padding(horizontal = 16.dp, vertical = 14.dp)
               ) {
@@ -912,7 +899,6 @@ fun TodModernHubScreen(
                   Box(
                     modifier = Modifier
                       .size(36.dp)
-                      .shadow(4.dp, CircleShape, spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
                       .liquidGlassEffect(shape = CircleShape, glowTint = Color(0xFF0A84FF)),
                     contentAlignment = Alignment.Center
                   ) {
@@ -945,11 +931,11 @@ fun TodModernHubScreen(
                     }
 
                     IosCircularControlBadge(
-                      icon = Icons.Default.Tv,
                       background = IosBadgeColors.Green,
-                      size = 46.dp,
-                      iconSize = 24.dp
-                    )
+                      size = 46.dp
+                    ) {
+                      TodBroadcastStationIcon(modifier = Modifier.size(24.dp))
+                    }
                   }
                 }
               }
@@ -958,8 +944,7 @@ fun TodModernHubScreen(
               Box(
                 modifier = Modifier
                   .fillMaxWidth()
-                  .shadow(14.dp, RoundedCornerShape(24.dp), spotColor = Color(0xFF007AFF).copy(alpha = 0.3f))
-                  .liquidGlassEffect(shape = RoundedCornerShape(24.dp), isElevated = true)
+                  .liquidGlassEffect(shape = RoundedCornerShape(24.dp), isElevated = true, glowTint = Color(0xFF007AFF))
                   .padding(vertical = 14.dp, horizontal = 12.dp)
               ) {
                 Row(
@@ -969,44 +954,44 @@ fun TodModernHubScreen(
                 ) {
                   // 1. Saved Playlists Button
                   IosCircleControlButton(
-                    icon = Icons.Default.Subscriptions,
                     label = "السيرفرات",
-                    tint = Color(0xFF64D2FF),
                     onClick = {
                       savedPlaylists = xtreamRepo.getAllPlaylists()
                       showPlaylistsManagerModal = true
                     }
-                  )
+                  ) {
+                    TodBackupExportIcon(modifier = Modifier.size(24.dp))
+                  }
 
                   // 2. Paste Clipboard Button
                   IosCircleControlButton(
-                    icon = Icons.Default.ContentPaste,
                     label = "لصق رابط",
-                    tint = Color(0xFF30D158),
                     onClick = { onOpenQuickLinkScreen() }
-                  )
+                  ) {
+                    TodDirectPasteIcon(modifier = Modifier.size(24.dp))
+                  }
 
                   // 3. Speed / Ping Test Button (Fixed navigation)
                   IosCircleControlButton(
-                    icon = Icons.Default.Bolt,
                     label = "فحص السرعة",
-                    tint = Color(0xFF00F0FF),
                     onClick = {
                       viewMode = HubViewMode.CATEGORIES
                       activeNavTab = TodNavTab.MORE
                     }
-                  )
+                  ) {
+                    TodSpeedTestDialIcon(modifier = Modifier.size(24.dp))
+                  }
 
                   // 4. Settings Button (Fixed navigation)
                   IosCircleControlButton(
-                    icon = Icons.Default.Tune,
                     label = "التفضيلات",
-                    tint = Color(0xFFA855F7),
                     onClick = {
                       viewMode = HubViewMode.CATEGORIES
                       activeNavTab = TodNavTab.MORE
                     }
-                  )
+                  ) {
+                    TodSettingsWheelIcon(modifier = Modifier.size(24.dp))
+                  }
                 }
               }
             }
@@ -1016,11 +1001,9 @@ fun TodModernHubScreen(
         HubViewMode.CATEGORIES -> {
           // TOD MAIN 3-TAB APP INTERFACE - Truly Floating Liquid Glass Dock
           Box(modifier = Modifier.fillMaxSize()) {
-            // 1. Main Tab View: Full-bleed with bottom padding so items glide cleanly beneath the floating glass dock
+            // 1. Main Tab View: Seamless full-bleed where content glides behind the floating dock
             Box(
-              modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = 76.dp)
+              modifier = Modifier.fillMaxSize()
             ) {
               when (activeNavTab) {
                 TodNavTab.HOME -> {
@@ -1185,7 +1168,6 @@ fun TodModernHubScreen(
                   Box(
                     modifier = Modifier
                       .iosBounceClick { submitXtreamForm() }
-                      .shadow(8.dp, RoundedCornerShape(12.dp), spotColor = Color(0xFF007AFF).copy(alpha = 0.4f))
                       .liquidGlassEffect(shape = RoundedCornerShape(12.dp), isElevated = true, glowTint = Color(0xFF007AFF))
                       .padding(horizontal = 14.dp, vertical = 7.dp)
                   ) {
@@ -1205,7 +1187,6 @@ fun TodModernHubScreen(
                     Box(
                       modifier = Modifier
                         .fillMaxWidth()
-                        .shadow(8.dp, RoundedCornerShape(16.dp))
                         .clip(RoundedCornerShape(16.dp))
                         .background(Color(0x33FF3B30))
                         .border(1.dp, Color(0x88FF3B30), RoundedCornerShape(16.dp))
@@ -1247,8 +1228,7 @@ fun TodModernHubScreen(
                             }
                           }
                         }
-                        .shadow(6.dp, RoundedCornerShape(14.dp))
-                        .liquidGlassEffect(shape = RoundedCornerShape(14.dp), isElevated = true)
+                        .liquidGlassEffect(shape = RoundedCornerShape(14.dp), isElevated = true, glowTint = Color(0xFF30D158))
                         .padding(vertical = 10.dp, horizontal = 12.dp),
                       contentAlignment = Alignment.Center
                     ) {
@@ -1275,8 +1255,7 @@ fun TodModernHubScreen(
                             }
                           }
                         }
-                        .shadow(6.dp, RoundedCornerShape(14.dp))
-                        .liquidGlassEffect(shape = RoundedCornerShape(14.dp), isElevated = true)
+                        .liquidGlassEffect(shape = RoundedCornerShape(14.dp), isElevated = true, glowTint = Color(0xFF00F0FF))
                         .padding(vertical = 10.dp, horizontal = 12.dp),
                       contentAlignment = Alignment.Center
                     ) {
@@ -1388,7 +1367,6 @@ fun TodModernHubScreen(
                     modifier = Modifier
                       .fillMaxWidth()
                       .iosBounceClick { submitXtreamForm() }
-                      .shadow(16.dp, RoundedCornerShape(18.dp), spotColor = Color(0xFF007AFF).copy(alpha = 0.45f))
                       .liquidGlassEffect(
                         shape = RoundedCornerShape(18.dp),
                         isElevated = true,
@@ -1646,7 +1624,7 @@ fun TodModernHubScreen(
               .fillMaxWidth()
               .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
               .background(Color(0xFF0E1A34).copy(alpha = 0.97f))
-              .border(1.dp, Brush.verticalGradient(listOf(Color(0xFF0A84FF), Color(0x350A84FF), Color.Transparent)), RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+              .border(1.dp, Brush.verticalGradient(listOf(Color(0xFF0A84FF), Color(0x350A84FF), Color(0x000A84FF))), RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
               .clickable(enabled = false, interactionSource = remember { MutableInteractionSource() }, indication = null) {}
               .padding(horizontal = 16.dp, vertical = 12.dp)
               .navigationBarsPadding(),
@@ -1664,7 +1642,6 @@ fun TodModernHubScreen(
               Box(
                 modifier = Modifier
                   .size(32.dp)
-                  .shadow(4.dp, CircleShape, spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
                   .liquidGlassEffect(shape = CircleShape, glowTint = Color(0xFF0A84FF))
                   .iosBounceClick { showPlaylistsManagerModal = false },
                 contentAlignment = Alignment.Center
@@ -1748,7 +1725,6 @@ fun TodModernHubScreen(
               Box(
                 modifier = Modifier
                   .weight(1f)
-                  .shadow(6.dp, RoundedCornerShape(16.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
                   .liquidGlassEffect(shape = RoundedCornerShape(16.dp), glowTint = Color(0xFF0A84FF))
                   .iosBounceClick {
                     showPlaylistsManagerModal = false
@@ -1764,7 +1740,6 @@ fun TodModernHubScreen(
               Box(
                 modifier = Modifier
                   .weight(1f)
-                  .shadow(6.dp, RoundedCornerShape(16.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.45f))
                   .liquidGlassEffect(shape = RoundedCornerShape(16.dp), glowTint = Color(0xFF0A84FF), isElevated = true)
                   .iosBounceClick {
                     showPlaylistsManagerModal = false

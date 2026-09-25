@@ -331,7 +331,6 @@ fun TodMoreScreen(
             Box(
               modifier = Modifier
                 .size(66.dp)
-                .shadow(6.dp, RoundedCornerShape(20.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
                 .liquidGlassEffect(shape = RoundedCornerShape(20.dp), isElevated = true, glowTint = Color(0xFF0A84FF)),
               contentAlignment = Alignment.Center
             ) {
@@ -356,7 +355,6 @@ fun TodMoreScreen(
               Box(
                 modifier = Modifier
                   .size(66.dp)
-                  .shadow(if (isActive) 8.dp else 4.dp, RoundedCornerShape(20.dp), spotColor = Color(0xFF0A84FF).copy(alpha = if (isActive) 0.5f else 0.25f))
                   .clip(RoundedCornerShape(20.dp))
                   .background(grad)
                   .then(
@@ -406,7 +404,9 @@ fun TodMoreScreen(
             title = "إدارة السيرفرات والملفات",
             subtitle = "التبديل بين الحسابات (${savedPlaylists.size} مسجل)",
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.ManageAccounts, background = IosBadgeColors.Blue)
+              IosCustomIconBadge(background = IosBadgeColors.Blue) {
+                TodAccountsManagerIcon()
+              }
             },
             value = "${savedPlaylists.size} متاح",
             valueColor = Color(0xFF64D2FF),
@@ -416,7 +416,9 @@ fun TodMoreScreen(
             title = "إضافة اشتراك Xtream API",
             subtitle = "سيرفر ومستخدم وكلمة سر",
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.Bolt, background = IosBadgeColors.Cyan)
+              IosCustomIconBadge(background = IosBadgeColors.Cyan) {
+                TodXtreamServerIcon()
+              }
             },
             onClick = { onOpenXtreamForm() }
           )
@@ -424,7 +426,9 @@ fun TodMoreScreen(
             title = "إضافة قائمة تشغيل M3U",
             subtitle = "تحميل رابط أو ملف M3U المباشر",
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.Subscriptions, background = IosBadgeColors.Purple)
+              IosCustomIconBadge(background = IosBadgeColors.Purple) {
+                TodM3uPlaylistIcon()
+              }
             },
             onClick = { onOpenM3uForm() }
           )
@@ -432,7 +436,9 @@ fun TodMoreScreen(
             title = "تشغيل رابط بث مباشر",
             subtitle = "M3U8 / TS / MPD / MP4 المباشر",
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.PlayArrow, background = IosBadgeColors.Sunset)
+              IosCustomIconBadge(background = IosBadgeColors.Sunset) {
+                TodDirectStreamLinkIcon()
+              }
             },
             showDivider = false,
             onClick = { onOpenDirectLink() }
@@ -448,7 +454,9 @@ fun TodMoreScreen(
               value = activeConfig.playlistName,
               valueColor = Color(0xFF64D2FF),
               iconBadge = {
-                IosIconBadge(icon = Icons.Default.Person, background = IosBadgeColors.Indigo)
+                IosCustomIconBadge(background = IosBadgeColors.Indigo) {
+                  TodAccountsManagerIcon(tint = Color.White)
+                }
               },
               showChevron = false
             )
@@ -456,7 +464,9 @@ fun TodMoreScreen(
               title = "عنوان السيرفر",
               value = activeConfig.serverUrl.takeIf { it.isNotBlank() } ?: activeConfig.m3uUrl,
               iconBadge = {
-                IosIconBadge(icon = Icons.Default.Dns, background = IosBadgeColors.Blue)
+                IosCustomIconBadge(background = IosBadgeColors.Blue) {
+                  TodXtreamServerIcon()
+                }
               },
               showChevron = false
             )
@@ -471,7 +481,9 @@ fun TodMoreScreen(
               },
               valueColor = if (livePingResult != null && livePingResult!! > 0) IosSystemGreen else IosSystemBlue,
               iconBadge = {
-                IosIconBadge(icon = Icons.Default.NetworkCheck, background = IosBadgeColors.Green)
+                IosCustomIconBadge(background = IosBadgeColors.Green) {
+                  TodPingDiagnosticIcon()
+                }
               },
               trailing = {
                 if (isTestingPing) {
@@ -495,7 +507,9 @@ fun TodMoreScreen(
               value = "تحديث",
               valueColor = Color(0xFF64D2FF),
               iconBadge = {
-                IosIconBadge(icon = Icons.Default.Refresh, background = IosBadgeColors.Teal)
+                IosCustomIconBadge(background = IosBadgeColors.Teal) {
+                  TodServerSyncIcon()
+                }
               },
               showDivider = false,
               onClick = {
@@ -517,7 +531,9 @@ fun TodMoreScreen(
             title = "المزامنة التلقائية لدليل البرامج",
             subtitle = "جلب جدول المباريات والبرامج لكل قناة تلقائياً",
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.Tv, background = IosBadgeColors.Purple)
+              IosCustomIconBadge(background = IosBadgeColors.Purple) {
+                TodEpgGuideIcon()
+              }
             },
             trailing = {
               IosSwitch(
@@ -557,7 +573,9 @@ fun TodMoreScreen(
             value = appSettings.epgSyncInterval,
             valueColor = Color(0xFF64D2FF),
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.Schedule, background = IosBadgeColors.Mint)
+              IosCustomIconBadge(background = IosBadgeColors.Mint) {
+                TodLiveClockIcon()
+              }
             },
             showDivider = false,
             onClick = {
@@ -575,7 +593,9 @@ fun TodMoreScreen(
             title = "التسريع العتادي الفائق (Hardware GPU)",
             subtitle = "تشغيل معالجات GPU المتقدمة لدعم 4K بسلاسة 60fps",
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.Speed, background = IosBadgeColors.Green)
+              IosCustomIconBadge(background = IosBadgeColors.Green) {
+                TodGpuAccelerationIcon()
+              }
             },
             trailing = {
               IosSwitch(
@@ -592,7 +612,9 @@ fun TodMoreScreen(
             title = "المواءمة التلقائية للجودة (Adaptive Bitrate)",
             subtitle = "التكيف الذكي مع سرعة الإنترنت لمنع تقطيع البث",
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.Tune, background = IosBadgeColors.Teal)
+              IosCustomIconBadge(background = IosBadgeColors.Teal) {
+                TodAdaptiveBitrateIcon()
+              }
             },
             trailing = {
               IosSwitch(
@@ -612,7 +634,9 @@ fun TodMoreScreen(
             value = appSettings.defaultAspectRatio,
             valueColor = Color(0xFF64D2FF),
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.AspectRatio, background = IosBadgeColors.Indigo)
+              IosCustomIconBadge(background = IosBadgeColors.Indigo) {
+                TodAspectRatioIcon()
+              }
             },
             onClick = {
               val next = (selectedRatioIdx + 1) % ratioOptions.size
@@ -629,7 +653,9 @@ fun TodMoreScreen(
             value = appSettings.videoDecoderEngine,
             valueColor = Color(0xFF64D2FF),
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.Tune, background = IosBadgeColors.Cyan)
+              IosCustomIconBadge(background = IosBadgeColors.Cyan) {
+                TodVideoDecoderIcon()
+              }
             },
             onClick = {
               val next = (selectedDecIdx + 1) % decoderOptions.size
@@ -642,7 +668,9 @@ fun TodMoreScreen(
             title = "مزامنة معدل التحديث (Match 50/60Hz)",
             subtitle = "مزامنة الشاشة مع إطارات البث لمنع التقطيع في المباريات الحية",
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.Speed, background = IosBadgeColors.Green)
+              IosCustomIconBadge(background = IosBadgeColors.Green) {
+                TodMatchRefreshRateIcon()
+              }
             },
             trailing = {
               IosSwitch(
@@ -659,7 +687,9 @@ fun TodMoreScreen(
             title = "شاشة البيانات الفنية للبث (Diagnostic HUD)",
             subtitle = "عرض معلومات الـ FPS والترميز وسرعة البت الحقيقية على الشاشة",
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.Info, background = IosBadgeColors.Amber)
+              IosCustomIconBadge(background = IosBadgeColors.Amber) {
+                TodDiagnosticHudIcon()
+              }
             },
             trailing = {
               IosSwitch(
@@ -676,7 +706,9 @@ fun TodMoreScreen(
             title = "وضع توفير باقة الإنترنت (Data Saver)",
             subtitle = "تحديد الدقة إلى 720p HD لتقليل استهلاك بيانات الجوال",
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.Wifi, background = IosBadgeColors.Orange)
+              IosCustomIconBadge(background = IosBadgeColors.Orange) {
+                TodDataSaverIcon()
+              }
             },
             trailing = {
               IosSwitch(
@@ -693,7 +725,9 @@ fun TodMoreScreen(
             title = "إبقاء الشاشة نشطة دائماً",
             subtitle = "منع إيقاف تشغيل الشاشة أو خمول الجهاز أثناء المشاهدة",
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.StayCurrentPortrait, background = IosBadgeColors.Cyan)
+              IosCustomIconBadge(background = IosBadgeColors.Cyan) {
+                TodKeepScreenOnIcon()
+              }
             },
             trailing = {
               IosSwitch(
@@ -710,7 +744,9 @@ fun TodMoreScreen(
             title = "استئناف آخر قناة تلقائياً",
             subtitle = "تشغيل البث الأخير مباشرة بمجرد فتح التطبيق",
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.PlayArrow, background = IosBadgeColors.Pink)
+              IosCustomIconBadge(background = IosBadgeColors.Pink) {
+                TodAutoPlayIcon()
+              }
             },
             trailing = {
               IosSwitch(
@@ -742,7 +778,9 @@ fun TodMoreScreen(
             title = "مضخم الصوت الذكي (Audio Boost)",
             subtitle = "رفع مستوى الصوت حتى +150% لمكبرات الجهاز الصغيرة",
             iconBadge = {
-              IosIconBadge(icon = Icons.AutoMirrored.Filled.VolumeUp, background = IosBadgeColors.Teal)
+              IosCustomIconBadge(background = IosBadgeColors.Teal) {
+                TodAudioBoostIcon()
+              }
             },
             trailing = {
               IosSwitch(
@@ -759,7 +797,9 @@ fun TodMoreScreen(
             title = "توضيح صوت المعلق (Vocal Clarity)",
             subtitle = "إبراز صوت المعلق الرياضي وخفض الصخب الخلفي",
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.GraphicEq, background = IosBadgeColors.Rose)
+              IosCustomIconBadge(background = IosBadgeColors.Rose) {
+                TodVocalClarityIcon()
+              }
             },
             trailing = {
               IosSwitch(
@@ -799,7 +839,9 @@ fun TodMoreScreen(
             value = appSettings.soundProfile,
             valueColor = Color(0xFF64D2FF),
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.GraphicEq, background = IosBadgeColors.Teal)
+              IosCustomIconBadge(background = IosBadgeColors.Teal) {
+                TodAudioEqualizerIcon()
+              }
             },
             showDivider = false,
             onClick = {
@@ -816,7 +858,9 @@ fun TodMoreScreen(
             title = "تفعيل الترجمة المدمجة",
             subtitle = "إظهار ملفات الترجمة SRT و VTT المرفقة مع القناة",
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.ClosedCaption, background = IosBadgeColors.Amber)
+              IosCustomIconBadge(background = IosBadgeColors.Amber) {
+                TodSubtitlesCcIcon()
+              }
             },
             trailing = {
               IosSwitch(
@@ -856,7 +900,9 @@ fun TodMoreScreen(
             value = appSettings.subtitleEncoding,
             valueColor = Color(0xFF64D2FF),
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.FontDownload, background = IosBadgeColors.Indigo)
+              IosCustomIconBadge(background = IosBadgeColors.Indigo) {
+                TodTextEncodingIcon()
+              }
             },
             showDivider = false,
             onClick = {
@@ -874,7 +920,9 @@ fun TodMoreScreen(
             title = "إيماءات التمرير للصوت والإضاءة",
             subtitle = "السحب العمودي يميناً للإضاءة ويساراً للصوت",
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.Swipe, background = IosBadgeColors.Blue)
+              IosCustomIconBadge(background = IosBadgeColors.Blue) {
+                TodSwipeGesturesIcon()
+              }
             },
             trailing = {
               IosSwitch(
@@ -891,7 +939,9 @@ fun TodMoreScreen(
             title = "النافذة العائمة المصغرة (Picture-in-Picture)",
             subtitle = "مواصلة المشاهدة في نافذة عائمة عند مغادرة التطبيق",
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.PictureInPictureAlt, background = IosBadgeColors.Cyan)
+              IosCustomIconBadge(background = IosBadgeColors.Cyan) {
+                TodPictureInPictureIcon()
+              }
             },
             trailing = {
               IosSwitch(
@@ -908,7 +958,9 @@ fun TodMoreScreen(
             title = "إظهار الساعة الحية في المشغل",
             subtitle = "عرض التوقيت الفعلي أعلى شاشة البث أثناء المشاهدة",
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.Schedule, background = IosBadgeColors.Orange)
+              IosCustomIconBadge(background = IosBadgeColors.Orange) {
+                TodLiveClockIcon()
+              }
             },
             trailing = {
               IosSwitch(
@@ -925,7 +977,9 @@ fun TodMoreScreen(
             title = "التبديل الفوري بين القنوات (Fast Zapping)",
             subtitle = "التنقل السريع بين القنوات بدون إغلاق شاشة البث",
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.SwapHoriz, background = IosBadgeColors.Purple)
+              IosCustomIconBadge(background = IosBadgeColors.Purple) {
+                TodFastZappingIcon()
+              }
             },
             trailing = {
               IosSwitch(
@@ -947,7 +1001,9 @@ fun TodMoreScreen(
             value = sleepLabels[selectedSleepIdx],
             valueColor = if (appSettings.sleepTimerMinutes > 0) IosSystemGreen else Color(0xFF8E8E93),
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.Schedule, background = IosBadgeColors.Indigo)
+              IosCustomIconBadge(background = IosBadgeColors.Indigo) {
+                TodSleepTimerIcon()
+              }
             },
             showDivider = false,
             onClick = {
@@ -968,7 +1024,9 @@ fun TodMoreScreen(
             value = appSettings.themeAccentName,
             valueColor = Color(0xFF64D2FF),
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.Tune, background = IosBadgeColors.Blue)
+              IosCustomIconBadge(background = IosBadgeColors.Blue) {
+                TodThemePaletteIcon()
+              }
             },
             showDivider = false,
             onClick = {
@@ -990,7 +1048,9 @@ fun TodMoreScreen(
             title = "قفل الرقابة الأبوية (PIN Lock)",
             subtitle = "حماية الباقات والقنوات الحساسة برمز سري مكون من 4 أرقام",
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.Lock, background = IosBadgeColors.Red)
+              IosCustomIconBadge(background = IosBadgeColors.Red) {
+                TodParentalLockIcon()
+              }
             },
             trailing = {
               IosSwitch(
@@ -1015,7 +1075,9 @@ fun TodMoreScreen(
               value = "••••",
               valueColor = Color(0xFF64D2FF),
               iconBadge = {
-                IosIconBadge(icon = Icons.Default.Security, background = IosBadgeColors.Charcoal)
+                IosCustomIconBadge(background = IosBadgeColors.Charcoal) {
+                  TodParentalPinIcon()
+                }
               },
               onClick = { showPinDialog = true }
             )
@@ -1025,7 +1087,9 @@ fun TodMoreScreen(
             title = "إخفاء المحتوى للكبار تلقائياً",
             subtitle = "حجب الفئات غير المناسبة من القائمة الرئيسية فوراً",
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.VisibilityOff, background = IosBadgeColors.Slate)
+              IosCustomIconBadge(background = IosBadgeColors.Slate) {
+                TodAdultFilterIcon()
+              }
             },
             trailing = {
               IosSwitch(
@@ -1048,7 +1112,9 @@ fun TodMoreScreen(
               value = if (selectedDns == opt) "محدد" else "",
               valueColor = Color(0xFF64D2FF),
               iconBadge = {
-                IosIconBadge(icon = Icons.Default.Security, background = if (selectedDns == opt) IosBadgeColors.Blue else IosBadgeColors.Slate)
+                IosCustomIconBadge(background = if (selectedDns == opt) IosBadgeColors.Blue else IosBadgeColors.Slate) {
+                  TodDnsNetworkIcon()
+                }
               },
               showChevron = false,
               showDivider = idx != dnsOptions.size - 1,
@@ -1071,7 +1137,9 @@ fun TodMoreScreen(
             title = "نسخ قائمة السيرفرات للحافظة",
             subtitle = "تصدير بيانات السيرفرات النشطة لنقلها لجهاز آخر",
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.ContentCopy, background = IosBadgeColors.Mint)
+              IosCustomIconBadge(background = IosBadgeColors.Mint) {
+                TodBackupExportIcon()
+              }
             },
             value = "نسخ",
             valueColor = Color(0xFF64D2FF),
@@ -1098,7 +1166,9 @@ fun TodMoreScreen(
             title = "مسح الذاكرة المؤقتة (Clear Cache)",
             subtitle = "تحرير مساحة التخزين وحذف الشعارات والسجلات المؤقتة",
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.CleaningServices, background = IosBadgeColors.Teal)
+              IosCustomIconBadge(background = IosBadgeColors.Teal) {
+                TodClearCacheIcon()
+              }
             },
             value = "مسح ($liveCacheSize)",
             valueColor = Color(0xFF64D2FF),
@@ -1123,7 +1193,9 @@ fun TodMoreScreen(
             title = "إعادة تعيين كافة الإعدادات الافتراضية",
             subtitle = "استعادة خيارات العرض والصوت والمشغل الأصلية",
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.RestartAlt, background = IosBadgeColors.Red)
+              IosCustomIconBadge(background = IosBadgeColors.Red) {
+                TodResetDefaultsIcon()
+              }
             },
             value = "إعادة ضبط",
             valueColor = IosSystemRed,
@@ -1139,7 +1211,9 @@ fun TodMoreScreen(
             value = "v2.9.0 iOS 18 Liquid Edition Pro",
             valueColor = Color(0xCCFFFFFF),
             iconBadge = {
-              IosIconBadge(icon = Icons.Default.Info, background = IosBadgeColors.Slate)
+              IosCustomIconBadge(background = IosBadgeColors.Slate) {
+                TodAppInfoIcon()
+              }
             },
             showDivider = false,
             showChevron = false

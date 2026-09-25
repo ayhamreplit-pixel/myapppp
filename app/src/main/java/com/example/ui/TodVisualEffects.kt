@@ -246,62 +246,66 @@ fun FluidMeshBackground(
         val h = size.height
 
         // 1. Glowing Fluid Orb 1: Electric Blue & Vivid Cyan (Top-Left / Header region)
+        val orb1Center = Offset(w * 0.20f + orb1Offset, h * 0.15f + orb2Offset * 0.5f)
         drawCircle(
           brush = Brush.radialGradient(
             colors = listOf(
               Color(0xFF007AFF).copy(alpha = (ambientAlpha * 0.85f).coerceIn(0f, 1f)),
               Color(0xFF00F0FF).copy(alpha = (ambientAlpha * 0.45f).coerceIn(0f, 1f)),
-              Color.Transparent
+              Color(0x0000F0FF)
             ),
-            center = Offset(w * 0.20f + orb1Offset, h * 0.15f + orb2Offset * 0.5f),
+            center = orb1Center,
             radius = w * 0.85f
           ),
-          center = Offset(w * 0.20f + orb1Offset, h * 0.15f + orb2Offset * 0.5f),
+          center = orb1Center,
           radius = w * 0.85f
         )
 
         // 2. Glowing Fluid Orb 2: Royal Violet & Vivid Magenta (Middle-Right)
+        val orb2Center = Offset(w * 0.85f + orb2Offset, h * 0.42f + orb1Offset)
         drawCircle(
           brush = Brush.radialGradient(
             colors = listOf(
               Color(0xFFA855F7).copy(alpha = (ambientAlpha * 0.75f).coerceIn(0f, 1f)),
               Color(0xFFEC4899).copy(alpha = (ambientAlpha * 0.40f).coerceIn(0f, 1f)),
-              Color.Transparent
+              Color(0x00EC4899)
             ),
-            center = Offset(w * 0.85f + orb2Offset, h * 0.42f + orb1Offset),
+            center = orb2Center,
             radius = w * 0.80f * orb3Scale
           ),
-          center = Offset(w * 0.85f + orb2Offset, h * 0.42f + orb1Offset),
+          center = orb2Center,
           radius = w * 0.80f * orb3Scale
         )
 
         // 3. Glowing Fluid Orb 3: Radiant Amber & Golden Sunset (Bottom-Left)
+        val orb3Center = Offset(w * 0.15f - orb1Offset * 0.6f, h * 0.75f + orb2Offset * 0.4f)
         drawCircle(
           brush = Brush.radialGradient(
             colors = listOf(
               Color(0xFFFFB800).copy(alpha = (ambientAlpha * 0.55f).coerceIn(0f, 1f)),
               Color(0xFFFF6B6B).copy(alpha = (ambientAlpha * 0.30f).coerceIn(0f, 1f)),
-              Color.Transparent
+              Color(0x00FF6B6B)
             ),
-            center = Offset(w * 0.15f - orb1Offset * 0.6f, h * 0.75f + orb2Offset * 0.4f),
+            center = orb3Center,
             radius = w * 0.75f
           ),
-          center = Offset(w * 0.15f - orb1Offset * 0.6f, h * 0.75f + orb2Offset * 0.4f),
+          center = orb3Center,
           radius = w * 0.75f
         )
 
         // 4. Glowing Fluid Orb 4: Emerald Mint & Cyan Glow (Bottom-Right / Nav region)
+        val orb4Center = Offset(w * 0.80f - orb2Offset * 0.5f, h * 0.88f)
         drawCircle(
           brush = Brush.radialGradient(
             colors = listOf(
               Color(0xFF10B981).copy(alpha = (ambientAlpha * 0.50f).coerceIn(0f, 1f)),
               Color(0xFF06B6D4).copy(alpha = (ambientAlpha * 0.25f).coerceIn(0f, 1f)),
-              Color.Transparent
+              Color(0x0006B6D4)
             ),
-            center = Offset(w * 0.80f - orb2Offset * 0.5f, h * 0.88f),
+            center = orb4Center,
             radius = w * 0.70f
           ),
-          center = Offset(w * 0.80f - orb2Offset * 0.5f, h * 0.88f),
+          center = orb4Center,
           radius = w * 0.70f
         )
       }
@@ -324,14 +328,14 @@ fun Modifier.liquidGlassEffect(
   val effectiveGlowTint = glowTint ?: Color(0xFF0A84FF)
   val surfaceColors = when {
     glassColor != null -> listOf(
-      glassColor,
-      glassColor.copy(alpha = (glassColor.alpha * 0.65f).coerceAtLeast(0.08f)),
-      glassColor.copy(alpha = (glassColor.alpha * 0.35f).coerceAtLeast(0.04f))
+      glassColor.copy(alpha = (glassColor.alpha * 0.85f).coerceIn(0.12f, 0.95f)),
+      glassColor.copy(alpha = (glassColor.alpha * 0.60f).coerceIn(0.08f, 0.80f)),
+      glassColor.copy(alpha = (glassColor.alpha * 0.38f).coerceIn(0.04f, 0.60f))
     )
     else -> listOf(
-      effectiveGlowTint.copy(alpha = 0.28f),
-      effectiveGlowTint.copy(alpha = 0.14f),
-      effectiveGlowTint.copy(alpha = 0.05f)
+      effectiveGlowTint.copy(alpha = if (isElevated) 0.32f else 0.22f),
+      effectiveGlowTint.copy(alpha = if (isElevated) 0.18f else 0.12f),
+      effectiveGlowTint.copy(alpha = if (isElevated) 0.10f else 0.05f)
     )
   }
 
@@ -345,28 +349,6 @@ fun Modifier.liquidGlassEffect(
   this
     .clip(shape)
     .background(Brush.verticalGradient(surfaceColors))
-    .drawBehind {
-      if (showTopGlare) {
-        // Curved optical refraction specular highlight arc across the top rim (soft, elegant)
-        val glareWidth = size.width
-        val glareHeight = (size.height * 0.34f).coerceAtMost(26.dp.toPx())
-
-        drawRoundRect(
-          brush = Brush.verticalGradient(
-            colors = listOf(
-              Color(0x40FFFFFF),
-              Color(0x12FFFFFF),
-              Color.Transparent
-            ),
-            startY = 0f,
-            endY = glareHeight
-          ),
-          topLeft = Offset(0f, 0f),
-          size = Size(glareWidth, glareHeight),
-          cornerRadius = CornerRadius(18.dp.toPx(), 18.dp.toPx())
-        )
-      }
-    }
     .border(width = 1.15.dp, brush = finalBorderBrush, shape = shape)
 }
 
@@ -399,12 +381,6 @@ fun LiquidGlassCard(
   Box(
     modifier = modifier
       .scale(scale)
-      .shadow(
-        elevation = if (isElevated) 14.dp else 8.dp,
-        shape = shape,
-        spotColor = (glowTint ?: Color(0xFF0A84FF)).copy(alpha = 0.40f),
-        ambientColor = Color.Transparent
-      )
       .liquidGlassEffect(
         shape = shape,
         isElevated = isElevated,
@@ -453,11 +429,6 @@ fun LiquidGlassPill(
   Box(
     modifier = modifier
       .scale(scale)
-      .shadow(
-        elevation = if (isActive) 12.dp else 6.dp,
-        shape = pillShape,
-        spotColor = if (isActive) activeTint.copy(alpha = 0.5f) else Color(0xFF0055D4).copy(alpha = 0.3f)
-      )
       .clip(pillShape)
       .background(
         if (isActive) {
@@ -472,23 +443,6 @@ fun LiquidGlassPill(
           Brush.verticalGradient(LiquidGlassTheme.LiquidSurfaceRegular)
         }
       )
-      .drawBehind {
-        // Specular top highlight sheen
-        drawRoundRect(
-          brush = Brush.verticalGradient(
-            colors = listOf(
-              Color(0x99FFFFFF),
-              Color(0x25FFFFFF),
-              Color.Transparent
-            ),
-            startY = 0f,
-            endY = size.height * 0.45f
-          ),
-          topLeft = Offset(0f, 0f),
-          size = Size(size.width, size.height * 0.45f),
-          cornerRadius = CornerRadius(32.dp.toPx(), 32.dp.toPx())
-        )
-      }
       .border(
         width = 1.15.dp,
         brush = if (isActive) LiquidGlassTheme.LiquidGoldBorder else LiquidGlassTheme.LiquidSpecularBorder,
@@ -726,16 +680,10 @@ fun LiquidGlassBottomBar(
     // Floating Dynamic Island Dock Container
     Box(
       modifier = Modifier
-        .shadow(
-          elevation = 18.dp,
-          shape = RoundedCornerShape(34.dp),
-          spotColor = Color(0xFF007AFF).copy(alpha = 0.30f),
-          ambientColor = Color.Black.copy(alpha = 0.40f)
-        )
         .liquidGlassEffect(
           shape = RoundedCornerShape(34.dp),
           isElevated = true,
-          glassColor = Color(0x35141D34),
+          glowTint = Color(0xFF0A84FF),
           borderBrush = Brush.verticalGradient(
             listOf(
               Color(0x60FFFFFF),
@@ -768,11 +716,6 @@ fun LiquidGlassBottomBar(
           Box(
             modifier = Modifier
               .scale(tabScale)
-              .shadow(
-                elevation = if (isSelected) 8.dp else 0.dp,
-                shape = RoundedCornerShape(26.dp),
-                spotColor = Color(0xFF0A84FF).copy(alpha = 0.45f)
-              )
               .clip(RoundedCornerShape(26.dp))
               .then(
                 if (isSelected) {
@@ -993,25 +936,10 @@ fun IosCircularControlBadge(
   size: Dp = 52.dp,
   iconSize: Dp = 26.dp
 ) {
-  Box(
-    modifier = modifier
-      .size(size)
-      .shadow(10.dp, CircleShape, spotColor = Color(0xFF007AFF).copy(alpha = 0.45f))
-      .clip(CircleShape)
-      .background(background)
-      .drawBehind {
-        // Specular top highlight curve
-        drawRoundRect(
-          brush = Brush.verticalGradient(
-            colors = listOf(Color(0x88FFFFFF), Color.Transparent),
-            startY = 0f,
-            endY = drawContext.size.height * 0.45f
-          ),
-          cornerRadius = CornerRadius(size.toPx() / 2f, size.toPx() / 2f)
-        )
-      }
-      .border(1.dp, Color(0x66FFFFFF), CircleShape),
-    contentAlignment = Alignment.Center
+  IosCircularControlBadge(
+    background = background,
+    modifier = modifier,
+    size = size
   ) {
     Icon(
       imageVector = icon,
@@ -1019,6 +947,28 @@ fun IosCircularControlBadge(
       tint = tint,
       modifier = Modifier.size(iconSize)
     )
+  }
+}
+
+/**
+ * Apple iOS 18 Control Center Circular Glowing Action Badge with Custom Composable Content
+ */
+@Composable
+fun IosCircularControlBadge(
+  background: Brush,
+  modifier: Modifier = Modifier,
+  size: Dp = 52.dp,
+  content: @Composable () -> Unit
+) {
+  Box(
+    modifier = modifier
+      .size(size)
+      .clip(CircleShape)
+      .background(background)
+      .border(1.dp, Color(0x66FFFFFF), CircleShape),
+    contentAlignment = Alignment.Center
+  ) {
+    content()
   }
 }
 
@@ -1034,6 +984,32 @@ fun IosCircleControlButton(
   tint: Color = Color.White,
   size: Dp = 56.dp,
   iconSize: Dp = 24.dp
+) {
+  IosCircleControlButton(
+    label = label,
+    onClick = onClick,
+    modifier = modifier,
+    size = size
+  ) {
+    Icon(
+      imageVector = icon,
+      contentDescription = label,
+      tint = tint,
+      modifier = Modifier.size(iconSize)
+    )
+  }
+}
+
+/**
+ * Apple iOS 18 Control Center Frosted Circle Button with Custom Composable Icon
+ */
+@Composable
+fun IosCircleControlButton(
+  label: String,
+  onClick: () -> Unit,
+  modifier: Modifier = Modifier,
+  size: Dp = 56.dp,
+  iconContent: @Composable () -> Unit
 ) {
   val interactionSource = remember { MutableInteractionSource() }
   val isPressed by interactionSource.collectIsPressedAsState()
@@ -1052,7 +1028,6 @@ fun IosCircleControlButton(
       modifier = Modifier
         .scale(scale)
         .size(size)
-        .shadow(10.dp, CircleShape, spotColor = Color(0xFF007AFF).copy(alpha = 0.35f))
         .liquidGlassEffect(shape = CircleShape, isElevated = true)
         .clickable(
           interactionSource = interactionSource,
@@ -1061,12 +1036,7 @@ fun IosCircleControlButton(
         ),
       contentAlignment = Alignment.Center
     ) {
-      Icon(
-        imageVector = icon,
-        contentDescription = label,
-        tint = tint,
-        modifier = Modifier.size(iconSize)
-      )
+      iconContent()
     }
     Text(
       text = label,

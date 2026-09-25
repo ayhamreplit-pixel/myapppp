@@ -73,16 +73,16 @@ object TodGradients {
     listOf(Color(0xEE0A84FF), Color(0x550A84FF), Color(0x20FFFFFF))
   )
   val HeaderGlass = Brush.verticalGradient(
-    listOf(Color(0x40FFFFFF), Color(0x20FFFFFF), Color.Transparent)
+    listOf(Color(0x40FFFFFF), Color(0x20FFFFFF), Color(0x00FFFFFF))
   )
   val HeroScrim = Brush.verticalGradient(
-    listOf(Color.Transparent, Color(0x200A1024), Color(0x800A1024))
+    listOf(Color(0x000A1024), Color(0x200A1024), Color(0x800A1024))
   )
   val PlayerTopVignette = Brush.verticalGradient(
-    listOf(Color(0x80000000), Color(0x30000000), Color.Transparent)
+    listOf(Color(0x80000000), Color(0x30000000), Color(0x00000000))
   )
   val PlayerBottomVignette = Brush.verticalGradient(
-    listOf(Color.Transparent, Color(0x40000000), Color(0x90000000))
+    listOf(Color(0x00000000), Color(0x40000000), Color(0x90000000))
   )
   val SportsPurple = Brush.verticalGradient(
     listOf(Color(0x80A855F7), Color(0x30A855F7))
@@ -123,7 +123,7 @@ object TodGradients {
     listOf(Color(0xFF64D2FF), Color(0xFF0A84FF))
   )
   val IosHeroGlow = Brush.radialGradient(
-    listOf(Color(0x550A84FF), Color(0x25A855F7), Color.Transparent)
+    listOf(Color(0x550A84FF), Color(0x25A855F7), Color(0x00A855F7))
   )
 }
 

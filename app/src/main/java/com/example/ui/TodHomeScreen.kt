@@ -309,14 +309,13 @@ fun TodHomeScreen(
             modifier = Modifier
               .scale(avatarScale)
               .size(38.dp)
-              .shadow(6.dp, CircleShape, spotColor = TodGold.copy(alpha = 0.5f))
               .clip(CircleShape)
               .background(
                 Brush.linearGradient(listOf(TodGold, Color(0xFFFF9500)))
               )
               .drawBehind {
                 drawRoundRect(
-                  brush = Brush.verticalGradient(listOf(Color(0x80FFFFFF), Color.Transparent)),
+                  brush = Brush.verticalGradient(listOf(Color(0x80FFFFFF), Color(0x00FFFFFF))),
                   cornerRadius = CornerRadius(19.dp.toPx(), 19.dp.toPx())
                 )
               }
@@ -350,7 +349,6 @@ fun TodHomeScreen(
           Box(
             modifier = Modifier
               .scale(quickScale)
-              .shadow(6.dp, RoundedCornerShape(20.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.4f))
               .liquidGlassEffect(
                 shape = RoundedCornerShape(20.dp),
                 glowTint = Color(0xFF0A84FF)
@@ -367,12 +365,7 @@ fun TodHomeScreen(
               verticalAlignment = Alignment.CenterVertically,
               horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-              Icon(
-                imageVector = Icons.Default.Bolt,
-                contentDescription = "رابط سريع",
-                tint = Color(0xFF0A84FF),
-                modifier = Modifier.size(16.dp)
-              )
+              TodQuickLinkArtIcon(modifier = Modifier.size(16.dp))
               Text(
                 text = "رابط سريع",
                 color = Color.White,
@@ -407,7 +400,6 @@ fun TodHomeScreen(
         Box(
           modifier = Modifier
             .scale(allScale)
-            .shadow(6.dp, RoundedCornerShape(20.dp), spotColor = Color(0xFF0A84FF).copy(alpha = if (isAllSelected) 0.50f else 0.25f))
             .liquidGlassEffect(
               shape = RoundedCornerShape(20.dp),
               glowTint = Color(0xFF0A84FF),
@@ -442,7 +434,6 @@ fun TodHomeScreen(
           Box(
             modifier = Modifier
               .scale(catScale)
-              .shadow(6.dp, RoundedCornerShape(20.dp), spotColor = Color(0xFF0A84FF).copy(alpha = if (isSelected) 0.50f else 0.25f))
             .liquidGlassEffect(
               shape = RoundedCornerShape(20.dp),
               glowTint = Color(0xFF0A84FF),
@@ -512,7 +503,6 @@ fun TodHomeScreen(
             Row(
               modifier = Modifier
                 .scale(catBackScale)
-                .shadow(6.dp, RoundedCornerShape(16.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
                 .liquidGlassEffect(
                   shape = RoundedCornerShape(16.dp),
                   glowTint = Color(0xFF0A84FF)
@@ -577,7 +567,6 @@ fun TodHomeScreen(
 
             Row(
               modifier = Modifier
-                .shadow(6.dp, RoundedCornerShape(14.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
                 .liquidGlassEffect(
                   shape = RoundedCornerShape(14.dp),
                   glowTint = Color(0xFF0A84FF)
@@ -670,339 +659,469 @@ fun TodHomeScreen(
 
       LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 32.dp)
+        contentPadding = PaddingValues(bottom = 100.dp)
       ) {
         // 3. Apple TV Style Floating Cinematic Glass Carousel Banner
         if (activeHero != null) {
           item(key = "hero_banner") {
-            Box(
-              modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 6.dp)
-                .height(310.dp)
-              .shadow(
-                elevation = 16.dp,
-                shape = RoundedCornerShape(24.dp),
-                spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f),
-                ambientColor = Color.Transparent
-              )
-              .clip(RoundedCornerShape(24.dp))
-              .liquidGlassEffect(shape = RoundedCornerShape(24.dp), glowTint = Color(0xFF0A84FF))
-          ) {
-            // Gradient backdrop
-            Box(
-              modifier = Modifier
-                .fillMaxSize()
-                .background(activeHero.backdropGradient)
-            )
-
-            // Scrim overlay
-            Box(
-              modifier = Modifier
-                .fillMaxSize()
-                .background(TodGradients.HeroScrim)
-            )
-
-            // Sound mute toggle in hero
-            IconButton(
-              onClick = { isMuted = !isMuted },
-              modifier = Modifier
-                .padding(top = 14.dp, start = 14.dp)
-                .size(36.dp)
-                .shadow(4.dp, CircleShape, spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
-                .liquidGlassEffect(shape = CircleShape, glowTint = Color(0xFF0A84FF))
-                .align(Alignment.TopStart)
-            ) {
-              Icon(
-                imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
-                contentDescription = "الصوت",
-                tint = Color.White,
-                modifier = Modifier.size(18.dp)
-              )
-            }
-
-            // Hero Bottom Overlay Controls
-            Column(
-              modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-              horizontalAlignment = Alignment.End
-            ) {
-              // Animated Hero Content with Cross-fade
-              AnimatedContent(
-                targetState = activeHero,
-                transitionSpec = {
-                  fadeIn(animationSpec = tween(400)) togetherWith fadeOut(animationSpec = tween(300))
-                },
-                label = "heroCrossfade"
-              ) { hero ->
+            if (activeHero.channel == null) {
+              // ULTRA-MODERN FUTURISTIC 4K IPTV PLAYER SHOWCASE HERO (Brand New Redesigned Layout)
+              Box(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(horizontal = 14.dp, vertical = 6.dp)
+                  .clip(RoundedCornerShape(26.dp))
+                  .liquidGlassEffect(
+                    shape = RoundedCornerShape(26.dp),
+                    glowTint = Color(0xFF0A84FF),
+                    borderBrush = Brush.linearGradient(
+                      listOf(Color(0xFF64D2FF), Color(0xFF0A84FF), Color(0x30FFFFFF))
+                    )
+                  )
+                  .padding(18.dp)
+              ) {
                 Column(
                   modifier = Modifier.fillMaxWidth(),
                   horizontalAlignment = Alignment.End
                 ) {
-                  // Badges / Tags row
-                  if (hero.tags.isNotEmpty()) {
+                  // Top Row: 4K UHD Masterpiece Emblem + Live Badges
+                  Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                  ) {
+                    TodIptv4kMasterpieceIcon(modifier = Modifier.size(50.dp))
+
                     Row(
                       horizontalArrangement = Arrangement.spacedBy(6.dp),
                       verticalAlignment = Alignment.CenterVertically
                     ) {
-                      hero.tags.forEach { tag ->
-                        Box(
-                          modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(Color(0x33FFFFFF))
-                            .border(0.5.dp, Color(0x44FFFFFF), RoundedCornerShape(6.dp))
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                        ) {
-                          Text(tag, color = Color.White, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
-                        }
+                      Box(
+                        modifier = Modifier
+                          .clip(RoundedCornerShape(8.dp))
+                          .background(
+                            Brush.horizontalGradient(
+                              listOf(Color(0xFF0A84FF).copy(alpha = 0.4f), Color(0xFF00E5FF).copy(alpha = 0.25f))
+                            )
+                          )
+                          .border(1.dp, Color(0xFF64D2FF).copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                          .padding(horizontal = 10.dp, vertical = 4.dp)
+                      ) {
+                        Text("🌟 4K UHD 60FPS", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                      }
+                      Box(
+                        modifier = Modifier
+                          .clip(RoundedCornerShape(8.dp))
+                          .background(Color(0x3334C759))
+                          .border(0.75.dp, Color(0x8834C759), RoundedCornerShape(8.dp))
+                          .padding(horizontal = 8.dp, vertical = 4.dp)
+                      ) {
+                        Text("⚡ مباشر", color = Color(0xFF34C759), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                       }
                     }
-                    Spacer(modifier = Modifier.height(6.dp))
                   }
 
-                  // Pulsing Live Beacon Pill
-                  if (hero.isLive) {
-                    PulsingLiveBadge()
-                    Spacer(modifier = Modifier.height(6.dp))
+                  Spacer(modifier = Modifier.height(12.dp))
+
+                  // Main Title & Subtitle
+                  Text(
+                    text = "مشغل IPTV الذكي 4K Ultra",
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontFamily = ThmanyahFontFamily,
+                    fontWeight = FontWeight.Black,
+                    textAlign = TextAlign.End
+                  )
+                  Spacer(modifier = Modifier.height(3.dp))
+                  Text(
+                    text = "بث فوري مباشر لكافة القنوات الرياضية والعالمية بأعلى دقة وتقنية مانع التقطيع التلقائي الذكي",
+                    color = Color(0xFFD8D8E0),
+                    fontSize = 12.sp,
+                    fontFamily = ThmanyahFontFamily,
+                    textAlign = TextAlign.End,
+                    lineHeight = 17.sp
+                  )
+
+                  Spacer(modifier = Modifier.height(12.dp))
+
+                  // Feature Spec Badges Row
+                  Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                  ) {
+                    val featurePills = listOf("🛡️ مانع تقطيع", "🔊 Dolby Audio", "⚡ زمن 0ms", "🌐 Xtream & M3U")
+                    featurePills.forEach { pill ->
+                      Box(
+                        modifier = Modifier
+                          .padding(start = 6.dp)
+                          .clip(RoundedCornerShape(8.dp))
+                          .background(Color(0x18FFFFFF))
+                          .border(0.5.dp, Color(0x30FFFFFF), RoundedCornerShape(8.dp))
+                          .padding(horizontal = 8.dp, vertical = 3.dp)
+                      ) {
+                        Text(pill, color = Color(0xFFE0E0EA), fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold)
+                      }
+                    }
                   }
 
-                  // Hero Title + Channel Logo Row
+                  Spacer(modifier = Modifier.height(16.dp))
+
+                  // Action Buttons
                   Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.End
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                   ) {
-                    Column(
-                      horizontalAlignment = Alignment.End,
-                      modifier = Modifier.weight(1f)
+                    // Quick Link Button
+                    val quickInteraction = remember { MutableInteractionSource() }
+                    val isQuickPressed by quickInteraction.collectIsPressedAsState()
+                    val quickScale by animateFloatAsState(
+                      targetValue = if (isQuickPressed) 0.92f else 1.0f,
+                      animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                      label = "quickHeroScale"
+                    )
+
+                    Box(
+                      modifier = Modifier
+                        .scale(quickScale)
+                        .height(46.dp)
+                        .liquidGlassEffect(
+                          shape = RoundedCornerShape(14.dp),
+                          glowTint = Color(0xFF00E5FF)
+                        )
+                        .clickable(
+                          interactionSource = quickInteraction,
+                          indication = null,
+                          onClick = onOpenQuickLink
+                        )
+                        .padding(horizontal = 14.dp),
+                      contentAlignment = Alignment.Center
                     ) {
-                      Text(
-                        text = hero.title,
-                        color = Color.White,
-                        fontSize = 20.sp,
-                        fontFamily = ThmanyahFontFamily,
-                        fontWeight = FontWeight.Black,
-                        textAlign = TextAlign.End,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                      )
-                      Text(
-                        text = hero.subtitle,
-                        color = Color(0xFFD0D0D8),
-                        fontSize = 12.sp,
-                        fontFamily = ThmanyahFontFamily,
-                        textAlign = TextAlign.End
-                      )
+                      Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                      ) {
+                        TodDirectStreamLinkIcon(modifier = Modifier.size(18.dp), tint = Color(0xFF00E5FF))
+                        Text(
+                          text = "رابط سريع",
+                          color = Color.White,
+                          fontSize = 13.sp,
+                          fontFamily = ThmanyahFontFamily,
+                          fontWeight = FontWeight.Bold
+                        )
+                      }
                     }
 
-                    if (!hero.channel?.iconUrl.isNullOrBlank()) {
-                      Spacer(modifier = Modifier.width(12.dp))
-                      Box(
-                        modifier = Modifier
-                          .size(48.dp)
-                          .shadow(4.dp, RoundedCornerShape(14.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
-                          .liquidGlassEffect(shape = RoundedCornerShape(14.dp), glowTint = Color(0xFF0A84FF))
-                          .padding(4.dp),
-                        contentAlignment = Alignment.Center
+                    // Primary Connect Xtream Button
+                    val playInteraction = remember { MutableInteractionSource() }
+                    val isPlayPressed by playInteraction.collectIsPressedAsState()
+                    val playScale by animateFloatAsState(
+                      targetValue = if (isPlayPressed) 0.94f else 1.0f,
+                      animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                      label = "heroPlayScale"
+                    )
+
+                    Box(
+                      modifier = Modifier
+                        .weight(1f)
+                        .scale(playScale)
+                        .height(46.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(
+                          Brush.horizontalGradient(
+                            listOf(Color(0xFF0A84FF), Color(0xFF0055D4), Color(0xFF003CB3))
+                          )
+                        )
+                        .border(1.2.dp, Brush.horizontalGradient(listOf(Color(0xFF64D2FF), Color(0x40FFFFFF))), RoundedCornerShape(14.dp))
+                        .clickable(
+                          interactionSource = playInteraction,
+                          indication = null,
+                          onClick = onOpenProfile
+                        ),
+                      contentAlignment = Alignment.Center
+                    ) {
+                      Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                       ) {
-                        AsyncImage(
-                          model = hero.channel?.iconUrl,
-                          contentDescription = hero.title,
-                          modifier = Modifier.size(38.dp),
-                          contentScale = ContentScale.Fit
+                        TodXtreamServerIcon(modifier = Modifier.size(20.dp), tint = Color.White)
+                        Text(
+                          text = "تسجيل الدخول إلى سيرفرك",
+                          color = Color.White,
+                          fontSize = 13.5.sp,
+                          fontFamily = ThmanyahFontFamily,
+                          fontWeight = FontWeight.Black
                         )
                       }
                     }
                   }
                 }
               }
-
-              Spacer(modifier = Modifier.height(12.dp))
-
-              // Hero Action Buttons with Physics-Based Touch Feedback
-              Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            } else {
+              // Live Channel Hero Mode
+              Box(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(horizontal = 14.dp, vertical = 6.dp)
+                  .height(310.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .liquidGlassEffect(shape = RoundedCornerShape(24.dp), glowTint = Color(0xFF0A84FF))
               ) {
-                if (activeHero.channel != null) {
-                  // Replay Button (↺)
-                  val replayInteraction = remember { MutableInteractionSource() }
-                  val isReplayPressed by replayInteraction.collectIsPressedAsState()
-                  val replayScale by animateFloatAsState(
-                    targetValue = if (isReplayPressed) 0.88f else 1.0f,
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-                    label = "replayScale"
-                  )
-
-                  Box(
-                    modifier = Modifier
-                      .scale(replayScale)
-                      .size(42.dp)
-                      .shadow(4.dp, RoundedCornerShape(14.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
-                      .liquidGlassEffect(shape = RoundedCornerShape(14.dp), glowTint = Color(0xFF0A84FF))
-                      .clickable(
-                        interactionSource = replayInteraction,
-                        indication = null
-                      ) {
-                        activeHero.channel.let { onPlayChannel(it, allChannels, "Hero Replay") }
-                      },
-                    contentAlignment = Alignment.Center
-                  ) {
-                    Icon(Icons.Default.Refresh, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
-                  }
-
-                  // Add Button (+)
-                  val addInteraction = remember { MutableInteractionSource() }
-                  val isAddPressed by addInteraction.collectIsPressedAsState()
-                  val addScale by animateFloatAsState(
-                    targetValue = if (isAddPressed) 0.88f else 1.0f,
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-                    label = "addHeroScale"
-                  )
-
-                  Box(
-                    modifier = Modifier
-                      .scale(addScale)
-                      .size(42.dp)
-                      .shadow(4.dp, RoundedCornerShape(14.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
-                      .liquidGlassEffect(shape = RoundedCornerShape(14.dp), glowTint = Color(0xFF0A84FF))
-                      .clickable(
-                        interactionSource = addInteraction,
-                        indication = null
-                      ) { /* Watchlist */ },
-                    contentAlignment = Alignment.Center
-                  ) {
-                    Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
-                  }
-                } else {
-                  // Quick Stream Link button in welcome mode
-                  val quickInteraction = remember { MutableInteractionSource() }
-                  val isQuickPressed by quickInteraction.collectIsPressedAsState()
-                  val quickScale by animateFloatAsState(
-                    targetValue = if (isQuickPressed) 0.92f else 1.0f,
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-                    label = "quickHeroScale"
-                  )
-
-                  Box(
-                    modifier = Modifier
-                      .scale(quickScale)
-                      .height(44.dp)
-                      .clip(RoundedCornerShape(14.dp))
-                      .background(Color(0x2EFFFFFF))
-                      .border(1.dp, Color(0x55FFFFFF), RoundedCornerShape(14.dp))
-                      .clickable(
-                        interactionSource = quickInteraction,
-                        indication = null,
-                        onClick = onOpenQuickLink
-                      )
-                      .padding(horizontal = 14.dp),
-                    contentAlignment = Alignment.Center
-                  ) {
-                    Row(
-                      verticalAlignment = Alignment.CenterVertically,
-                      horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                      Icon(Icons.Default.Bolt, contentDescription = null, tint = Color(0xFF00E5FF), modifier = Modifier.size(18.dp))
-                      Text(
-                        text = "⚡ رابط مباشر",
-                        color = Color.White,
-                        fontSize = 12.5.sp,
-                        fontFamily = ThmanyahFontFamily,
-                        fontWeight = FontWeight.Bold
-                      )
-                    }
-                  }
-                }
-
-                // Apple-Style Primary Action Button
-                val playInteraction = remember { MutableInteractionSource() }
-                val isPlayPressed by playInteraction.collectIsPressedAsState()
-                val playScale by animateFloatAsState(
-                  targetValue = if (isPlayPressed) 0.94f else 1.0f,
-                  animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-                  label = "heroPlayScale"
+                Box(
+                  modifier = Modifier
+                    .fillMaxSize()
+                    .background(activeHero.backdropGradient)
                 )
 
                 Box(
                   modifier = Modifier
-                    .weight(1f)
-                    .scale(playScale)
-                    .height(44.dp)
-                    .shadow(8.dp, RoundedCornerShape(14.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.45f))
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Brush.linearGradient(listOf(Color(0xFF0A84FF), Color(0xFF0055D4))))
-                    .border(1.dp, Color(0x66FFFFFF), RoundedCornerShape(14.dp))
-                    .clickable(
-                      interactionSource = playInteraction,
-                      indication = null
-                    ) {
-                      if (activeHero.channel != null) {
-                        onPlayChannel(activeHero.channel, allChannels, "TOD Hero")
-                      } else {
-                        onOpenProfile()
-                      }
-                    },
-                  contentAlignment = Alignment.Center
+                    .fillMaxSize()
+                    .background(TodGradients.HeroScrim)
+                )
+
+                IconButton(
+                  onClick = { isMuted = !isMuted },
+                  modifier = Modifier
+                    .padding(top = 14.dp, start = 14.dp)
+                    .size(36.dp)
+                    .liquidGlassEffect(shape = CircleShape, glowTint = Color(0xFF0A84FF))
+                    .align(Alignment.TopStart)
                 ) {
-                  Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                  ) {
-                    Text(
-                      text = activeHero.primaryButtonLabel,
-                      color = Color.White,
-                      fontSize = 14.sp,
-                      fontFamily = ThmanyahFontFamily,
-                      fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Icon(
-                      imageVector = if (activeHero.channel != null) Icons.Default.PlayArrow else Icons.Default.Dns,
-                      contentDescription = null,
-                      tint = Color.White,
-                      modifier = Modifier.size(20.dp)
-                    )
-                  }
+                  Icon(
+                    imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                    contentDescription = "الصوت",
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp)
+                  )
                 }
-              }
 
-              Spacer(modifier = Modifier.height(10.dp))
-
-              // Carousel Indicator Pills
-              if (dynamicHeroItems.size > 1) {
-                Row(
-                  modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.Center,
-                  verticalAlignment = Alignment.CenterVertically
+                Column(
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                  horizontalAlignment = Alignment.End
                 ) {
-                  dynamicHeroItems.indices.forEach { idx ->
-                    val isActive = idx == currentHeroIndex
-                    val pillWidth by animateDpAsState(
-                      targetValue = if (isActive) 20.dp else 6.dp,
-                      animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-                      label = "heroDotWidth_$idx"
+                  AnimatedContent(
+                    targetState = activeHero,
+                    transitionSpec = {
+                      fadeIn(animationSpec = tween(400)) togetherWith fadeOut(animationSpec = tween(300))
+                    },
+                    label = "heroCrossfade"
+                  ) { hero ->
+                    Column(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalAlignment = Alignment.End
+                    ) {
+                      if (hero.tags.isNotEmpty()) {
+                        Row(
+                          horizontalArrangement = Arrangement.spacedBy(6.dp),
+                          verticalAlignment = Alignment.CenterVertically
+                        ) {
+                          hero.tags.forEach { tag ->
+                            Box(
+                              modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color(0x33FFFFFF))
+                                .border(0.5.dp, Color(0x44FFFFFF), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                              Text(tag, color = Color.White, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+                            }
+                          }
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                      }
+
+                      if (hero.isLive) {
+                        PulsingLiveBadge()
+                        Spacer(modifier = Modifier.height(6.dp))
+                      }
+
+                      Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.End
+                      ) {
+                        Column(
+                          horizontalAlignment = Alignment.End,
+                          modifier = Modifier.weight(1f)
+                        ) {
+                          Text(
+                            text = hero.title,
+                            color = Color.White,
+                            fontSize = 20.sp,
+                            fontFamily = ThmanyahFontFamily,
+                            fontWeight = FontWeight.Black,
+                            textAlign = TextAlign.End,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                          )
+                          Text(
+                            text = hero.subtitle,
+                            color = Color(0xFFD0D0D8),
+                            fontSize = 12.sp,
+                            fontFamily = ThmanyahFontFamily,
+                            textAlign = TextAlign.End
+                          )
+                        }
+
+                        if (!hero.channel?.iconUrl.isNullOrBlank()) {
+                          Spacer(modifier = Modifier.width(12.dp))
+                          Box(
+                            modifier = Modifier
+                              .size(48.dp)
+                              .liquidGlassEffect(shape = RoundedCornerShape(14.dp), glowTint = Color(0xFF0A84FF))
+                              .padding(4.dp),
+                            contentAlignment = Alignment.Center
+                          ) {
+                            AsyncImage(
+                              model = hero.channel?.iconUrl,
+                              contentDescription = hero.title,
+                              modifier = Modifier.size(38.dp),
+                              contentScale = ContentScale.Fit
+                            )
+                          }
+                        }
+                      }
+                    }
+                  }
+
+                  Spacer(modifier = Modifier.height(12.dp))
+
+                  Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                  ) {
+                    val replayInteraction = remember { MutableInteractionSource() }
+                    val isReplayPressed by replayInteraction.collectIsPressedAsState()
+                    val replayScale by animateFloatAsState(
+                      targetValue = if (isReplayPressed) 0.88f else 1.0f,
+                      animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                      label = "replayScale"
                     )
 
                     Box(
                       modifier = Modifier
-                        .padding(horizontal = 3.dp)
-                        .height(4.dp)
-                        .width(pillWidth)
-                        .clip(CircleShape)
-                        .background(if (isActive) Color.White else Color(0x55FFFFFF))
+                        .scale(replayScale)
+                        .size(42.dp)
+                        .liquidGlassEffect(shape = RoundedCornerShape(14.dp), glowTint = Color(0xFF0A84FF))
+                        .clickable(
+                          interactionSource = replayInteraction,
+                          indication = null
+                        ) {
+                          activeHero.channel?.let { onPlayChannel(it, allChannels, "Hero Replay") }
+                        },
+                      contentAlignment = Alignment.Center
+                    ) {
+                      TodServerSyncIcon(modifier = Modifier.size(20.dp), tint = Color.White)
+                    }
+
+                    val addInteraction = remember { MutableInteractionSource() }
+                    val isAddPressed by addInteraction.collectIsPressedAsState()
+                    val addScale by animateFloatAsState(
+                      targetValue = if (isAddPressed) 0.88f else 1.0f,
+                      animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                      label = "addHeroScale"
                     )
+
+                    Box(
+                      modifier = Modifier
+                        .scale(addScale)
+                        .size(42.dp)
+                        .liquidGlassEffect(shape = RoundedCornerShape(14.dp), glowTint = Color(0xFF0A84FF))
+                        .clickable(
+                          interactionSource = addInteraction,
+                          indication = null
+                        ) { /* Watchlist */ },
+                      contentAlignment = Alignment.Center
+                    ) {
+                      Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    }
+
+                    val playInteraction = remember { MutableInteractionSource() }
+                    val isPlayPressed by playInteraction.collectIsPressedAsState()
+                    val playScale by animateFloatAsState(
+                      targetValue = if (isPlayPressed) 0.94f else 1.0f,
+                      animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                      label = "heroPlayScale"
+                    )
+
+                    Box(
+                      modifier = Modifier
+                        .weight(1f)
+                        .scale(playScale)
+                        .height(44.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Brush.linearGradient(listOf(Color(0xFF0A84FF), Color(0xFF0055D4))))
+                        .border(1.dp, Color(0x66FFFFFF), RoundedCornerShape(14.dp))
+                        .clickable(
+                          interactionSource = playInteraction,
+                          indication = null
+                        ) {
+                          activeHero.channel?.let {
+                            onPlayChannel(it, allChannels, "TOD Hero")
+                          }
+                        },
+                      contentAlignment = Alignment.Center
+                    ) {
+                      Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                      ) {
+                        Text(
+                          text = activeHero.primaryButtonLabel,
+                          color = Color.White,
+                          fontSize = 14.sp,
+                          fontFamily = ThmanyahFontFamily,
+                          fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Icon(
+                          imageVector = Icons.Default.PlayArrow,
+                          contentDescription = null,
+                          tint = Color.White,
+                          modifier = Modifier.size(20.dp)
+                        )
+                      }
+                    }
+                  }
+
+                  Spacer(modifier = Modifier.height(10.dp))
+
+                  if (dynamicHeroItems.size > 1) {
+                    Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.Center,
+                      verticalAlignment = Alignment.CenterVertically
+                    ) {
+                      dynamicHeroItems.indices.forEach { idx ->
+                        val isActive = idx == currentHeroIndex
+                        val pillWidth by animateDpAsState(
+                          targetValue = if (isActive) 20.dp else 6.dp,
+                          animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+                          label = "heroDotWidth_$idx"
+                        )
+
+                        Box(
+                          modifier = Modifier
+                            .padding(horizontal = 3.dp)
+                            .height(4.dp)
+                            .width(pillWidth)
+                            .clip(CircleShape)
+                            .background(if (isActive) Color.White else Color(0x55FFFFFF))
+                        )
+                      }
+                    }
                   }
                 }
               }
             }
+            Spacer(modifier = Modifier.height(12.dp))
           }
-          Spacer(modifier = Modifier.height(12.dp))
         }
-      }
 
       // Real Live Channels Rail directly from Xtream ("تابع الآن على الهواء")
       if (allChannels.isNotEmpty()) {
@@ -1085,7 +1204,6 @@ fun TodHomeScreen(
                 modifier = Modifier
                   .scale(card1Scale)
                   .fillMaxWidth()
-                  .shadow(8.dp, RoundedCornerShape(20.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
                   .liquidGlassEffect(
                     shape = RoundedCornerShape(20.dp),
                     glowTint = Color(0xFF0A84FF)
@@ -1110,7 +1228,7 @@ fun TodHomeScreen(
                       .border(1.dp, Color(0x55FFFFFF), RoundedCornerShape(14.dp)),
                     contentAlignment = Alignment.Center
                   ) {
-                    Icon(Icons.Default.Dns, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+                    TodXtreamServerArtIcon(modifier = Modifier.size(28.dp))
                   }
 
                   Column(modifier = Modifier.weight(1f)) {
@@ -1153,7 +1271,6 @@ fun TodHomeScreen(
                 modifier = Modifier
                   .scale(card2Scale)
                   .fillMaxWidth()
-                  .shadow(8.dp, RoundedCornerShape(20.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
                   .liquidGlassEffect(
                     shape = RoundedCornerShape(20.dp),
                     glowTint = Color(0xFF0A84FF)
@@ -1178,7 +1295,7 @@ fun TodHomeScreen(
                       .border(1.dp, Color(0x55FFFFFF), RoundedCornerShape(14.dp)),
                     contentAlignment = Alignment.Center
                   ) {
-                    Icon(Icons.Default.Bolt, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+                    TodQuickLinkArtIcon(modifier = Modifier.size(28.dp))
                   }
 
                   Column(modifier = Modifier.weight(1f)) {
@@ -1212,7 +1329,6 @@ fun TodHomeScreen(
               Box(
                 modifier = Modifier
                   .fillMaxWidth()
-                  .shadow(8.dp, RoundedCornerShape(20.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
                   .liquidGlassEffect(
                     shape = RoundedCornerShape(20.dp),
                     glowTint = Color(0xFF0A84FF)
@@ -1232,7 +1348,7 @@ fun TodHomeScreen(
                       .border(1.dp, Color(0x55FFFFFF), RoundedCornerShape(14.dp)),
                     contentAlignment = Alignment.Center
                   ) {
-                    Icon(Icons.Default.Speed, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+                    TodAntiBufferEngineArtIcon(modifier = Modifier.size(28.dp))
                   }
 
                   Column(modifier = Modifier.weight(1f)) {
@@ -1293,7 +1409,6 @@ fun CorporateChannelGridCard(
       .scale(scale)
       .fillMaxWidth()
       .height(148.dp)
-      .shadow(8.dp, RoundedCornerShape(22.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
       .liquidGlassEffect(shape = RoundedCornerShape(22.dp), glowTint = Color(0xFF0A84FF), isElevated = true)
       .clickable(
         interactionSource = interactionSource,
@@ -1315,7 +1430,6 @@ fun CorporateChannelGridCard(
         Box(
           modifier = Modifier
             .size(42.dp)
-            .shadow(4.dp, RoundedCornerShape(12.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
             .liquidGlassEffect(shape = RoundedCornerShape(12.dp), glowTint = Color(0xFF0A84FF)),
           contentAlignment = Alignment.Center
         ) {
@@ -1407,7 +1521,6 @@ fun CorporateChannelListRow(
       .scale(scale)
       .fillMaxWidth()
       .height(74.dp)
-      .shadow(6.dp, RoundedCornerShape(20.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.30f))
       .liquidGlassEffect(shape = RoundedCornerShape(20.dp), glowTint = Color(0xFF0A84FF), isElevated = true)
       .clickable(
         interactionSource = interactionSource,
@@ -1433,7 +1546,6 @@ fun CorporateChannelListRow(
       Box(
         modifier = Modifier
           .size(44.dp)
-          .shadow(4.dp, RoundedCornerShape(12.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
           .liquidGlassEffect(shape = RoundedCornerShape(12.dp), glowTint = Color(0xFF0A84FF)),
         contentAlignment = Alignment.Center
       ) {
@@ -1523,7 +1635,6 @@ fun DynamicChannelRail(
       Row(
         modifier = Modifier
           .scale(actionScale)
-          .shadow(4.dp, RoundedCornerShape(14.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.30f))
           .liquidGlassEffect(
             shape = RoundedCornerShape(14.dp),
             glowTint = Color(0xFF0A84FF)
@@ -1589,7 +1700,6 @@ fun DynamicChannelRail(
             .scale(scale)
             .width(182.dp)
             .height(134.dp)
-            .shadow(8.dp, RoundedCornerShape(20.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
             .liquidGlassEffect(shape = RoundedCornerShape(20.dp), glowTint = Color(0xFF0A84FF))
             .clickable(
               interactionSource = interactionSource,
@@ -1610,7 +1720,6 @@ fun DynamicChannelRail(
               Box(
                 modifier = Modifier
                   .size(38.dp)
-                  .shadow(4.dp, RoundedCornerShape(11.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
                   .liquidGlassEffect(shape = RoundedCornerShape(11.dp), glowTint = Color(0xFF0A84FF)),
                 contentAlignment = Alignment.Center
               ) {

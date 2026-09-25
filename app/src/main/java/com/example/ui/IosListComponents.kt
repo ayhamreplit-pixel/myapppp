@@ -138,20 +138,8 @@ fun IosIconBadge(
   Box(
     modifier = modifier
       .size(size)
-      .shadow(4.dp, RoundedCornerShape(10.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
       .clip(RoundedCornerShape(10.dp))
       .background(background)
-      .drawBehind {
-        // Top specular glare curve
-        drawRoundRect(
-          brush = Brush.verticalGradient(
-            colors = listOf(Color(0x77FFFFFF), Color.Transparent),
-            startY = 0f,
-            endY = drawContext.size.height * 0.45f
-          ),
-          cornerRadius = CornerRadius(10.dp.toPx(), 10.dp.toPx())
-        )
-      }
       .border(0.75.dp, Color(0x66FFFFFF), RoundedCornerShape(10.dp)),
     contentAlignment = Alignment.Center
   ) {
@@ -161,6 +149,28 @@ fun IosIconBadge(
       tint = tint,
       modifier = Modifier.size(iconSize)
     )
+  }
+}
+
+/**
+ * iOS Liquid Glass Iconic Rounded Squircle Badge for Custom Canvas/Vector Drawings
+ */
+@Composable
+fun IosCustomIconBadge(
+  background: Brush,
+  modifier: Modifier = Modifier,
+  size: Dp = 34.dp,
+  content: @Composable () -> Unit
+) {
+  Box(
+    modifier = modifier
+      .size(size)
+      .clip(RoundedCornerShape(10.dp))
+      .background(background)
+      .border(0.75.dp, Color(0x66FFFFFF), RoundedCornerShape(10.dp)),
+    contentAlignment = Alignment.Center
+  ) {
+    content()
   }
 }
 
@@ -175,7 +185,6 @@ fun IosListGroup(
   Box(
     modifier = modifier
       .fillMaxWidth()
-      .shadow(8.dp, RoundedCornerShape(22.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
       .liquidGlassEffect(shape = RoundedCornerShape(22.dp), glowTint = Color(0xFF0A84FF))
   ) {
     Column(
@@ -326,7 +335,6 @@ fun IosSwitch(
     modifier = modifier
       .width(52.dp)
       .height(32.dp)
-      .shadow(4.dp, CircleShape, spotColor = if (checked) activeTrackColor.copy(alpha = 0.5f) else Color(0xFF0A84FF).copy(alpha = 0.25f))
       .clip(CircleShape)
       .background(
         if (checked) {
@@ -339,17 +347,6 @@ fun IosSwitch(
           )
         }
       )
-      .drawBehind {
-        // Specular top highlight
-        drawRoundRect(
-          brush = Brush.verticalGradient(
-            colors = listOf(Color(0x88FFFFFF), Color.Transparent),
-            startY = 0f,
-            endY = size.height * 0.45f
-          ),
-          cornerRadius = CornerRadius(16.dp.toPx(), 16.dp.toPx())
-        )
-      }
       .border(
         width = 1.dp,
         brush = if (checked) LiquidGlassTheme.LiquidGoldBorder else LiquidGlassTheme.LiquidSpecularBorder,
@@ -366,7 +363,6 @@ fun IosSwitch(
       modifier = Modifier
         .offset(x = thumbOffset)
         .size(28.dp)
-        .shadow(6.dp, CircleShape, spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
         .clip(CircleShape)
         .background(
           Brush.verticalGradient(
@@ -392,7 +388,6 @@ fun IosSegmentedControl(
     modifier = modifier
       .fillMaxWidth()
       .height(42.dp)
-      .shadow(8.dp, RoundedCornerShape(14.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
       .liquidGlassEffect(shape = RoundedCornerShape(14.dp), glowTint = Color(0xFF0A84FF))
       .padding(3.dp)
   ) {
@@ -410,17 +405,6 @@ fun IosSegmentedControl(
 
         val selectedModifier = if (isSelected) {
           Modifier
-            .shadow(6.dp, RoundedCornerShape(11.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.45f))
-            .drawBehind {
-              drawRoundRect(
-                brush = Brush.verticalGradient(
-                  colors = listOf(Color(0x99FFFFFF), Color.Transparent),
-                  startY = 0f,
-                  endY = drawContext.size.height * 0.45f
-                ),
-                cornerRadius = CornerRadius(11.dp.toPx(), 11.dp.toPx())
-              )
-            }
             .border(1.dp, Color(0x88FFFFFF), RoundedCornerShape(11.dp))
         } else {
           Modifier
@@ -439,7 +423,7 @@ fun IosSegmentedControl(
                 )
               } else {
                 Brush.verticalGradient(
-                  listOf(Color.Transparent, Color.Transparent)
+                  listOf(Color(0x00FFFFFF), Color(0x00FFFFFF))
                 )
               }
             )
@@ -571,7 +555,6 @@ fun IosNavigationBar(
           modifier = Modifier
             .iosBounceClick(scaleDown = 0.88f, onClick = onBack)
             .size(40.dp)
-            .shadow(6.dp, CircleShape, spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
             .liquidGlassEffect(shape = CircleShape, glowTint = Color(0xFF0A84FF))
             .border(1.dp, Color(0x55FFFFFF), CircleShape),
           contentAlignment = Alignment.Center
@@ -714,7 +697,6 @@ fun IosGrabber(
       modifier = Modifier
         .width(42.dp)
         .height(5.5.dp)
-        .shadow(2.dp, RoundedCornerShape(3.dp))
         .clip(RoundedCornerShape(3.dp))
         .background(
           Brush.verticalGradient(

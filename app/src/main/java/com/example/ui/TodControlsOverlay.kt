@@ -475,7 +475,7 @@ fun TodControlsOverlay(
                   .clip(CircleShape)
                   .background(
                     Brush.radialGradient(
-                      colors = listOf(Color(0x33FDB913), Color(0x11000000), Color.Transparent)
+                      colors = listOf(Color(0x33FDB913), Color(0x11000000), Color(0x00FDB913))
                     )
                   )
                   .clickable(

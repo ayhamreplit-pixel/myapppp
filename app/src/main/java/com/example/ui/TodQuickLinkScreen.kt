@@ -628,7 +628,6 @@ fun TodQuickLinkScreen(
             val isCurrent = urlInput == sampleUrl
             Box(
               modifier = Modifier
-                .shadow(if (isCurrent) 6.dp else 2.dp, RoundedCornerShape(16.dp), spotColor = Color(0xFF0A84FF).copy(alpha = 0.35f))
                 .liquidGlassEffect(
                   shape = RoundedCornerShape(16.dp),
                   glowTint = Color(0xFF0A84FF),
