@@ -195,17 +195,19 @@ object SmartStreamResolver {
     val clean = url.substringBefore('?').lowercase()
     return clean.endsWith(".m3u8") || clean.endsWith(".m3u") || clean.endsWith(".mpd") ||
            clean.endsWith(".ts") || clean.endsWith(".mp4") || clean.endsWith(".mkv") ||
-           clean.endsWith(".ism") || clean.endsWith(".flv")
+           clean.endsWith(".ism") || clean.endsWith(".flv") || clean.endsWith(".webm") ||
+           url.contains("/live/", ignoreCase = true) || url.contains(":8080/live/", ignoreCase = true)
   }
 
   private fun detectFormat(url: String, contentType: String = ""): StreamFormat {
     val lower = url.lowercase()
     val ct = contentType.lowercase()
     return when {
-      ct.contains("dash") || lower.contains(".mpd") || lower.contains("format=mpd") -> StreamFormat.DASH
-      ct.contains("mpegurl") || lower.contains(".m3u8") || lower.contains(".m3u") -> StreamFormat.HLS
-      ct.contains("smoothstreaming") || lower.contains(".ism") -> StreamFormat.SMOOTH_STREAMING
-      lower.contains(".mp4") || lower.contains(".mkv") || lower.contains(".ts") || lower.contains(".flv") -> StreamFormat.PROGRESSIVE
+      ct.contains("mpegurl") || lower.contains(".m3u8") || lower.contains(".m3u") || lower.contains("format=m3u8") || lower.contains("output=m3u8") || lower.contains("/hls/") -> StreamFormat.HLS
+      (ct.contains("dash") || lower.contains(".mpd") || lower.contains("format=mpd")) && !lower.contains(".m3u8") -> StreamFormat.DASH
+      (ct.contains("smoothstreaming") || lower.contains(".ism") || lower.contains("/manifest")) && !lower.contains(".m3u8") && !lower.contains("format=m3u8") -> StreamFormat.SMOOTH_STREAMING
+      lower.contains(".ts") || lower.contains("output=ts") -> StreamFormat.PROGRESSIVE
+      lower.contains(".mp4") || lower.contains(".mkv") || lower.contains(".flv") || lower.contains(".webm") || lower.contains(".avi") -> StreamFormat.PROGRESSIVE
       else -> StreamFormat.AUTO
     }
   }
@@ -222,7 +224,7 @@ object SmartStreamResolver {
   )
 
   private fun extractStreamFromHtml(html: String, pageUrl: String): ExtractedStreamData? {
-    // 1. Look for explicit .m3u8 or .mpd URLs inside quotes
+    // 1. Look for explicit .m3u8 or .mpd URLs inside quotes or JS variables
     val m3u8Regex = Pattern.compile("[\"'](https?://[^\"'\\s<>]+\\.(?:m3u8|m3u)[^\"'\\s<>]*)[\"']", Pattern.CASE_INSENSITIVE)
     val m3u8Matcher = m3u8Regex.matcher(html)
     if (m3u8Matcher.find()) {
@@ -250,8 +252,8 @@ object SmartStreamResolver {
       )
     }
 
-    // 2. Look for player config properties: source: "...", file: "...", src: "..."
-    val configRegex = Pattern.compile("(?:source|file|src|streamUrl|hls|videoUrl)\\s*:\\s*[\"'](https?://[^\"']+)[\"']", Pattern.CASE_INSENSITIVE)
+    // 2. Look for JS player config properties: source: "...", file: "...", src: "...", hls.loadSource("..."), videojs("...")
+    val configRegex = Pattern.compile("(?:source|file|src|streamUrl|hls|videoUrl|stream_url|playUrl|loadSource)\\s*(?::|\\()\\s*[\"'](https?://[^\"'\\)]+)[\"']", Pattern.CASE_INSENSITIVE)
     val configMatcher = configRegex.matcher(html)
     if (configMatcher.find()) {
       val foundUrl = configMatcher.group(1)!!.replace("\\/", "/")
@@ -263,7 +265,20 @@ object SmartStreamResolver {
       )
     }
 
-    // 3. Look for Base64 encoded stream URLs (atob("..."))
+    // 3. Look for direct TS video streams in JS or HTML
+    val tsRegex = Pattern.compile("[\"'](https?://[^\"'\\s<>]+\\.ts[^\"'\\s<>]*)[\"']", Pattern.CASE_INSENSITIVE)
+    val tsMatcher = tsRegex.matcher(html)
+    if (tsMatcher.find()) {
+      val foundUrl = tsMatcher.group(1)!!.replace("\\/", "/")
+      return ExtractedStreamData(
+        streamUrl = resolveRelativeUrl(foundUrl, pageUrl),
+        format = StreamFormat.PROGRESSIVE,
+        referer = pageUrl,
+        origin = getOriginFromUrl(pageUrl)
+      )
+    }
+
+    // 4. Look for Base64 encoded stream URLs (atob("..."))
     val atobRegex = Pattern.compile("atob\\s*\\(\\s*[\"']([A-Za-z0-9+/=]{16,})[\"']\\s*\\)")
     val atobMatcher = atobRegex.matcher(html)
     while (atobMatcher.find()) {
@@ -283,7 +298,7 @@ object SmartStreamResolver {
       } catch (_: Exception) {}
     }
 
-    // 4. Look for raw progressive video tags: <video src="..."><source src="..."
+    // 5. Look for raw progressive video tags: <video src="..."><source src="..."
     val videoSrcRegex = Pattern.compile("<(?:video|source)[^>]+src=[\"'](https?://[^\"']+)[\"']", Pattern.CASE_INSENSITIVE)
     val videoMatcher = videoSrcRegex.matcher(html)
     if (videoMatcher.find()) {

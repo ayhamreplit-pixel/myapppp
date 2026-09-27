@@ -7,6 +7,13 @@ import coil.disk.DiskCache
 import coil.memory.MemoryCache
 
 class TodApplication : Application(), ImageLoaderFactory {
+  override fun onCreate() {
+    super.onCreate()
+    try {
+      com.example.player.AppSettings.getInstance(this)
+    } catch (_: Exception) {}
+  }
+
   override fun newImageLoader(): ImageLoader {
     return ImageLoader.Builder(this)
       .memoryCache {

@@ -110,9 +110,12 @@ class TodExoPlayerManager(
   )
 
   val exoPlayer: ExoPlayer by lazy {
+    val appSettings = AppSettings.getInstance(context)
+    val isSoftwareAudio = appSettings.audioDecoderEngine.contains("برمجي") || appSettings.audioDecoderEngine.contains("Software")
+    
     // Universal RenderersFactory with software decoder fallback and safe component querying
     val renderersFactory = DefaultRenderersFactory(context)
-      .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
+      .setExtensionRendererMode(if (isSoftwareAudio) DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER else DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
       .setMediaCodecSelector(MediaCodecSelector.DEFAULT)
       .setEnableDecoderFallback(true)
       .setAllowedVideoJoiningTimeMs(5000)
@@ -362,20 +365,29 @@ class TodExoPlayerManager(
   private fun handlePlaybackRetry(errorMsg: String) {
     val stream = currentStream ?: return
 
-    if (retryCount < 2) {
+    if (retryCount < 3) {
       retryCount++
       currentUaIndex = (currentUaIndex + 1) % userAgents.size
       
       val altFormat = when (stream.format) {
-        StreamFormat.HLS -> StreamFormat.PROGRESSIVE
-        StreamFormat.PROGRESSIVE -> StreamFormat.HLS
-        else -> StreamFormat.AUTO
+        StreamFormat.DASH, StreamFormat.SMOOTH_STREAMING -> {
+          if (retryCount == 1) StreamFormat.HLS else StreamFormat.PROGRESSIVE
+        }
+        StreamFormat.HLS -> {
+          if (retryCount == 1) StreamFormat.PROGRESSIVE else StreamFormat.AUTO
+        }
+        StreamFormat.PROGRESSIVE -> {
+          if (retryCount == 1) StreamFormat.HLS else StreamFormat.AUTO
+        }
+        StreamFormat.AUTO -> {
+          if (retryCount == 1) StreamFormat.HLS else StreamFormat.PROGRESSIVE
+        }
       }
 
       Log.i("TodExoPlayerManager", "Silent retry #$retryCount with format: $altFormat and UA: ${userAgents[currentUaIndex]}")
       retryJob?.cancel()
       retryJob = coroutineScope.launch {
-        delay(1000)
+        delay(800)
         playStream(stream.copy(format = altFormat), isRetry = true)
       }
       return
@@ -455,6 +467,7 @@ class TodExoPlayerManager(
       StreamFormat.HLS -> {
         HlsMediaSource.Factory(dataSourceFactory)
           .setExtractorFactory(universalHlsExtractorFactory)
+          .setAllowChunklessPreparation(true)
           .createMediaSource(mediaItemBuilder.setMimeType(MimeTypes.APPLICATION_M3U8).build())
       }
       StreamFormat.DASH -> {
@@ -481,16 +494,32 @@ class TodExoPlayerManager(
     val pathWithoutQuery = cleanUrl.substringBefore('?').lowercase()
     val lower = cleanUrl.lowercase()
     return when {
-      pathWithoutQuery.endsWith(".mpd") || lower.contains("format=mpd") || lower.contains("manifest.mpd") -> StreamFormat.DASH
-      pathWithoutQuery.endsWith(".ism") || lower.contains("/manifest") -> StreamFormat.SMOOTH_STREAMING
+      // 1. Top priority: HLS M3U8 / M3U
+      pathWithoutQuery.endsWith(".m3u8") || pathWithoutQuery.endsWith(".m3u") ||
+      lower.contains(".m3u8") || lower.contains(".m3u") ||
+      lower.contains("format=m3u8") || lower.contains("output=m3u8") ||
+      lower.contains("format=hls") || lower.contains("/hls/") || lower.contains("hls-") -> StreamFormat.HLS
+
+      // 2. DASH (.mpd) only when it's genuinely MPD and not M3U8
+      pathWithoutQuery.endsWith(".mpd") || lower.contains("format=mpd") || (lower.contains(".mpd") && !lower.contains(".m3u8")) -> StreamFormat.DASH
+
+      // 3. SmoothStreaming (.ism) only when not requesting .m3u8
+      (pathWithoutQuery.endsWith(".ism") || lower.contains("/manifest")) && !lower.contains(".m3u8") && !lower.contains("format=m3u8") -> StreamFormat.SMOOTH_STREAMING
+
+      // 4. Common container video files
       pathWithoutQuery.endsWith(".mp4") || pathWithoutQuery.endsWith(".mkv") || pathWithoutQuery.endsWith(".flv") ||
       pathWithoutQuery.endsWith(".avi") || pathWithoutQuery.endsWith(".webm") || pathWithoutQuery.endsWith(".mov") ||
-      pathWithoutQuery.endsWith(".mp3") || pathWithoutQuery.endsWith(".aac") || pathWithoutQuery.endsWith(".ogg") -> StreamFormat.PROGRESSIVE
-      pathWithoutQuery.endsWith(".ts") || lower.contains("output=ts") -> StreamFormat.PROGRESSIVE
-      pathWithoutQuery.endsWith(".m3u8") || pathWithoutQuery.endsWith(".m3u") || lower.contains("output=m3u8") ||
+      pathWithoutQuery.endsWith(".mp3") || pathWithoutQuery.endsWith(".aac") || pathWithoutQuery.endsWith(".ogg") ||
+      pathWithoutQuery.endsWith(".wav") || pathWithoutQuery.endsWith(".m4a") -> StreamFormat.PROGRESSIVE
+
+      // 5. Raw TS stream / MPEG-TS
+      pathWithoutQuery.endsWith(".ts") || lower.contains("output=ts") || lower.contains(".ts?") -> StreamFormat.PROGRESSIVE
+
+      // 6. Dynamic script streams / live tokens (IPTV gateways)
       pathWithoutQuery.endsWith(".php") || pathWithoutQuery.endsWith(".json") || pathWithoutQuery.endsWith(".css") ||
       pathWithoutQuery.endsWith(".js") || pathWithoutQuery.endsWith(".html") || pathWithoutQuery.endsWith(".htm") ||
       lower.contains("/live/") || lower.contains("/play/") || lower.contains("/stream/") || lower.contains("token=") -> StreamFormat.HLS
+
       else -> StreamFormat.HLS
     }
   }

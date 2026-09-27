@@ -65,17 +65,17 @@ fun SubtitlesCustomizerModal(
   onDismiss: () -> Unit,
   modifier: Modifier = Modifier
 ) {
+  val activeTheme = com.example.ui.theme.LocalAppTheme.current
+  val themeAccent = activeTheme.primaryColor
+  val glowAccent = activeTheme.glowColor
+
   var fontSize by remember { mutableFloatStateOf(18f) }
   var textColorIndex by remember { mutableIntStateOf(0) }
   var bgOpacityIndex by remember { mutableIntStateOf(1) }
   var timeOffsetMs by remember { mutableStateOf(0L) }
 
-  val textColors = listOf(Color.White, TodGold, Color(0xFF34C759), Color(0xFF00E5FF))
-  val textColorNames = listOf("أبيض", "ذهبي TOD", "أخضر نيون", "سماوي")
-
+  val textColors = listOf(Color.White, themeAccent, Color(0xFF34C759), Color(0xFF00E5FF))
   val bgOpacities = listOf(0.0f, 0.60f, 0.85f, 1.0f)
-  val bgOpacityNames = listOf("بدون خلفية", "شبه شفاف (60%)", "داكن (85%)", "أسود كامل (100%)")
-
   val fontSizes = listOf(14f, 18f, 22f, 28f)
   val fontSizeNames = listOf("صغير", "متوسط", "كبير", "ضخم")
 
@@ -98,10 +98,10 @@ fun SubtitlesCustomizerModal(
         .clip(RoundedCornerShape(26.dp))
         .background(
           Brush.verticalGradient(
-            listOf(Color(0xFF1B2338), Color(0xFF101524), Color(0xFF090D18))
+            listOf(Color(0xFF161E30), Color(0xFF0F1522), Color(0xFF0A0E18))
           )
         )
-        .border(1.2.dp, Brush.verticalGradient(listOf(TodGold.copy(alpha = 0.6f), Color(0x33FFFFFF))), RoundedCornerShape(26.dp))
+        .border(1.2.dp, Brush.verticalGradient(listOf(themeAccent.copy(alpha = 0.7f), Color(0x33FFFFFF))), RoundedCornerShape(26.dp))
         .clickable(
           interactionSource = remember { MutableInteractionSource() },
           indication = null,
@@ -140,7 +140,7 @@ fun SubtitlesCustomizerModal(
               fontFamily = ThmanyahFontFamily,
               fontWeight = FontWeight.Bold
             )
-            Icon(Icons.Default.Subtitles, contentDescription = null, tint = TodGold, modifier = Modifier.size(22.dp))
+            Icon(Icons.Default.Subtitles, contentDescription = null, tint = themeAccent, modifier = Modifier.size(22.dp))
           }
         }
 
@@ -171,7 +171,7 @@ fun SubtitlesCustomizerModal(
         }
 
         // 1. Subtitle Track Selection
-        Text("مسار الترجمة المتاح", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.End))
+        Text("مسار الترجمة المتاح", color = Color.White, fontSize = 13.sp, fontFamily = ThmanyahFontFamily, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.End))
         Row(
           modifier = Modifier.fillMaxWidth(),
           horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -180,11 +180,11 @@ fun SubtitlesCustomizerModal(
           Box(
             modifier = Modifier
               .clip(RoundedCornerShape(12.dp))
-              .background(if (isOff) TodGold else Color(0x22FFFFFF))
+              .background(if (isOff) themeAccent else Color(0x22FFFFFF))
               .clickable { onSelectSubtitle(null) }
               .padding(horizontal = 14.dp, vertical = 8.dp)
           ) {
-            Text("إيقاف (Off)", color = if (isOff) Color.Black else Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text("إيقاف (Off)", color = if (isOff) Color.Black else Color.White, fontSize = 12.sp, fontFamily = ThmanyahFontFamily, fontWeight = FontWeight.Bold)
           }
 
           subtitles.forEach { sub ->
@@ -192,11 +192,11 @@ fun SubtitlesCustomizerModal(
             Box(
               modifier = Modifier
                 .clip(RoundedCornerShape(12.dp))
-                .background(if (isSelected) TodGold else Color(0x22FFFFFF))
+                .background(if (isSelected) themeAccent else Color(0x22FFFFFF))
                 .clickable { onSelectSubtitle(sub) }
                 .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
-              Text(sub.label, color = if (isSelected) Color.Black else Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+              Text(sub.label, color = if (isSelected) Color.Black else Color.White, fontSize = 12.sp, fontFamily = ThmanyahFontFamily, fontWeight = FontWeight.Bold)
             }
           }
         }
@@ -216,13 +216,13 @@ fun SubtitlesCustomizerModal(
           ) {
             Text(
               text = "${if (timeOffsetMs > 0) "+" else ""}${timeOffsetMs} ms",
-              color = TodGold,
+              color = themeAccent,
               fontSize = 14.sp,
               fontWeight = FontWeight.Black
             )
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-              Text("مزامنة توقيت الترجمة (Time Sync)", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-              Icon(Icons.Default.Sync, contentDescription = null, tint = TodGold, modifier = Modifier.size(16.dp))
+              Text("مزامنة توقيت الترجمة (Time Sync)", color = Color.White, fontSize = 13.sp, fontFamily = ThmanyahFontFamily, fontWeight = FontWeight.Bold)
+              Icon(Icons.Default.Sync, contentDescription = null, tint = themeAccent, modifier = Modifier.size(16.dp))
             }
           }
 
@@ -249,8 +249,8 @@ fun SubtitlesCustomizerModal(
               onValueChange = { timeOffsetMs = (it / 100).toInt() * 100L },
               valueRange = -3000f..3000f,
               colors = SliderDefaults.colors(
-                thumbColor = TodGold,
-                activeTrackColor = TodGold,
+                thumbColor = themeAccent,
+                activeTrackColor = themeAccent,
                 inactiveTrackColor = Color(0x33FFFFFF)
               ),
               modifier = Modifier.weight(1f)
@@ -270,7 +270,7 @@ fun SubtitlesCustomizerModal(
         }
 
         // 3. Font Size Selection
-        Text("حجم خط الترجمة", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.End))
+        Text("حجم خط الترجمة", color = Color.White, fontSize = 13.sp, fontFamily = ThmanyahFontFamily, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.End))
         Row(
           modifier = Modifier.fillMaxWidth(),
           horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -281,12 +281,12 @@ fun SubtitlesCustomizerModal(
               modifier = Modifier
                 .weight(1f)
                 .clip(RoundedCornerShape(10.dp))
-                .background(if (isSelected) TodGold else Color(0x22FFFFFF))
+                .background(if (isSelected) themeAccent else Color(0x22FFFFFF))
                 .clickable { fontSize = sizeVal }
                 .padding(vertical = 8.dp),
               contentAlignment = Alignment.Center
             ) {
-              Text(fontSizeNames[index], color = if (isSelected) Color.Black else Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+              Text(fontSizeNames[index], color = if (isSelected) Color.Black else Color.White, fontSize = 12.sp, fontFamily = ThmanyahFontFamily, fontWeight = FontWeight.Bold)
             }
           }
         }
@@ -298,7 +298,7 @@ fun SubtitlesCustomizerModal(
         ) {
           // Text Color
           Column(modifier = Modifier.weight(1f)) {
-            Text("لون النص", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.End))
+            Text("لون النص", color = Color.White, fontSize = 12.sp, fontFamily = ThmanyahFontFamily, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.End))
             Spacer(modifier = Modifier.height(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
               textColors.forEachIndexed { idx, c ->
@@ -316,7 +316,7 @@ fun SubtitlesCustomizerModal(
 
           // Background Opacity
           Column(modifier = Modifier.weight(1.2f)) {
-            Text("خلفية النص", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.End))
+            Text("خلفية النص", color = Color.White, fontSize = 12.sp, fontFamily = ThmanyahFontFamily, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.End))
             Spacer(modifier = Modifier.height(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
               bgOpacities.forEachIndexed { idx, op ->
@@ -324,7 +324,7 @@ fun SubtitlesCustomizerModal(
                   modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(if (bgOpacityIndex == idx) TodGold else Color(0x22FFFFFF))
+                    .background(if (bgOpacityIndex == idx) themeAccent else Color(0x22FFFFFF))
                     .clickable { bgOpacityIndex = idx }
                     .padding(vertical = 6.dp),
                   contentAlignment = Alignment.Center
@@ -333,6 +333,7 @@ fun SubtitlesCustomizerModal(
                     text = if (op == 0f) "0%" else "${(op * 100).toInt()}%",
                     color = if (bgOpacityIndex == idx) Color.Black else Color.White,
                     fontSize = 11.sp,
+                    fontFamily = ThmanyahFontFamily,
                     fontWeight = FontWeight.Bold
                   )
                 }

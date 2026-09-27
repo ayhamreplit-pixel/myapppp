@@ -25,7 +25,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GraphicEq
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
@@ -46,12 +45,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.ThmanyahFontFamily
-import com.example.ui.theme.TodAmberYellow
-import com.example.ui.theme.TodGold
 
 enum class EqualizerPreset(val label: String, val bands: List<Float>, val bassBoost: Float, val icon: String) {
   SPORTS_COMMENTARY("⚽ تعليق رياضي", listOf(-2f, 1f, 6f, 4f, 2f), 20f, "⚽"),
@@ -68,6 +64,9 @@ fun TodEqualizerModal(
   onApplyPreset: (EqualizerPreset, List<Float>, Float) -> Unit = { _, _, _ -> },
   modifier: Modifier = Modifier
 ) {
+  val activeTheme = com.example.ui.theme.LocalAppTheme.current
+  val themeAccent = activeTheme.primaryColor
+
   var selectedPreset by remember { mutableStateOf(EqualizerPreset.SPORTS_COMMENTARY) }
   var isEqEnabled by remember { mutableStateOf(true) }
   var bassBoostValue by remember { mutableFloatStateOf(selectedPreset.bassBoost) }
@@ -99,10 +98,14 @@ fun TodEqualizerModal(
         .clip(RoundedCornerShape(26.dp))
         .background(
           Brush.verticalGradient(
-            listOf(Color(0xFF1B2338), Color(0xFF101524), Color(0xFF090D18))
+            listOf(Color(0xFF161E30), Color(0xFF0F1522), Color(0xFF0A0E18))
           )
         )
-        .border(1.2.dp, Brush.verticalGradient(listOf(TodGold.copy(alpha = 0.6f), Color(0x33FFFFFF))), RoundedCornerShape(26.dp))
+        .border(
+          1.2.dp,
+          Brush.verticalGradient(listOf(themeAccent.copy(alpha = 0.7f), Color(0x33FFFFFF))),
+          RoundedCornerShape(26.dp)
+        )
         .clickable(
           interactionSource = remember { MutableInteractionSource() },
           indication = null,
@@ -141,7 +144,7 @@ fun TodEqualizerModal(
               fontFamily = ThmanyahFontFamily,
               fontWeight = FontWeight.Bold
             )
-            Icon(Icons.Default.GraphicEq, contentDescription = null, tint = TodGold, modifier = Modifier.size(22.dp))
+            Icon(Icons.Default.GraphicEq, contentDescription = null, tint = themeAccent, modifier = Modifier.size(22.dp))
           }
         }
 
@@ -159,18 +162,18 @@ fun TodEqualizerModal(
             checked = isEqEnabled,
             onCheckedChange = { isEqEnabled = it },
             colors = SwitchDefaults.colors(
-              checkedThumbColor = TodGold,
-              checkedTrackColor = TodGold.copy(alpha = 0.4f)
+              checkedThumbColor = themeAccent,
+              checkedTrackColor = themeAccent.copy(alpha = 0.4f)
             )
           )
           Column(horizontalAlignment = Alignment.End) {
-            Text("تفعيل تحسين الصوت الرياضي", color = Color.White, fontSize = 13.5.sp, fontWeight = FontWeight.Bold)
-            Text("معالجة الصوت لتعزيز المعلق وأجواء الملعب", color = Color(0xAAFFFFFF), fontSize = 11.sp)
+            Text("تفعيل تحسين الصوت الرياضي", color = Color.White, fontSize = 13.5.sp, fontFamily = ThmanyahFontFamily, fontWeight = FontWeight.Bold)
+            Text("معالجة الصوت لتعزيز المعلق وأجواء الملعب", color = Color(0xAAFFFFFF), fontSize = 11.sp, fontFamily = ThmanyahFontFamily)
           }
         }
 
         // Presets Chips Row
-        Text("الأنماط الرياضية الجاهزة", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.End))
+        Text("الأنماط الرياضية الجاهزة", color = Color.White, fontSize = 13.sp, fontFamily = ThmanyahFontFamily, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.End))
         Row(
           modifier = Modifier
             .fillMaxWidth()
@@ -182,7 +185,7 @@ fun TodEqualizerModal(
             Box(
               modifier = Modifier
                 .clip(RoundedCornerShape(12.dp))
-                .background(if (isSelected) TodGold else Color(0x22FFFFFF))
+                .background(if (isSelected) themeAccent else Color(0x22FFFFFF))
                 .clickable {
                   selectedPreset = preset
                   if (preset != EqualizerPreset.CUSTOM) {
@@ -198,6 +201,7 @@ fun TodEqualizerModal(
                 text = preset.label,
                 color = if (isSelected) Color.Black else Color.White,
                 fontSize = 12.sp,
+                fontFamily = ThmanyahFontFamily,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
               )
             }
@@ -217,10 +221,10 @@ fun TodEqualizerModal(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
           ) {
-            Text(text = "${bassBoostValue.toInt()}%", color = TodGold, fontSize = 14.sp, fontWeight = FontWeight.Black)
+            Text(text = "${bassBoostValue.toInt()}%", color = themeAccent, fontSize = 14.sp, fontWeight = FontWeight.Black)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-              Text(text = "مضخم الترددات المنخفضة (Bass Boost)", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-              Icon(Icons.Default.VolumeUp, contentDescription = null, tint = TodGold, modifier = Modifier.size(16.dp))
+              Text(text = "مضخم الترددات المنخفضة (Bass Boost)", color = Color.White, fontSize = 13.sp, fontFamily = ThmanyahFontFamily, fontWeight = FontWeight.Bold)
+              Icon(Icons.Default.VolumeUp, contentDescription = null, tint = themeAccent, modifier = Modifier.size(16.dp))
             }
           }
           Slider(
@@ -232,15 +236,15 @@ fun TodEqualizerModal(
             },
             valueRange = 0f..100f,
             colors = SliderDefaults.colors(
-              thumbColor = TodGold,
-              activeTrackColor = TodGold,
+              thumbColor = themeAccent,
+              activeTrackColor = themeAccent,
               inactiveTrackColor = Color(0x33FFFFFF)
             )
           )
         }
 
         // 5-Band Equalizer Sliders
-        Text("التحكم بترددات الصوت (5-Band Graphic EQ)", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.End))
+        Text("التحكم بترددات الصوت (5-Band Graphic EQ)", color = Color.White, fontSize = 13.sp, fontFamily = ThmanyahFontFamily, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.End))
         Row(
           modifier = Modifier
             .fillMaxWidth()
@@ -258,7 +262,7 @@ fun TodEqualizerModal(
             ) {
               Text(
                 text = "${if (value > 0) "+" else ""}${value.toInt()}dB",
-                color = if (value != 0f) TodGold else Color(0xAAFFFFFF),
+                color = if (value != 0f) themeAccent else Color(0xAAFFFFFF),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold
               )
@@ -268,7 +272,6 @@ fun TodEqualizerModal(
                   .width(36.dp),
                 contentAlignment = Alignment.Center
               ) {
-                // Vertical-like control simulation
                 Slider(
                   value = value,
                   onValueChange = { newVal ->
@@ -278,14 +281,14 @@ fun TodEqualizerModal(
                   },
                   valueRange = -10f..10f,
                   colors = SliderDefaults.colors(
-                    thumbColor = TodGold,
-                    activeTrackColor = TodGold,
+                    thumbColor = themeAccent,
+                    activeTrackColor = themeAccent,
                     inactiveTrackColor = Color(0x33FFFFFF)
                   ),
                   modifier = Modifier.fillMaxSize()
                 )
               }
-              Text(text = freqLabel, color = Color.White, fontSize = 9.5.sp, fontWeight = FontWeight.SemiBold)
+              Text(text = freqLabel, color = Color.White, fontSize = 9.5.sp, fontFamily = ThmanyahFontFamily, fontWeight = FontWeight.SemiBold)
             }
           }
         }

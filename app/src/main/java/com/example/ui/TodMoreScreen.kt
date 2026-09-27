@@ -881,10 +881,33 @@ fun TodMoreScreen(
                 TodAudioEqualizerIcon()
               }
             },
-            showDivider = false,
             onClick = {
               val next = (selectedSoundIdx + 1) % soundProfiles.size
               appSettings.setSoundMode(soundProfiles[next])
+            }
+          )
+
+          // Audio Decoder Engine Option (Solves silent stream issues)
+          val audioDecoders = listOf(
+            "فك تشفير برمجي شامل (Software Audio - يحل مشكلة الصوت)",
+            "عتادي افتراضي (Hardware Audio)",
+            "تلقائي ذكي (Auto Smart)"
+          )
+          val selectedAudioDecIdx = audioDecoders.indexOf(appSettings.audioDecoderEngine).takeIf { it >= 0 } ?: 0
+          IosListRow(
+            title = "محرك فك تشفير الصوت (Audio Decoder)",
+            subtitle = "حل جذري لمشكلة البثوث بدون صوت (دعم AC3, EAC3, DTS, AAC)",
+            value = if (appSettings.audioDecoderEngine.contains("برمجي")) "برمجي شامل" else "عتادي",
+            valueColor = Color(0xFF64D2FF),
+            iconBadge = {
+              IosCustomIconBadge(background = IosBadgeColors.Indigo) {
+                TodAudioBoostIcon()
+              }
+            },
+            showDivider = false,
+            onClick = {
+              val next = (selectedAudioDecIdx + 1) % audioDecoders.size
+              appSettings.setAudioDecoder(audioDecoders[next])
             }
           )
         }

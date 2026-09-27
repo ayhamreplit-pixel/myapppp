@@ -235,6 +235,7 @@ fun TodControlsOverlay(
               }
 
               // Content Title & Category / Subtitle - Clickable to open Channel Drawer directly!
+              val cleanedTitle = com.example.model.ChannelTitleFormatter.formatTitle(stream.title.ifEmpty { "قناة البث المباشر" })
               Column(
                 modifier = Modifier
                   .widthIn(max = 280.dp)
@@ -246,7 +247,7 @@ fun TodControlsOverlay(
                   horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                   Text(
-                    text = stream.title.ifEmpty { "قناة البث المباشر" },
+                    text = cleanedTitle,
                     color = Color.White,
                     fontSize = 15.sp,
                     fontFamily = ThmanyahFontFamily,
@@ -359,17 +360,19 @@ fun TodControlsOverlay(
                 )
               }
 
-              // 4. Subtitles icon
-              Box(
-                modifier = Modifier
-                  .iosBounceClick(scaleDown = 0.84f) { onOpenSubtitles() }
-                  .size(36.dp),
-                contentAlignment = Alignment.Center
-              ) {
-                TodSubtitles(
-                  size = 22.dp,
-                  tint = if (playerState.selectedSubtitleTrack != null) TodAmberYellow else Color.White
-                )
+              // 4. Subtitles icon - Only show if stream contains subtitles
+              if (playerState.subtitleTracks.isNotEmpty()) {
+                Box(
+                  modifier = Modifier
+                    .iosBounceClick(scaleDown = 0.84f) { onOpenSubtitles() }
+                    .size(36.dp),
+                  contentAlignment = Alignment.Center
+                ) {
+                  TodSubtitles(
+                    size = 22.dp,
+                    tint = if (playerState.selectedSubtitleTrack != null) TodAmberYellow else Color.White
+                  )
+                }
               }
 
               // 5. Settings Cog with Play Triangle inside -> opens Audio/Quality modal
@@ -382,52 +385,7 @@ fun TodControlsOverlay(
                 TodSettingsCogWithPlay(size = 24.dp, tint = Color.White)
               }
 
-              // 6. Modern iOS 18 Glass Channels Button -> opens channel drawer
-              Box(
-                modifier = Modifier
-                  .iosBounceClick(scaleDown = 0.88f) { onOpenGrid() }
-                  .clip(RoundedCornerShape(10.dp))
-                  .background(Color(0x33FFFFFF))
-                  .border(0.75.dp, Color(0x55FFFFFF), RoundedCornerShape(10.dp))
-                  .padding(horizontal = 9.dp, vertical = 5.dp),
-                contentAlignment = Alignment.Center
-              ) {
-                Row(
-                  verticalAlignment = Alignment.CenterVertically,
-                  horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                  Icon(
-                    imageVector = Icons.Default.LiveTv,
-                    contentDescription = "القنوات",
-                    tint = TodGold,
-                    modifier = Modifier.size(16.dp)
-                  )
-                  Text(
-                    text = "القنوات",
-                    color = Color.White,
-                    fontSize = 12.sp,
-                    fontFamily = ThmanyahFontFamily,
-                    fontWeight = FontWeight.Bold
-                  )
-                }
-              }
-
-              // 7. Android TV / Leanback Split Screen Toggle
-              Box(
-                modifier = Modifier
-                  .iosBounceClick(scaleDown = 0.84f) { onToggleLeanback() }
-                  .size(36.dp),
-                contentAlignment = Alignment.Center
-              ) {
-                Icon(
-                  imageVector = Icons.Default.Tv,
-                  contentDescription = "واجهة TV",
-                  tint = if (isLeanbackMode) TodGold else Color.White.copy(alpha = 0.85f),
-                  modifier = Modifier.size(20.dp)
-                )
-              }
-
-              // 5. Aspect Ratio pill button (16:9, Fit, Zoom, Stretch)
+              // 6. Aspect Ratio pill button (16:9, Fit, Zoom, Stretch)
               Box(
                 modifier = Modifier
                   .iosBounceClick(scaleDown = 0.88f) { onCycleAspectRatio() }
@@ -456,7 +414,7 @@ fun TodControlsOverlay(
                 }
               }
 
-              // 6. Quick Touch Lock
+              // 7. Quick Touch Lock
               Box(
                 modifier = Modifier
                   .iosBounceClick(scaleDown = 0.84f) { onToggleLock() }

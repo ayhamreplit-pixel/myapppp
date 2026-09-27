@@ -38,6 +38,9 @@ class AppSettings private constructor(context: Context) {
   var videoDecoderEngine by mutableStateOf(prefs.getString("video_decoder", "ExoPlayer عتادي فائق") ?: "ExoPlayer عتادي فائق")
     private set
 
+  var audioDecoderEngine by mutableStateOf(prefs.getString("audio_decoder", "فك تشفير برمجي شامل (Software Audio - يحل مشكلة الصوت)") ?: "فك تشفير برمجي شامل (Software Audio - يحل مشكلة الصوت)")
+    private set
+
   var lowLatencyMode by mutableStateOf(prefs.getBoolean("low_latency_mode", true))
     private set
 
@@ -168,6 +171,11 @@ class AppSettings private constructor(context: Context) {
   fun setVideoDecoder(engine: String) {
     videoDecoderEngine = engine
     prefs.edit().putString("video_decoder", engine).apply()
+  }
+
+  fun setAudioDecoder(engine: String) {
+    audioDecoderEngine = engine
+    prefs.edit().putString("audio_decoder", engine).apply()
   }
 
   fun setLowLatency(enabled: Boolean) {

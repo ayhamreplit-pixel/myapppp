@@ -73,6 +73,7 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
   var showSubtitlesCustomizerModal by remember { mutableStateOf(false) }
   var showEqualizerModal by remember { mutableStateOf(false) }
   var showSettingsSheet by remember { mutableStateOf(false) }
+  var showDualPickerModal by remember { mutableStateOf(false) }
   var isLeanbackMode by remember { mutableStateOf(false) }
 
   val exitPlayerToHome: () -> Unit = {
@@ -261,12 +262,7 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
             isFavorite = isFav,
             onOpenEqualizer = { showEqualizerModal = true },
             onOpenDualPlayer = {
-              val second = activeChannelList.find { it.id != currentStream.id } ?: currentStream
-              dualStream1 = currentStream
-              dualStream2 = second
-              playerManager.stop()
-              returnDestination = ScreenDestination.START_INPUT
-              screenDestination = ScreenDestination.DUAL_PLAYER
+              showDualPickerModal = true
             },
             onToggleLeanback = { isLeanbackMode = !isLeanbackMode },
             isLeanbackMode = isLeanbackMode,
@@ -397,6 +393,23 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
         onAspectChange = { mode -> playerManager.setAspectRatioMode(mode) },
         onAudioBoostChange = { boost -> playerManager.setAudioBoostPercent(boost) },
         onDismiss = { showSettingsSheet = false }
+      )
+    }
+
+    // 6. Dual Channel Selector Modal
+    if (showDualPickerModal) {
+      DualChannelPickerModal(
+        channels = activeChannelList,
+        currentStreamId = currentStream.id,
+        onSelectSecondChannel = { chosenStream ->
+          dualStream1 = currentStream
+          dualStream2 = chosenStream
+          showDualPickerModal = false
+          playerManager.stop()
+          returnDestination = ScreenDestination.START_INPUT
+          screenDestination = ScreenDestination.DUAL_PLAYER
+        },
+        onDismiss = { showDualPickerModal = false }
       )
     }
   }

@@ -122,10 +122,10 @@ object StreamUrlParser {
     // Auto-detect format from cleanUrl
     val lower = cleanUrl.lowercase()
     val format = when {
-      lower.contains(".mpd") || lower.contains("format=mpd") || lower.contains("manifest.mpd") -> StreamFormat.DASH
-      lower.contains(".ism") || lower.contains("/manifest") -> StreamFormat.SMOOTH_STREAMING
-      lower.contains(".m3u8") || lower.contains(".m3u") -> StreamFormat.HLS
-      lower.contains(".mp4") || lower.contains(".mkv") || lower.contains(".ts") -> StreamFormat.PROGRESSIVE
+      lower.contains(".m3u8") || lower.contains(".m3u") || lower.contains("format=m3u8") || lower.contains("output=m3u8") || lower.contains("/hls/") -> StreamFormat.HLS
+      (lower.contains(".mpd") || lower.contains("format=mpd")) && !lower.contains(".m3u8") -> StreamFormat.DASH
+      (lower.contains(".ism") || lower.contains("/manifest")) && !lower.contains(".m3u8") && !lower.contains("format=m3u8") -> StreamFormat.SMOOTH_STREAMING
+      lower.contains(".mp4") || lower.contains(".mkv") || lower.contains(".ts") || lower.contains(".flv") || lower.contains(".webm") -> StreamFormat.PROGRESSIVE
       else -> StreamFormat.AUTO
     }
 
