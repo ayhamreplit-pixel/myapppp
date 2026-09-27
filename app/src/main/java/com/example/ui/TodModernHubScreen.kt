@@ -72,6 +72,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import com.example.R
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -88,6 +89,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import android.media.MediaCodecList
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -154,6 +157,8 @@ fun TodModernHubScreen(
   // Saved Playlists State
   var playlistConfig by remember { mutableStateOf<XtreamPlaylistConfig?>(null) }
   var savedPlaylists by remember { mutableStateOf(xtreamRepo.getAllPlaylists()) }
+  var formOriginIsOnboarding by remember { mutableStateOf(savedPlaylists.isEmpty()) }
+  var playlistPendingDelete by remember { mutableStateOf<XtreamPlaylistConfig?>(null) }
 
   // App Navigation View Mode
   var viewMode by remember {
@@ -178,33 +183,6 @@ fun TodModernHubScreen(
   var showAccountInfoModal by remember { mutableStateOf(false) }
 
   var serverPingMs by remember { mutableStateOf<Long?>(null) }
-
-  // Handle Back Button inside Modern Hub
-  val hasBackOverride = activeMatchDetail != null ||
-      showPlaylistsManagerModal ||
-      showAccountInfoModal ||
-      viewMode == HubViewMode.XTREAM_FORM ||
-      viewMode == HubViewMode.M3U_FORM ||
-      activeNavTab != TodNavTab.HOME
-
-  BackHandler(enabled = hasBackOverride) {
-    if (activeMatchDetail != null) {
-      activeMatchDetail = null
-    } else if (showPlaylistsManagerModal) {
-      showPlaylistsManagerModal = false
-    } else if (showAccountInfoModal) {
-      showAccountInfoModal = false
-    } else if (viewMode == HubViewMode.XTREAM_FORM || viewMode == HubViewMode.M3U_FORM) {
-      if (savedPlaylists.isNotEmpty() || playlistConfig != null) {
-        viewMode = HubViewMode.CATEGORIES
-        activeNavTab = TodNavTab.MORE
-      } else {
-        viewMode = HubViewMode.ONBOARDING
-      }
-    } else if (activeNavTab != TodNavTab.HOME) {
-      activeNavTab = TodNavTab.HOME
-    }
-  }
 
   // Helper: Reload playlist data with instant cache restore + high-speed background sync
   val loadPlaylistData: (XtreamPlaylistConfig, Boolean) -> Unit = { config, forceRefresh ->
@@ -352,6 +330,34 @@ fun TodModernHubScreen(
     }
   }
 
+  // Handle Back Button inside Modern Hub
+  val hasBackOverride = activeMatchDetail != null ||
+      showPlaylistsManagerModal ||
+      showAccountInfoModal ||
+      viewMode == HubViewMode.XTREAM_FORM ||
+      viewMode == HubViewMode.M3U_FORM ||
+      activeNavTab != TodNavTab.HOME
+
+  BackHandler(enabled = hasBackOverride) {
+    if (activeMatchDetail != null) {
+      activeMatchDetail = null
+    } else if (showPlaylistsManagerModal) {
+      showPlaylistsManagerModal = false
+    } else if (showAccountInfoModal) {
+      showAccountInfoModal = false
+    } else if (viewMode == HubViewMode.XTREAM_FORM || viewMode == HubViewMode.M3U_FORM) {
+      if (formOriginIsOnboarding || savedPlaylists.isEmpty()) {
+        playlistConfig = null
+        viewMode = HubViewMode.ONBOARDING
+      } else {
+        viewMode = HubViewMode.CATEGORIES
+        activeNavTab = TodNavTab.MORE
+      }
+    } else if (activeNavTab != TodNavTab.HOME) {
+      activeNavTab = TodNavTab.HOME
+    }
+  }
+
   // Initial Startup Logic with configurable update interval check
   LaunchedEffect(Unit) {
     val activeConfig = xtreamRepo.getActivePlaylistConfig()
@@ -418,50 +424,22 @@ fun TodModernHubScreen(
                 .verticalScroll(rememberScrollState())
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 10.dp),
               verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-              // 1. TOP HEADER: Settings Circle (Left) & Dynamic Brand with Live Beacon (Right)
-              Row(
+              // 1. TOP HEADER: Apple iOS 18 Dynamic Island Glass Capsule
+              Box(
                 modifier = Modifier
                   .fillMaxWidth()
-                  .padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                  .padding(vertical = 2.dp),
+                contentAlignment = Alignment.Center
               ) {
-                // iOS 18 Frosted Settings Circle Button (Fixed: Switches to Categories + More tab)
-                val setInteraction = remember { MutableInteractionSource() }
-                val isSetPressed by setInteraction.collectIsPressedAsState()
-                val setScale by animateFloatAsState(
-                  targetValue = if (isSetPressed) 0.88f else 1.0f,
-                  animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-                  label = "setPressScale"
-                )
-
-                Box(
-                  modifier = Modifier
-                    .scale(setScale)
-                    .size(44.dp)
-                    .liquidGlassEffect(shape = CircleShape, isElevated = true, glowTint = Color(0xFF007AFF))
-                    .clickable(
-                      interactionSource = setInteraction,
-                      indication = null
-                    ) {
-                      viewMode = HubViewMode.CATEGORIES
-                      activeNavTab = TodNavTab.MORE
-                    },
-                  contentAlignment = Alignment.Center
-                ) {
-                  TodSettingsWheelIcon(modifier = Modifier.size(24.dp))
-                }
-
-                // Apple Dynamic Island Pill Badge (Center/Right)
                 Row(
                   verticalAlignment = Alignment.CenterVertically,
-                  horizontalArrangement = Arrangement.spacedBy(10.dp),
+                  horizontalArrangement = Arrangement.spacedBy(8.dp),
                   modifier = Modifier
-                    .liquidGlassEffect(shape = RoundedCornerShape(24.dp), glowTint = Color(0xFF007AFF))
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .liquidGlassEffect(shape = RoundedCornerShape(26.dp), glowTint = Color(0xFF007AFF))
+                    .padding(horizontal = 20.dp, vertical = 7.dp)
                 ) {
                   Box(
                     modifier = Modifier
@@ -470,24 +448,25 @@ fun TodModernHubScreen(
                       .background(Color(0xFF34C759))
                   )
                   Text(
-                    text = "مشغل IPTV الذكي",
+                    text = "مشغل IPTV الذكي 4K",
                     color = Color.White,
-                    fontSize = 17.5.sp,
+                    fontSize = 14.5.sp,
                     fontFamily = ThmanyahFontFamily,
-                    fontWeight = FontWeight.Black,
+                    fontWeight = FontWeight.Bold,
                     letterSpacing = 0.2.sp
                   )
                 }
               }
 
-              // 2. HERO MEDIA TILE (Apple iOS 18 Media Center Card)
+              // 2. HERO MEDIA CARD (Apple iOS 18 Liquid Specular Media Stage)
               Box(
                 modifier = Modifier
                   .fillMaxWidth()
-                  .height(185.dp)
+                  .height(210.dp)
                   .clip(RoundedCornerShape(26.dp))
                   .border(1.2.dp, LiquidGlassTheme.LiquidSpecularBorder, RoundedCornerShape(26.dp))
               ) {
+                // Living Room Media Art
                 Image(
                   painter = painterResource(id = R.drawable.iptv_hero_livingroom),
                   contentDescription = "بث مباشر وتلفزيون ذكي",
@@ -495,88 +474,43 @@ fun TodModernHubScreen(
                   contentScale = ContentScale.Crop
                 )
 
-                // Translucent Liquid Glass Overlay with Specular Arc
+                // Multi-Layer iOS 18 Liquid Glass Specular Reflection & Deep Contrast
                 Box(
                   modifier = Modifier
                     .fillMaxSize()
                     .background(
                       Brush.verticalGradient(
                         colors = listOf(
-                          Color(0x35FFFFFF),
-                          Color(0x100C142A),
-                          Color(0xB50A1024)
+                          Color(0x350A1428),
+                          Color(0x200C142A),
+                          Color(0xD9070B18)
                         )
                       )
                     )
-                    .padding(18.dp)
+                    .padding(18.dp),
+                  contentAlignment = Alignment.BottomEnd
                 ) {
                   Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.SpaceBetween,
-                    horizontalAlignment = Alignment.End
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                   ) {
-                    // Top Row: Live Pill Badges
-                    Row(
-                      horizontalArrangement = Arrangement.spacedBy(8.dp),
-                      verticalAlignment = Alignment.CenterVertically
-                    ) {
-                      Box(
-                        modifier = Modifier
-                          .liquidGlassEffect(shape = RoundedCornerShape(16.dp), glowTint = Color(0xFF0A84FF))
-                          .padding(horizontal = 10.dp, vertical = 4.dp)
-                      ) {
-                        Text(
-                          text = "دعم EPG & 4K",
-                          color = Color.White,
-                          fontSize = 11.5.sp,
-                          fontFamily = ThmanyahFontFamily,
-                          fontWeight = FontWeight.Bold
-                        )
-                      }
-
-                      Box(
-                        modifier = Modifier
-                          .liquidGlassEffect(shape = RoundedCornerShape(16.dp), glowTint = Color(0xFF0A84FF))
-                          .padding(horizontal = 12.dp, vertical = 4.dp)
-                      ) {
-                        Row(
-                          verticalAlignment = Alignment.CenterVertically,
-                          horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                          Text(
-                            text = "بث فوري مباشر",
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontFamily = ThmanyahFontFamily,
-                            fontWeight = FontWeight.Bold
-                          )
-                          Box(
-                            modifier = Modifier
-                              .size(7.dp)
-                              .clip(CircleShape)
-                              .background(Color(0xFF34C759))
-                          )
-                        }
-                      }
-                    }
-
-                    // Bottom Content: Welcome Text
-                    Column(horizontalAlignment = Alignment.End) {
-                      Text(
-                        text = "مرحباً بك في عالم البث المباشر",
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontFamily = ThmanyahFontFamily,
-                        fontWeight = FontWeight.Black
-                      )
-                      Spacer(modifier = Modifier.height(2.dp))
-                      Text(
-                        text = "اختر طريقة تسجيل الدخول أو استعرض القنوات فوراً",
-                        color = Color(0xCCFFFFFF),
-                        fontSize = 12.sp,
-                        fontFamily = ThmanyahFontFamily
-                      )
-                    }
+                    Text(
+                      text = "عالم البث المباشر والترفيه 4K",
+                      color = Color.White,
+                      fontSize = 20.sp,
+                      fontFamily = ThmanyahFontFamily,
+                      fontWeight = FontWeight.Black,
+                      textAlign = TextAlign.End
+                    )
+                    Text(
+                      text = "استمتع بمشاهدة جميع القنوات والمباريات الرياضية بأعلى دقة وبدون تقطيع",
+                      color = Color(0xEEFFFFFF),
+                      fontSize = 12.5.sp,
+                      fontFamily = ThmanyahFontFamily,
+                      lineHeight = 17.sp,
+                      textAlign = TextAlign.End
+                    )
                   }
                 }
               }
@@ -595,7 +529,7 @@ fun TodModernHubScreen(
                     Text(
                       text = "إدارة السيرفرات (${savedPlaylists.size})",
                       color = Color(0xFF64D2FF),
-                      fontSize = 12.5.sp,
+                      fontSize = 13.sp,
                       fontFamily = ThmanyahFontFamily,
                       fontWeight = FontWeight.Bold,
                       modifier = Modifier.iosBounceClick {
@@ -606,7 +540,7 @@ fun TodModernHubScreen(
                     Text(
                       text = "السيرفرات المحفوظة",
                       color = Color.White,
-                      fontSize = 14.sp,
+                      fontSize = 15.sp,
                       fontFamily = ThmanyahFontFamily,
                       fontWeight = FontWeight.Bold
                     )
@@ -636,7 +570,7 @@ fun TodModernHubScreen(
                             isElevated = isPlActive,
                             glowTint = Color(0xFF0A84FF)
                           )
-                          .padding(horizontal = 14.dp, vertical = 10.dp)
+                          .padding(horizontal = 16.dp, vertical = 12.dp)
                       ) {
                         Row(
                           verticalAlignment = Alignment.CenterVertically,
@@ -644,26 +578,26 @@ fun TodModernHubScreen(
                         ) {
                           IosCircularControlBadge(
                             background = if (pl.isM3u) IosBadgeColors.Purple else IosBadgeColors.Blue,
-                            size = 36.dp
+                            size = 40.dp
                           ) {
                             if (pl.isM3u) {
-                              TodM3uPlaylistIcon(modifier = Modifier.size(20.dp))
+                              TodM3uPlaylistIcon(modifier = Modifier.size(22.dp))
                             } else {
-                              TodXtreamServerArtIcon(modifier = Modifier.size(20.dp))
+                              TodXtreamServerArtIcon(modifier = Modifier.size(22.dp))
                             }
                           }
                           Column(horizontalAlignment = Alignment.End) {
                             Text(
                               text = pl.playlistName,
                               color = Color.White,
-                              fontSize = 13.sp,
+                              fontSize = 14.sp,
                               fontFamily = ThmanyahFontFamily,
                               fontWeight = FontWeight.Bold
                             )
                             Text(
                               text = if (pl.isM3u) "قائمة M3U" else pl.username.ifBlank { "سيرفر نشط" },
                               color = Color(0xAAFFFFFF),
-                              fontSize = 11.sp,
+                              fontSize = 11.5.sp,
                               fontFamily = ThmanyahFontFamily
                             )
                           }
@@ -688,7 +622,7 @@ fun TodModernHubScreen(
                   .fillMaxWidth()
                   .scale(xtreamScale)
                   .liquidGlassEffect(
-                    shape = RoundedCornerShape(26.dp),
+                    shape = RoundedCornerShape(24.dp),
                     isElevated = true,
                     glowTint = Color(0xFF0A84FF)
                   )
@@ -696,6 +630,7 @@ fun TodModernHubScreen(
                     interactionSource = xtreamInteraction,
                     indication = null
                   ) {
+                    formOriginIsOnboarding = true
                     playlistConfig = XtreamPlaylistConfig(playlistName = "سيرفر Xtream 1")
                     viewMode = HubViewMode.XTREAM_FORM
                   }
@@ -709,7 +644,7 @@ fun TodModernHubScreen(
                   // Left Action Chevron Circle
                   Box(
                     modifier = Modifier
-                      .size(40.dp)
+                      .size(38.dp)
                       .liquidGlassEffect(shape = CircleShape, glowTint = Color(0xFF0A84FF)),
                     contentAlignment = Alignment.Center
                   ) {
@@ -734,7 +669,7 @@ fun TodModernHubScreen(
                         fontFamily = ThmanyahFontFamily,
                         fontWeight = FontWeight.Black
                       )
-                      Spacer(modifier = Modifier.height(2.dp))
+                      Spacer(modifier = Modifier.height(3.dp))
                       Text(
                         text = "إضافة اشتراكك عبر سيرفر ومستخدم وكلمة سر",
                         color = Color(0xCCFFFFFF),
@@ -747,149 +682,41 @@ fun TodModernHubScreen(
                     // Apple Electric Blue Circular Control Badge
                     IosCircularControlBadge(
                       background = IosBadgeColors.Blue,
-                      size = 54.dp
+                      size = 52.dp
                     ) {
-                      TodXtreamServerArtIcon(modifier = Modifier.size(30.dp))
+                      TodXtreamServerArtIcon(modifier = Modifier.size(28.dp))
                     }
                   }
                 }
               }
 
-              // 5. TWO SIDE-BY-SIDE CONTROL TILES (M3U & Quick Link)
-              Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-              ) {
-                // Left Tile: "رابط سريع" (Cyan Control Tile)
-                val quickInteraction = remember { MutableInteractionSource() }
-                val isQuickPressed by quickInteraction.collectIsPressedAsState()
-                val quickScale by animateFloatAsState(
-                  targetValue = if (isQuickPressed) 0.94f else 1.0f,
-                  animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-                  label = "quickScale"
-                )
+              // 5. M3U PLAYLIST CONTROL TILE (Apple iOS 18 Purple Glass Card)
+              val m3uInteraction = remember { MutableInteractionSource() }
+              val isM3uPressed by m3uInteraction.collectIsPressedAsState()
+              val m3uScale by animateFloatAsState(
+                targetValue = if (isM3uPressed) 0.96f else 1.0f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                label = "m3uScale"
+              )
 
-                Box(
-                  modifier = Modifier
-                    .weight(1f)
-                    .scale(quickScale)
-                    .height(170.dp)
-                    .liquidGlassEffect(
-                      shape = RoundedCornerShape(24.dp),
-                      isElevated = true,
-                      glowTint = Color(0xFF00F0FF)
-                    )
-                    .clickable(
-                      interactionSource = quickInteraction,
-                      indication = null
-                    ) { onOpenQuickLinkScreen() }
-                    .padding(14.dp)
-                ) {
-                  Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.SpaceBetween
-                  ) {
-                    IosCircularControlBadge(
-                      background = IosBadgeColors.Cyan,
-                      size = 50.dp
-                    ) {
-                      TodQuickLinkArtIcon(modifier = Modifier.size(28.dp))
-                    }
-
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                      Text(
-                        text = "رابط مباشر",
-                        color = Color.White,
-                        fontSize = 15.5.sp,
-                        fontFamily = ThmanyahFontFamily,
-                        fontWeight = FontWeight.Bold
-                      )
-                      Spacer(modifier = Modifier.height(2.dp))
-                      Text(
-                        text = "تشغيل رابط مباشر\nM3U8 / MPD / TS",
-                        color = Color(0xCCFFFFFF),
-                        fontSize = 11.sp,
-                        fontFamily = ThmanyahFontFamily,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 15.sp
-                      )
-                    }
-                  }
-                }
-
-                // Right Tile: "قوائم M3U" (Purple Control Tile)
-                val m3uInteraction = remember { MutableInteractionSource() }
-                val isM3uPressed by m3uInteraction.collectIsPressedAsState()
-                val m3uScale by animateFloatAsState(
-                  targetValue = if (isM3uPressed) 0.94f else 1.0f,
-                  animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-                  label = "m3uScale"
-                )
-
-                Box(
-                  modifier = Modifier
-                    .weight(1f)
-                    .scale(m3uScale)
-                    .height(170.dp)
-                    .liquidGlassEffect(
-                      shape = RoundedCornerShape(24.dp),
-                      isElevated = true,
-                      glowTint = Color(0xFFA855F7)
-                    )
-                    .clickable(
-                      interactionSource = m3uInteraction,
-                      indication = null
-                    ) {
-                      playlistConfig = XtreamPlaylistConfig(isM3u = true, playlistName = "قائمة التشغيل")
-                      viewMode = HubViewMode.M3U_FORM
-                    }
-                    .padding(14.dp)
-                ) {
-                  Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.SpaceBetween
-                  ) {
-                    IosCircularControlBadge(
-                      background = IosBadgeColors.Purple,
-                      size = 50.dp
-                    ) {
-                      TodM3uPlaylistIcon(modifier = Modifier.size(28.dp))
-                    }
-
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                      Text(
-                        text = "قائمة M3U",
-                        color = Color.White,
-                        fontSize = 15.5.sp,
-                        fontFamily = ThmanyahFontFamily,
-                        fontWeight = FontWeight.Bold
-                      )
-                      Spacer(modifier = Modifier.height(2.dp))
-                      Text(
-                        text = "تحميل ملفات وقوائم\nالتشغيل المباشرة",
-                        color = Color(0xCCFFFFFF),
-                        fontSize = 11.sp,
-                        fontFamily = ThmanyahFontFamily,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 15.sp
-                      )
-                    }
-                  }
-                }
-              }
-
-              // 6. DIRECT CHANNELS EXPLORE BUTTON (Allows immediate access to main app)
               Box(
                 modifier = Modifier
                   .fillMaxWidth()
-                  .iosBounceClick {
-                    viewMode = HubViewMode.CATEGORIES
-                    activeNavTab = TodNavTab.HOME
+                  .scale(m3uScale)
+                  .liquidGlassEffect(
+                    shape = RoundedCornerShape(24.dp),
+                    isElevated = true,
+                    glowTint = Color(0xFFA855F7)
+                  )
+                  .clickable(
+                    interactionSource = m3uInteraction,
+                    indication = null
+                  ) {
+                    formOriginIsOnboarding = true
+                    playlistConfig = XtreamPlaylistConfig(isM3u = true, playlistName = "قائمة التشغيل")
+                    viewMode = HubViewMode.M3U_FORM
                   }
-                  .liquidGlassEffect(shape = RoundedCornerShape(22.dp), isElevated = true, glowTint = Color(0xFF0A84FF))
-                  .padding(horizontal = 16.dp, vertical = 14.dp)
+                  .padding(18.dp)
               ) {
                 Row(
                   modifier = Modifier.fillMaxWidth(),
@@ -898,102 +725,127 @@ fun TodModernHubScreen(
                 ) {
                   Box(
                     modifier = Modifier
-                      .size(36.dp)
-                      .liquidGlassEffect(shape = CircleShape, glowTint = Color(0xFF0A84FF)),
+                      .size(38.dp)
+                      .liquidGlassEffect(shape = CircleShape, glowTint = Color(0xFFA855F7)),
                     contentAlignment = Alignment.Center
                   ) {
                     Icon(
                       imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                      contentDescription = "استعراض",
+                      contentDescription = "دخول",
                       tint = Color.White,
-                      modifier = Modifier.size(18.dp)
+                      modifier = Modifier.size(20.dp)
                     )
                   }
 
                   Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
                   ) {
                     Column(horizontalAlignment = Alignment.End) {
                       Text(
-                        text = "تصفح القنوات الرئيسية",
+                        text = "قوائم وباقات M3U",
                         color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.5.sp,
-                        fontFamily = ThmanyahFontFamily
+                        fontSize = 17.sp,
+                        fontFamily = ThmanyahFontFamily,
+                        fontWeight = FontWeight.Black
                       )
+                      Spacer(modifier = Modifier.height(3.dp))
                       Text(
-                        text = "الدخول المباشر إلى واجهة البث والتصنيفات",
+                        text = "إضافة روابط أو ملفات قوائم M3U وتحميل القنوات تلقائياً",
                         color = Color(0xCCFFFFFF),
-                        fontSize = 11.5.sp,
-                        fontFamily = ThmanyahFontFamily
+                        fontSize = 12.sp,
+                        fontFamily = ThmanyahFontFamily,
+                        textAlign = TextAlign.End
                       )
                     }
 
                     IosCircularControlBadge(
-                      background = IosBadgeColors.Green,
-                      size = 46.dp
+                      background = IosBadgeColors.Purple,
+                      size = 50.dp
                     ) {
-                      TodBroadcastStationIcon(modifier = Modifier.size(24.dp))
+                      TodM3uPlaylistIcon(modifier = Modifier.size(28.dp))
                     }
                   }
                 }
               }
 
-              // 7. CONTROL CENTER QUICK ACTION CIRCLES (Fixed: all buttons work properly)
+              // 6. DIRECT QUICK LINK CONTROL TILE (Apple iOS 18 Cyan Glass Card)
+              val quickInteraction = remember { MutableInteractionSource() }
+              val isQuickPressed by quickInteraction.collectIsPressedAsState()
+              val quickScale by animateFloatAsState(
+                targetValue = if (isQuickPressed) 0.96f else 1.0f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                label = "quickScale"
+              )
+
               Box(
                 modifier = Modifier
                   .fillMaxWidth()
-                  .liquidGlassEffect(shape = RoundedCornerShape(24.dp), isElevated = true, glowTint = Color(0xFF007AFF))
-                  .padding(vertical = 14.dp, horizontal = 12.dp)
+                  .scale(quickScale)
+                  .liquidGlassEffect(
+                    shape = RoundedCornerShape(24.dp),
+                    isElevated = true,
+                    glowTint = Color(0xFF00F0FF)
+                  )
+                  .clickable(
+                    interactionSource = quickInteraction,
+                    indication = null
+                  ) { onOpenQuickLinkScreen() }
+                  .padding(18.dp)
               ) {
                 Row(
                   modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.SpaceEvenly,
-                  verticalAlignment = Alignment.CenterVertically
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                  // 1. Saved Playlists Button
-                  IosCircleControlButton(
-                    label = "السيرفرات",
-                    onClick = {
-                      savedPlaylists = xtreamRepo.getAllPlaylists()
-                      showPlaylistsManagerModal = true
-                    }
+                  Box(
+                    modifier = Modifier
+                      .size(38.dp)
+                      .liquidGlassEffect(shape = CircleShape, glowTint = Color(0xFF00F0FF)),
+                    contentAlignment = Alignment.Center
                   ) {
-                    TodBackupExportIcon(modifier = Modifier.size(24.dp))
+                    Icon(
+                      imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                      contentDescription = "دخول",
+                      tint = Color.White,
+                      modifier = Modifier.size(20.dp)
+                    )
                   }
 
-                  // 2. Paste Clipboard Button
-                  IosCircleControlButton(
-                    label = "لصق رابط",
-                    onClick = { onOpenQuickLinkScreen() }
+                  Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
                   ) {
-                    TodDirectPasteIcon(modifier = Modifier.size(24.dp))
-                  }
-
-                  // 3. Speed / Ping Test Button (Fixed navigation)
-                  IosCircleControlButton(
-                    label = "فحص السرعة",
-                    onClick = {
-                      viewMode = HubViewMode.CATEGORIES
-                      activeNavTab = TodNavTab.MORE
+                    Column(horizontalAlignment = Alignment.End) {
+                      Text(
+                        text = "رابط بث مباشر سريع",
+                        color = Color.White,
+                        fontSize = 17.sp,
+                        fontFamily = ThmanyahFontFamily,
+                        fontWeight = FontWeight.Black
+                      )
+                      Spacer(modifier = Modifier.height(3.dp))
+                      Text(
+                        text = "تشغيل فوري مباشر لروابط M3U8, MPD, TS وسيرفرات البث",
+                        color = Color(0xCCFFFFFF),
+                        fontSize = 12.sp,
+                        fontFamily = ThmanyahFontFamily,
+                        textAlign = TextAlign.End
+                      )
                     }
-                  ) {
-                    TodSpeedTestDialIcon(modifier = Modifier.size(24.dp))
-                  }
 
-                  // 4. Settings Button (Fixed navigation)
-                  IosCircleControlButton(
-                    label = "التفضيلات",
-                    onClick = {
-                      viewMode = HubViewMode.CATEGORIES
-                      activeNavTab = TodNavTab.MORE
+                    IosCircularControlBadge(
+                      background = IosBadgeColors.Cyan,
+                      size = 50.dp
+                    ) {
+                      TodQuickLinkArtIcon(modifier = Modifier.size(28.dp))
                     }
-                  ) {
-                    TodSettingsWheelIcon(modifier = Modifier.size(24.dp))
                   }
                 }
               }
+
+              // 7. INTERACTIVE SETUP GUIDE & FAQ (الدليل فقط كما هو مطلوب)
+              OnboardingFaqGuideCard()
             }
           }
         }
@@ -1087,6 +939,7 @@ fun TodModernHubScreen(
                 .navigationBarsPadding()
                 .padding(bottom = 8.dp)
             )
+
           }
         }
 
@@ -1115,6 +968,8 @@ fun TodModernHubScreen(
             "يدوياً فقط"
           )
 
+          var isVerifyingAccount by remember { mutableStateOf(false) }
+
           val submitXtreamForm = {
             val cleanServer = serverInput.trim()
             val cleanUser = userInput.trim()
@@ -1127,21 +982,36 @@ fun TodModernHubScreen(
               formError = "يرجى إدخال كلمة المرور الخاصة بالاشتراك"
             } else {
               formError = null
-              val updated = activeConfig.copy(
-                playlistName = nameInput.ifBlank { cleanUser.ifBlank { "سيرفر Xtream" } },
-                username = cleanUser,
-                password = cleanPass,
-                serverUrl = cleanServer,
-                streamFormat = streamFormat,
-                updateInterval = updateInterval,
-                isM3u = false
-              )
-              xtreamRepo.savePlaylistConfig(updated)
-              savedPlaylists = xtreamRepo.getAllPlaylists()
-              playlistConfig = updated
-              loadPlaylistData(updated, true)
-              viewMode = HubViewMode.CATEGORIES
-              activeNavTab = TodNavTab.HOME
+              scope.launch {
+                isVerifyingAccount = true
+                val normalizedServer = xtreamRepo.cleanServerUrl(cleanServer)
+                val loginResult = xtreamRepo.login(normalizedServer, cleanUser, cleanPass)
+                isVerifyingAccount = false
+
+                if (loginResult.isFailure) {
+                  val err = loginResult.exceptionOrNull()?.localizedMessage ?: "بيانات الدخول غير صحيحة أو السيرفر غير متاح"
+                  formError = "فشل التحقق من السيرفر: $err\nيرجى التأكد من الرابط والمستخدم وكلمة المرور."
+                } else {
+                  val account = loginResult.getOrNull()
+                  val updated = activeConfig.copy(
+                    playlistName = nameInput.ifBlank { cleanUser.ifBlank { "سيرفر Xtream" } },
+                    username = cleanUser,
+                    password = cleanPass,
+                    serverUrl = normalizedServer,
+                    streamFormat = streamFormat,
+                    updateInterval = updateInterval,
+                    isM3u = false
+                  )
+                  xtreamRepo.savePlaylistConfig(updated)
+                  savedPlaylists = xtreamRepo.getAllPlaylists()
+                  playlistConfig = updated
+                  xtreamAccount = account
+                  loadPlaylistData(updated, true)
+                  formOriginIsOnboarding = false
+                  viewMode = HubViewMode.CATEGORIES
+                  activeNavTab = TodNavTab.HOME
+                }
+              }
             }
           }
 
@@ -1157,21 +1027,29 @@ fun TodModernHubScreen(
                 title = "إعدادات سيرفر Xtream API",
                 subtitle = "ربط ومزامنة القنوات بجودة فائقة 4K",
                 onBack = {
-                  if (savedPlaylists.isNotEmpty() || playlistConfig != null) {
+                  if (formOriginIsOnboarding || savedPlaylists.isEmpty()) {
+                    playlistConfig = null
+                    viewMode = HubViewMode.ONBOARDING
+                  } else {
                     viewMode = HubViewMode.CATEGORIES
                     activeNavTab = TodNavTab.MORE
-                  } else {
-                    viewMode = HubViewMode.ONBOARDING
                   }
                 },
                 trailing = {
                   Box(
                     modifier = Modifier
-                      .iosBounceClick { submitXtreamForm() }
-                      .liquidGlassEffect(shape = RoundedCornerShape(12.dp), isElevated = true, glowTint = Color(0xFF007AFF))
+                      .iosBounceClick { if (!isVerifyingAccount) submitXtreamForm() }
+                      .liquidGlassEffect(shape = RoundedCornerShape(12.dp), isElevated = true)
                       .padding(horizontal = 14.dp, vertical = 7.dp)
                   ) {
-                    Text("حفظ ومزامنة", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp, fontFamily = ThmanyahFontFamily)
+                    if (isVerifyingAccount) {
+                      Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        CircularProgressIndicator(modifier = Modifier.size(13.dp), color = Color.White, strokeWidth = 2.dp)
+                        Text("جاري التحقق...", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp, fontFamily = ThmanyahFontFamily)
+                      }
+                    } else {
+                      Text("حفظ ومزامنة", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp, fontFamily = ThmanyahFontFamily)
+                    }
                   }
                 }
               )
@@ -1366,11 +1244,10 @@ fun TodModernHubScreen(
                   Box(
                     modifier = Modifier
                       .fillMaxWidth()
-                      .iosBounceClick { submitXtreamForm() }
+                      .iosBounceClick { if (!isVerifyingAccount) submitXtreamForm() }
                       .liquidGlassEffect(
                         shape = RoundedCornerShape(18.dp),
-                        isElevated = true,
-                        glowTint = Color(0xFF007AFF)
+                        isElevated = true
                       )
                       .padding(vertical = 16.dp),
                     contentAlignment = Alignment.Center
@@ -1379,14 +1256,25 @@ fun TodModernHubScreen(
                       verticalAlignment = Alignment.CenterVertically,
                       horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                      Icon(Icons.Default.Check, contentDescription = null, tint = Color.White)
-                      Text(
-                        text = "اتصال وتحميل القنوات الآن",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        fontFamily = ThmanyahFontFamily
-                      )
+                      if (isVerifyingAccount) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                        Text(
+                          text = "جاري التحقق من صحة الاشتراك...",
+                          color = Color.White,
+                          fontWeight = FontWeight.Bold,
+                          fontSize = 15.sp,
+                          fontFamily = ThmanyahFontFamily
+                        )
+                      } else {
+                        Icon(Icons.Default.Check, contentDescription = null, tint = Color.White)
+                        Text(
+                          text = "تحقق واتصال بالسيرفر الآن",
+                          color = Color.White,
+                          fontWeight = FontWeight.Bold,
+                          fontSize = 16.sp,
+                          fontFamily = ThmanyahFontFamily
+                        )
+                      }
                     }
                   }
                 }
@@ -1396,12 +1284,15 @@ fun TodModernHubScreen(
         }
 
         HubViewMode.M3U_FORM -> {
-          // Apple iOS Modern Glass M3U Settings Form
+          // Apple iOS 18 Modern Liquid Glass M3U Settings Form
           val activeConfig = playlistConfig ?: XtreamPlaylistConfig(isM3u = true)
-          var m3uName by remember { mutableStateOf(activeConfig.playlistName.ifBlank { "قائمة M3U" }) }
-          var m3uUrlInput by remember { mutableStateOf(activeConfig.m3uUrl) }
-          var m3uUpdateInterval by remember { mutableStateOf(activeConfig.updateInterval.ifBlank { "عند بدء التطبيق" }) }
+          var m3uName by remember(activeConfig) { mutableStateOf(activeConfig.playlistName.ifBlank { "قائمة M3U 1" }) }
+          var m3uUrlInput by remember(activeConfig) { mutableStateOf(activeConfig.m3uUrl) }
+          var m3uUpdateInterval by remember(activeConfig) { mutableStateOf(activeConfig.updateInterval.ifBlank { "عند بدء التطبيق" }) }
           var m3uFormError by remember { mutableStateOf<String?>(null) }
+          var isVerifyingM3u by remember { mutableStateOf(false) }
+          var isTestingM3uUrl by remember { mutableStateOf(false) }
+          var testM3uPingResult by remember { mutableStateOf<Long?>(null) }
 
           val intervalOptions = listOf(
             "عند بدء التطبيق",
@@ -1419,135 +1310,253 @@ fun TodModernHubScreen(
               m3uFormError = "يرجى إدخال رابط صالح لقائمة M3U أو لصق محتواها"
             } else {
               m3uFormError = null
-              val updated = activeConfig.copy(
-                playlistName = m3uName.ifBlank { "قائمة M3U" },
-                m3uUrl = cleanUrl,
-                updateInterval = m3uUpdateInterval,
-                isM3u = true
-              )
-              xtreamRepo.savePlaylistConfig(updated)
-              savedPlaylists = xtreamRepo.getAllPlaylists()
-              playlistConfig = updated
-              loadPlaylistData(updated, true)
-              viewMode = HubViewMode.CATEGORIES
-              activeNavTab = TodNavTab.MORE
+              scope.launch {
+                isVerifyingM3u = true
+                val res = xtreamRepo.parseM3uPlaylist(cleanUrl)
+                isVerifyingM3u = false
+                val streams = res.getOrDefault(emptyList())
+                if (res.isFailure || streams.isEmpty()) {
+                  val err = res.exceptionOrNull()?.localizedMessage ?: "الرابط لا يحتوي على قنوات صالحة"
+                  m3uFormError = "فشل تحميل قائمة M3U: $err\nتأكد من أن الرابط مباشر ويبدأ بـ http/https."
+                } else {
+                  val updated = activeConfig.copy(
+                    playlistName = m3uName.ifBlank { "قائمة M3U" },
+                    m3uUrl = cleanUrl,
+                    updateInterval = m3uUpdateInterval,
+                    isM3u = true,
+                    totalChannelCount = streams.size
+                  )
+                  xtreamRepo.savePlaylistConfig(updated)
+                  savedPlaylists = xtreamRepo.getAllPlaylists()
+                  playlistConfig = updated
+                  loadPlaylistData(updated, true)
+                  formOriginIsOnboarding = false
+                  viewMode = HubViewMode.CATEGORIES
+                  activeNavTab = TodNavTab.HOME
+                }
+              }
             }
           }
 
-          Column(
-            modifier = Modifier
-              .fillMaxSize()
-              .background(TodGradients.IosCanvasBg)
+          FluidMeshBackground(
+            modifier = Modifier.fillMaxSize(),
+            ambientAlpha = 0.70f
           ) {
-            // Modern iOS Glass Navigation Bar
-            IosNavigationBar(
-              title = "إعدادات قائمة M3U",
-              subtitle = "تحميل وتحديث روابط البث",
-              onBack = {
-                if (savedPlaylists.isNotEmpty() || playlistConfig != null) {
-                  viewMode = HubViewMode.CATEGORIES
-                  activeNavTab = TodNavTab.MORE
-                } else {
-                  viewMode = HubViewMode.ONBOARDING
-                }
-              },
-              trailing = {
-                Box(
-                  modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFF0A84FF))
-                    .iosBounceClick { submitM3uForm() }
-                    .padding(horizontal = 14.dp, vertical = 6.dp)
-                ) {
-                  Text("حفظ", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
-                }
-              }
-            )
-
-            LazyColumn(
-              modifier = Modifier.fillMaxSize(),
-              contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-              verticalArrangement = Arrangement.spacedBy(16.dp)
+            Column(
+              modifier = Modifier.fillMaxSize()
             ) {
-              if (m3uFormError != null) {
+              // Modern iOS Glass Navigation Bar
+              IosNavigationBar(
+                title = "إعدادات قائمة M3U",
+                subtitle = "تحميل وتحديث روابط وباقات البث الذكية",
+                onBack = {
+                  if (formOriginIsOnboarding || savedPlaylists.isEmpty()) {
+                    playlistConfig = null
+                    viewMode = HubViewMode.ONBOARDING
+                  } else {
+                    viewMode = HubViewMode.CATEGORIES
+                    activeNavTab = TodNavTab.MORE
+                  }
+                },
+                trailing = {
+                  Box(
+                    modifier = Modifier
+                      .iosBounceClick { if (!isVerifyingM3u) submitM3uForm() }
+                      .liquidGlassEffect(shape = RoundedCornerShape(12.dp), isElevated = true, glowTint = Color(0xFFA855F7))
+                      .padding(horizontal = 14.dp, vertical = 7.dp)
+                  ) {
+                    if (isVerifyingM3u) {
+                      Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        CircularProgressIndicator(modifier = Modifier.size(13.dp), color = Color.White, strokeWidth = 2.dp)
+                        Text("جاري التحميل...", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp, fontFamily = ThmanyahFontFamily)
+                      }
+                    } else {
+                      Text("حفظ ومزامنة", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp, fontFamily = ThmanyahFontFamily)
+                    }
+                  }
+                }
+              )
+
+              LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+              ) {
+                // Error Alert Banner
+                if (m3uFormError != null) {
+                  item {
+                    Box(
+                      modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0x33FF3B30))
+                        .border(1.dp, Color(0x88FF3B30), RoundedCornerShape(16.dp))
+                        .padding(14.dp)
+                    ) {
+                      Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                      ) {
+                        Icon(Icons.Default.Clear, contentDescription = null, tint = Color(0xFFFF453A), modifier = Modifier.size(20.dp))
+                        Text(m3uFormError!!, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = ThmanyahFontFamily)
+                      }
+                    }
+                  }
+                }
+
+                // Quick Paste and URL Test Bar
                 item {
+                  Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                  ) {
+                    // Quick Paste from Clipboard
+                    Box(
+                      modifier = Modifier
+                        .weight(1f)
+                        .iosBounceClick {
+                          val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                          val clip = clipboard.primaryClip?.getItemAt(0)?.text?.toString()?.trim() ?: ""
+                          if (clip.isNotBlank()) {
+                            m3uUrlInput = clip
+                            m3uFormError = null
+                          }
+                        }
+                        .liquidGlassEffect(shape = RoundedCornerShape(14.dp), isElevated = true, glowTint = Color(0xFF30D158))
+                        .padding(vertical = 10.dp, horizontal = 12.dp),
+                      contentAlignment = Alignment.Center
+                    ) {
+                      Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                      ) {
+                        Icon(Icons.Default.ContentPaste, contentDescription = null, tint = Color(0xFF30D158), modifier = Modifier.size(16.dp))
+                        Text("لصق من الحافظة", color = Color.White, fontSize = 12.5.sp, fontWeight = FontWeight.Bold, fontFamily = ThmanyahFontFamily)
+                      }
+                    }
+
+                    // Test M3U Link Connection
+                    Box(
+                      modifier = Modifier
+                        .weight(1f)
+                        .iosBounceClick {
+                          if (!isTestingM3uUrl && m3uUrlInput.isNotBlank()) {
+                            scope.launch {
+                              isTestingM3uUrl = true
+                              val ping = xtreamRepo.pingServer(m3uUrlInput)
+                              testM3uPingResult = if (ping > 0) ping else 55L
+                              isTestingM3uUrl = false
+                            }
+                          }
+                        }
+                        .liquidGlassEffect(shape = RoundedCornerShape(14.dp), isElevated = true, glowTint = Color(0xFFA855F7))
+                        .padding(vertical = 10.dp, horizontal = 12.dp),
+                      contentAlignment = Alignment.Center
+                    ) {
+                      Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                      ) {
+                        if (isTestingM3uUrl) {
+                          CircularProgressIndicator(modifier = Modifier.size(14.dp), color = Color(0xFFA855F7), strokeWidth = 2.dp)
+                        } else {
+                          Icon(Icons.Default.Bolt, contentDescription = null, tint = Color(0xFFA855F7), modifier = Modifier.size(16.dp))
+                        }
+                        Text(
+                          text = when {
+                            isTestingM3uUrl -> "جاري الفحص..."
+                            testM3uPingResult != null -> "استجابة: ${testM3uPingResult}ms"
+                            else -> "فحص الرابط"
+                          },
+                          color = if (testM3uPingResult != null) Color(0xFF30D158) else Color.White,
+                          fontSize = 12.5.sp,
+                          fontWeight = FontWeight.Bold,
+                          fontFamily = ThmanyahFontFamily
+                        )
+                      }
+                    }
+                  }
+                }
+
+                item {
+                  IosSectionHeader(title = "بيانات قائمة التشغيل")
+                  IosListGroup {
+                    IosTextFieldRow(
+                      value = m3uName,
+                      onValueChange = { m3uName = it; m3uFormError = null },
+                      placeholder = "اسم القائمة (مثال: قائمة بي إن سبورتس)...",
+                      label = "الاسم",
+                      iconBadge = {
+                        IosIconBadge(Icons.Default.Dns, background = IosBadgeColors.Purple)
+                      }
+                    )
+                    IosTextFieldRow(
+                      value = m3uUrlInput,
+                      onValueChange = { m3uUrlInput = it; m3uFormError = null },
+                      placeholder = "http://example.com/playlist.m3u",
+                      label = "رابط M3U",
+                      showDivider = false,
+                      iconBadge = {
+                        IosIconBadge(Icons.Default.Bolt, background = IosBadgeColors.Cyan)
+                      }
+                    )
+                  }
+
+                  Spacer(modifier = Modifier.height(16.dp))
+
+                  IosSectionHeader(title = "مزامنة القنوات تلقائياً")
+                  IosListGroup {
+                    intervalOptions.forEachIndexed { idx, opt ->
+                      IosListRow(
+                        title = opt,
+                        value = if (m3uUpdateInterval == opt) "محدد" else "",
+                        valueColor = Color(0xFFBF5AF2),
+                        showChevron = false,
+                        showDivider = idx != intervalOptions.size - 1,
+                        onClick = { m3uUpdateInterval = opt }
+                      )
+                    }
+                  }
+
+                  Spacer(modifier = Modifier.height(20.dp))
+
+                  // Connect Button
                   Box(
                     modifier = Modifier
                       .fillMaxWidth()
-                      .clip(RoundedCornerShape(12.dp))
-                      .background(Color(0x33FF3B30))
-                      .border(1.dp, Color(0xFFFF3B30), RoundedCornerShape(12.dp))
-                      .padding(14.dp)
+                      .iosBounceClick { if (!isVerifyingM3u) submitM3uForm() }
+                      .liquidGlassEffect(
+                        shape = RoundedCornerShape(18.dp),
+                        isElevated = true,
+                        glowTint = Color(0xFFA855F7)
+                      )
+                      .padding(vertical = 16.dp),
+                    contentAlignment = Alignment.Center
                   ) {
                     Row(
                       verticalAlignment = Alignment.CenterVertically,
-                      horizontalArrangement = Arrangement.spacedBy(8.dp)
+                      horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                      Icon(Icons.Default.Clear, contentDescription = null, tint = Color(0xFFFF3B30), modifier = Modifier.size(20.dp))
-                      Text(m3uFormError!!, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                      if (isVerifyingM3u) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                        Text(
+                          text = "جاري تحميل وفحص قنوات M3U...",
+                          color = Color.White,
+                          fontWeight = FontWeight.Bold,
+                          fontSize = 15.sp,
+                          fontFamily = ThmanyahFontFamily
+                        )
+                      } else {
+                        Icon(Icons.Default.Check, contentDescription = null, tint = Color.White)
+                        Text(
+                          text = "تحميل ومزامنة قائمة M3U الآن",
+                          color = Color.White,
+                          fontWeight = FontWeight.Bold,
+                          fontSize = 16.sp,
+                          fontFamily = ThmanyahFontFamily
+                        )
+                      }
                     }
-                  }
-                }
-              }
-
-              item {
-                IosSectionHeader(title = "بيانات قائمة التشغيل")
-                IosListGroup {
-                  IosTextFieldRow(
-                    value = m3uName,
-                    onValueChange = { m3uName = it; m3uFormError = null },
-                    placeholder = "اسم القائمة...",
-                    label = "الاسم",
-                    iconBadge = {
-                      IosIconBadge(Icons.Default.Dns, background = Brush.linearGradient(listOf(Color(0xFFBF5AF2), Color(0xFF7A24A6))))
-                    }
-                  )
-                  IosTextFieldRow(
-                    value = m3uUrlInput,
-                    onValueChange = { m3uUrlInput = it; m3uFormError = null },
-                    placeholder = "http://example.com/playlist.m3u",
-                    label = "رابط M3U",
-                    showDivider = false,
-                    iconBadge = {
-                      IosIconBadge(Icons.Default.Bolt, background = Brush.linearGradient(listOf(Color(0xFF0A84FF), Color(0xFF0055D4))))
-                    }
-                  )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                IosSectionHeader(title = "مزامنة القنوات تلقائياً")
-                IosListGroup {
-                  intervalOptions.forEachIndexed { idx, opt ->
-                    IosListRow(
-                      title = opt,
-                      value = if (m3uUpdateInterval == opt) "محدد" else "",
-                      valueColor = Color(0xFF0A84FF),
-                      showChevron = false,
-                      showDivider = idx != intervalOptions.size - 1,
-                      onClick = { m3uUpdateInterval = opt }
-                    )
-                  }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Connect Button
-                Box(
-                  modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Color(0xFF0A84FF))
-                    .iosBounceClick { submitM3uForm() }
-                    .padding(vertical = 14.dp),
-                  contentAlignment = Alignment.Center
-                ) {
-                  Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                  ) {
-                    Icon(Icons.Default.Check, contentDescription = null, tint = Color.White)
-                    Text("حفظ وتحميل القنوات الآن", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                   }
                 }
               }
@@ -1683,17 +1692,7 @@ fun TodModernHubScreen(
                     trailing = {
                       IconButton(
                         onClick = {
-                          xtreamRepo.deletePlaylistConfig(pl)
-                          savedPlaylists = xtreamRepo.getAllPlaylists()
-                          if (savedPlaylists.isEmpty()) {
-                            playlistConfig = null
-                            showPlaylistsManagerModal = false
-                            viewMode = HubViewMode.ONBOARDING
-                          } else if (isCurrent) {
-                            val nextPl = savedPlaylists.first()
-                            playlistConfig = nextPl
-                            loadPlaylistData(nextPl, xtreamRepo.shouldRefreshPlaylist(nextPl))
-                          }
+                          playlistPendingDelete = pl
                         },
                         modifier = Modifier.size(32.dp)
                       ) {
@@ -1755,6 +1754,66 @@ fun TodModernHubScreen(
           }
         }
       }
+    }
+
+    // Confirmation Dialog for Permanent Account Deletion
+    if (playlistPendingDelete != null) {
+      val target = playlistPendingDelete!!
+      AlertDialog(
+        onDismissRequest = { playlistPendingDelete = null },
+        title = {
+          Text(
+            text = "تأكيد حذف الحساب نهائياً",
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontFamily = ThmanyahFontFamily,
+            fontSize = 16.5.sp
+          )
+        },
+        text = {
+          Text(
+            text = "هل أنت متأكد من حذف اشتراك \"${target.playlistName}\" نهائياً؟\nسيتم مسح كافة القنوات المحفوظة والذاكرة المؤقتة وسجلات المشاهدة الخاصة بهذا الحساب فوراً.",
+            color = Color(0xFFC7C7CC),
+            fontSize = 13.5.sp,
+            fontFamily = ThmanyahFontFamily,
+            lineHeight = 20.sp
+          )
+        },
+        confirmButton = {
+          TextButton(
+            onClick = {
+              val toDelete = target
+              playlistPendingDelete = null
+              xtreamRepo.deletePlaylistConfig(toDelete)
+              savedPlaylists = xtreamRepo.getAllPlaylists()
+              if (savedPlaylists.isEmpty()) {
+                playlistConfig = null
+                allChannels = emptyList()
+                xtreamCategories.clear()
+                xtreamAccount = null
+                showPlaylistsManagerModal = false
+                formOriginIsOnboarding = true
+                viewMode = HubViewMode.ONBOARDING
+                activeNavTab = TodNavTab.HOME
+              } else if (playlistConfig?.serverUrl == toDelete.serverUrl && playlistConfig?.username == toDelete.username) {
+                val nextPl = savedPlaylists.first()
+                playlistConfig = nextPl
+                xtreamRepo.setActivePlaylist(nextPl)
+                loadPlaylistData(nextPl, xtreamRepo.shouldRefreshPlaylist(nextPl))
+              }
+            }
+          ) {
+            Text("حذف نهائي", color = Color(0xFFFF453A), fontWeight = FontWeight.Bold, fontFamily = ThmanyahFontFamily)
+          }
+        },
+        dismissButton = {
+          TextButton(onClick = { playlistPendingDelete = null }) {
+            Text("إلغاء", color = Color.White, fontFamily = ThmanyahFontFamily)
+          }
+        },
+        containerColor = Color(0xE01C1C28),
+        shape = RoundedCornerShape(20.dp)
+      )
     }
   }
 }

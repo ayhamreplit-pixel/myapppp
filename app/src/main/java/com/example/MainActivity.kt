@@ -20,7 +20,8 @@ class MainActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
     setContent {
-      MyApplicationTheme {
+      val appTheme = com.example.ui.theme.ThemeStateHolder.currentTheme
+      MyApplicationTheme(appTheme = appTheme) {
         Surface(
           modifier = Modifier.fillMaxSize(),
           color = DarkBg

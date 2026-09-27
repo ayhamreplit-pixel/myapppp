@@ -231,19 +231,20 @@ fun TodHomeScreen(
         )
       }
     } else {
+      val demoList = com.example.model.BroadcastCatalog.getInitialDemoChannels()
       listOf(
         DynamicTodHeroItem(
           id = "welcome_hero_pro",
           title = "مشغل IPTV الذكي 4K",
           subtitle = "بث فوري مباشر لكافة القنوات العالمية والرياضية بأعلى جودة وبدون تقطيع",
           categoryName = "البث المباشر الذكي",
-          channel = null,
+          channel = demoList.firstOrNull(),
           isLive = true,
           backdropGradient = Brush.verticalGradient(
             listOf(Color(0xFF0A84FF), Color(0xFF0055D4), Color(0xFF080D20))
           ),
           tags = listOf("🌟 IPTV 4K", "⚡ فائق السرعة", "🏆 مانع التقطيع", "🔥 مباشر"),
-          primaryButtonLabel = "تسجيل الدخول إلى سيرفرك"
+          primaryButtonLabel = "مشاهدة البث المباشر التجريبي"
         )
       )
     }
@@ -837,7 +838,14 @@ fun TodHomeScreen(
                         .clickable(
                           interactionSource = playInteraction,
                           indication = null,
-                          onClick = onOpenProfile
+                          onClick = {
+                            if (activeHero.channel != null) {
+                              val list = if (allChannels.isNotEmpty()) allChannels else com.example.model.BroadcastCatalog.getInitialDemoChannels()
+                              onPlayChannel(activeHero.channel, list, "TOD 4K Live")
+                            } else {
+                              onOpenProfile()
+                            }
+                          }
                         ),
                       contentAlignment = Alignment.Center
                     ) {
@@ -847,7 +855,7 @@ fun TodHomeScreen(
                       ) {
                         TodXtreamServerIcon(modifier = Modifier.size(20.dp), tint = Color.White)
                         Text(
-                          text = "تسجيل الدخول إلى سيرفرك",
+                          text = if (activeHero.channel != null) "مشاهدة البث التجريبي" else "تسجيل الدخول إلى سيرفرك",
                           color = Color.White,
                           fontSize = 13.5.sp,
                           fontFamily = ThmanyahFontFamily,
@@ -1325,13 +1333,30 @@ fun TodHomeScreen(
                 }
               }
 
-              // Card 3: Performance Engine
+              // Card 3: Performance Engine (Clickable for instant test)
+              val card3Interaction = remember { MutableInteractionSource() }
+              val isCard3Pressed by card3Interaction.collectIsPressedAsState()
+              val card3Scale by animateFloatAsState(
+                targetValue = if (isCard3Pressed) 0.97f else 1.0f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                label = "card3Scale"
+              )
+
               Box(
                 modifier = Modifier
+                  .scale(card3Scale)
                   .fillMaxWidth()
                   .liquidGlassEffect(
                     shape = RoundedCornerShape(20.dp),
-                    glowTint = Color(0xFF0A84FF)
+                    glowTint = Color(0xFF30D158)
+                  )
+                  .clickable(
+                    interactionSource = card3Interaction,
+                    indication = null,
+                    onClick = {
+                      val demo = com.example.model.BroadcastCatalog.getInitialDemoChannels().first()
+                      onPlayChannel(demo, com.example.model.BroadcastCatalog.getInitialDemoChannels(), "Demo Sports Live")
+                    }
                   )
                   .padding(16.dp)
               ) {
@@ -1353,7 +1378,7 @@ fun TodHomeScreen(
 
                   Column(modifier = Modifier.weight(1f)) {
                     Text(
-                      text = "محرك مانع التقطيع الذكي",
+                      text = "محرك مانع التقطيع الذكي (تشغيل تجريبي)",
                       color = Color.White,
                       fontSize = 14.5.sp,
                       fontFamily = ThmanyahFontFamily,
@@ -1361,13 +1386,91 @@ fun TodHomeScreen(
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                      text = "معالجة فورية وتخزين مؤقت سلس لتشغيل خالٍ من التوقفات",
+                      text = "انقر لتجربة البث الفوري بدون تقطيع مع معالجة التخزين المؤقت",
                       color = DarkTextSecondary,
                       fontSize = 11.5.sp,
                       fontFamily = ThmanyahFontFamily,
                       lineHeight = 16.sp
                     )
                   }
+
+                  Icon(
+                    Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    tint = Color(0xFF30D158),
+                    modifier = Modifier.size(22.dp)
+                  )
+                }
+              }
+
+              // Card 4: Curated Demo Channels List
+              val card4Interaction = remember { MutableInteractionSource() }
+              val isCard4Pressed by card4Interaction.collectIsPressedAsState()
+              val card4Scale by animateFloatAsState(
+                targetValue = if (isCard4Pressed) 0.97f else 1.0f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                label = "card4Scale"
+              )
+
+              Box(
+                modifier = Modifier
+                  .scale(card4Scale)
+                  .fillMaxWidth()
+                  .liquidGlassEffect(
+                    shape = RoundedCornerShape(20.dp),
+                    glowTint = Color(0xFFBF5AF2)
+                  )
+                  .clickable(
+                    interactionSource = card4Interaction,
+                    indication = null,
+                    onClick = {
+                      val demoList = com.example.model.BroadcastCatalog.getInitialDemoChannels()
+                      val first = demoList.getOrNull(1) ?: demoList.first()
+                      onPlayChannel(first, demoList, "beIN Sports 4K")
+                    }
+                  )
+                  .padding(16.dp)
+              ) {
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                  Box(
+                    modifier = Modifier
+                      .size(46.dp)
+                      .clip(RoundedCornerShape(14.dp))
+                      .background(Brush.linearGradient(listOf(Color(0xFFBF5AF2), Color(0xFF7A24A6))))
+                      .border(1.dp, Color(0x55FFFFFF), RoundedCornerShape(14.dp)),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    TodIptv4kMasterpieceIcon(modifier = Modifier.size(28.dp))
+                  }
+
+                  Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                      text = "تجربة قنوات beIN Sports 4K فائقة السرعة",
+                      color = Color.White,
+                      fontSize = 14.5.sp,
+                      fontFamily = ThmanyahFontFamily,
+                      fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                      text = "بثوث تجريبية جاهزة للتحقق من العتاد وجودة الصورة والصوتيات",
+                      color = DarkTextSecondary,
+                      fontSize = 11.5.sp,
+                      fontFamily = ThmanyahFontFamily,
+                      lineHeight = 16.sp
+                    )
+                  }
+
+                  Icon(
+                    Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    tint = Color(0xFFBF5AF2),
+                    modifier = Modifier.size(22.dp)
+                  )
                 }
               }
             }

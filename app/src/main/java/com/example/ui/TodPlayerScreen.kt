@@ -68,9 +68,12 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
   // In-Player quick channel drawer
   var showInPlayerChannelDrawer by remember { mutableStateOf(false) }
 
-  // Other secondary sheets
+  // Other secondary sheets & modals
   var showSubtitleSheet by remember { mutableStateOf(false) }
+  var showSubtitlesCustomizerModal by remember { mutableStateOf(false) }
+  var showEqualizerModal by remember { mutableStateOf(false) }
   var showSettingsSheet by remember { mutableStateOf(false) }
+  var isLeanbackMode by remember { mutableStateOf(false) }
 
   val exitPlayerToHome: () -> Unit = {
     playerManager.stop()
@@ -223,41 +226,92 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
 
         val isFav = favoriteIds.contains(currentStream.id)
 
-        TodPlayerView(
-          playerManager = playerManager,
-          playerState = playerState,
-          stream = currentStream,
-          isFullscreen = isFullscreen,
-          onToggleFullscreen = toggleFullscreen,
-          onTriggerPip = triggerPip,
-          onOpenQuality = {
-            initialModalTab = TodSettingsTab.QUALITY
-            showTodAudioQualityModal = true
-          },
-          onOpenAudio = {
-            initialModalTab = TodSettingsTab.AUDIO
-            showTodAudioQualityModal = true
-          },
-          onOpenSubtitles = { showSubtitleSheet = true },
-          onOpenSettings = { showSettingsSheet = true },
-          onOpenCustomStream = { exitPlayerToHome() },
-          onSelectMoment = { moment ->
-            playerManager.seekTo(moment.timeSeconds * 1000)
-          },
-          onNavigateBack = { exitPlayerToHome() },
-          onOpenGrid = {
-            // Open in-player channel drawer for instant channel switching!
-            showInPlayerChannelDrawer = true
-          },
-          onNextChannel = onNext,
-          onPreviousChannel = onPrev,
-          onToggleFavorite = {
-            xtreamRepo.toggleFavorite(currentStream.id)
-            favoriteIds = xtreamRepo.getFavorites()
-          },
-          isFavorite = isFav,
-          modifier = Modifier.fillMaxSize()
-        )
+        val playerComposableView = @Composable {
+          TodPlayerView(
+            playerManager = playerManager,
+            playerState = playerState,
+            stream = currentStream,
+            isFullscreen = isFullscreen,
+            onToggleFullscreen = toggleFullscreen,
+            onTriggerPip = triggerPip,
+            onOpenQuality = {
+              initialModalTab = TodSettingsTab.QUALITY
+              showTodAudioQualityModal = true
+            },
+            onOpenAudio = {
+              initialModalTab = TodSettingsTab.AUDIO
+              showTodAudioQualityModal = true
+            },
+            onOpenSubtitles = { showSubtitlesCustomizerModal = true },
+            onOpenSettings = { showSettingsSheet = true },
+            onOpenCustomStream = { exitPlayerToHome() },
+            onSelectMoment = { moment ->
+              playerManager.seekTo(moment.timeSeconds * 1000)
+            },
+            onNavigateBack = { exitPlayerToHome() },
+            onOpenGrid = {
+              showInPlayerChannelDrawer = true
+            },
+            onNextChannel = onNext,
+            onPreviousChannel = onPrev,
+            onToggleFavorite = {
+              xtreamRepo.toggleFavorite(currentStream.id)
+              favoriteIds = xtreamRepo.getFavorites()
+            },
+            isFavorite = isFav,
+            onOpenEqualizer = { showEqualizerModal = true },
+            onOpenDualPlayer = {
+              val second = activeChannelList.find { it.id != currentStream.id } ?: currentStream
+              dualStream1 = currentStream
+              dualStream2 = second
+              playerManager.stop()
+              returnDestination = ScreenDestination.START_INPUT
+              screenDestination = ScreenDestination.DUAL_PLAYER
+            },
+            onToggleLeanback = { isLeanbackMode = !isLeanbackMode },
+            isLeanbackMode = isLeanbackMode,
+            modifier = Modifier.fillMaxSize()
+          )
+        }
+
+        if (isLeanbackMode) {
+          val xtreamChannels = activeChannelList.map {
+            com.example.model.XtreamChannel(
+              streamId = it.id,
+              name = it.title,
+              iconUrl = it.logoUrl,
+              categoryId = it.category,
+              playUrl = it.streamUrl
+            )
+          }
+          val xtreamCats = xtreamChannels.groupBy { it.categoryId ?: "TOD Live" }.map {
+            com.example.model.XtreamCategory(it.key, it.key, it.value.size)
+          }
+
+          TodLeanbackView(
+            categories = xtreamCats,
+            channels = xtreamChannels,
+            currentStream = currentStream,
+            onSelectChannel = { ch ->
+              val matchingStream = activeChannelList.find { it.id == ch.streamId } ?: BroadcastStream(
+                id = ch.streamId,
+                title = ch.name,
+                subtitle = ch.categoryId ?: "Live",
+                category = ch.categoryId ?: "Live",
+                streamUrl = ch.playUrl,
+                logoUrl = ch.iconUrl,
+                isLive = true
+              )
+              currentStream = matchingStream
+              playerManager.playStream(matchingStream)
+            },
+            onToggleFullscreen = { isLeanbackMode = false },
+            playerContent = { playerComposableView() },
+            modifier = Modifier.fillMaxSize()
+          )
+        } else {
+          playerComposableView()
+        }
 
         // In-Player Channel Drawer (Slides in over the landscape player)
         TodInPlayerChannelDrawer(
@@ -269,7 +323,14 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
             playerManager.playStream(newStream)
           },
           onClose = { showInPlayerChannelDrawer = false },
-          onExitToHub = { exitPlayerToHome() }
+          onExitToHub = { exitPlayerToHome() },
+          onPlayDualWith = { secondStream ->
+            dualStream1 = currentStream
+            dualStream2 = secondStream
+            playerManager.stop()
+            returnDestination = ScreenDestination.START_INPUT
+            screenDestination = ScreenDestination.DUAL_PLAYER
+          }
         )
       }
     }
@@ -296,7 +357,27 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
       )
     }
 
-    // 2. Subtitles Sheet
+    // 2. Subtitles Engine Customizer Modal
+    if (showSubtitlesCustomizerModal) {
+      SubtitlesCustomizerModal(
+        subtitles = playerState.subtitleTracks,
+        selectedSubtitle = playerState.selectedSubtitleTrack,
+        onSelectSubtitle = { sub -> playerManager.selectSubtitleTrack(sub) },
+        onDismiss = { showSubtitlesCustomizerModal = false }
+      )
+    }
+
+    // 3. Audio 5-Band Equalizer & Bass Boost Modal
+    if (showEqualizerModal) {
+      TodEqualizerModal(
+        onDismiss = { showEqualizerModal = false },
+        onApplyPreset = { preset, bands, bassBoost ->
+          playerManager.setAudioBoostPercent(bassBoost.toInt())
+        }
+      )
+    }
+
+    // 4. Subtitles Sheet (Classic)
     if (showSubtitleSheet) {
       SubtitleTrackSheet(
         subtitles = playerState.subtitleTracks,
@@ -306,7 +387,7 @@ fun TodPlayerScreen(modifier: Modifier = Modifier) {
       )
     }
 
-    // 3. Playback Settings Sheet
+    // 5. Playback Settings Sheet
     if (showSettingsSheet) {
       PlaybackSettingsSheet(
         currentSpeed = playerState.playbackSpeed,

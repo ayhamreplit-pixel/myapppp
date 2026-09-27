@@ -97,6 +97,7 @@ fun TodInPlayerChannelDrawer(
   onSelectChannel: (BroadcastStream) -> Unit,
   onClose: () -> Unit,
   onExitToHub: () -> Unit,
+  onPlayDualWith: ((BroadcastStream) -> Unit)? = null,
   modifier: Modifier = Modifier
 ) {
   val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
@@ -587,16 +588,41 @@ fun TodInPlayerChannelDrawer(
 
                     Spacer(modifier = Modifier.width(6.dp))
 
-                    // Left: Playing State Equalizer or Arrow
+                    // Left: Playing State Equalizer or Actions
                     if (isPlaying) {
                       DrawerEqualizerIndicator()
                     } else {
-                      Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "تشغيل",
-                        tint = Color(0x66FFFFFF),
-                        modifier = Modifier.size(16.dp)
-                      )
+                      Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                      ) {
+                        if (onPlayDualWith != null) {
+                          Box(
+                            modifier = Modifier
+                              .clip(RoundedCornerShape(6.dp))
+                              .background(Color(0x3300E5FF))
+                              .clickable {
+                                onPlayDualWith(stream)
+                                onClose()
+                              }
+                              .padding(horizontal = 6.dp, vertical = 3.dp)
+                          ) {
+                            Text(
+                              text = "قناتين معا",
+                              color = Color(0xFF00E5FF),
+                              fontSize = 9.5.sp,
+                              fontFamily = ThmanyahFontFamily,
+                              fontWeight = FontWeight.Bold
+                            )
+                          }
+                        }
+                        Icon(
+                          imageVector = Icons.Default.PlayArrow,
+                          contentDescription = "تشغيل",
+                          tint = Color(0x66FFFFFF),
+                          modifier = Modifier.size(16.dp)
+                        )
+                      }
                     }
                   }
                 }

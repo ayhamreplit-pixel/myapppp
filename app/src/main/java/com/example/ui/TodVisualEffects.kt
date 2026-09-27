@@ -229,30 +229,30 @@ fun FluidMeshBackground(
     label = "orb3Scale"
   )
 
+  val currentTheme = com.example.ui.theme.LocalAppTheme.current
+
   Box(
     modifier = modifier
       .fillMaxSize()
       .background(
         Brush.verticalGradient(
-          colors = listOf(
-            Color(0xFF0C142A), // Deep vibrant sapphire indigo
-            Color(0xFF130D2E), // Deep luxury violet
-            Color(0xFF090E20)  // Midnight blue
-          )
+          colors = currentTheme.bgGradientColors
         )
       )
       .drawBehind {
         val w = size.width
         val h = size.height
 
-        // 1. Glowing Fluid Orb 1: Electric Blue & Vivid Cyan (Top-Left / Header region)
+        // 1. Glowing Fluid Orb 1: Primary Accent Region (Top-Left / Header region)
         val orb1Center = Offset(w * 0.20f + orb1Offset, h * 0.15f + orb2Offset * 0.5f)
+        val o1a = currentTheme.orb1Colors.getOrElse(0) { Color(0xFF007AFF) }
+        val o1b = currentTheme.orb1Colors.getOrElse(1) { Color(0xFF00F0FF) }
         drawCircle(
           brush = Brush.radialGradient(
             colors = listOf(
-              Color(0xFF007AFF).copy(alpha = (ambientAlpha * 0.85f).coerceIn(0f, 1f)),
-              Color(0xFF00F0FF).copy(alpha = (ambientAlpha * 0.45f).coerceIn(0f, 1f)),
-              Color(0x0000F0FF)
+              o1a.copy(alpha = (ambientAlpha * 0.85f).coerceIn(0f, 1f)),
+              o1b.copy(alpha = (ambientAlpha * 0.45f).coerceIn(0f, 1f)),
+              o1b.copy(alpha = 0f)
             ),
             center = orb1Center,
             radius = w * 0.85f
@@ -261,14 +261,16 @@ fun FluidMeshBackground(
           radius = w * 0.85f
         )
 
-        // 2. Glowing Fluid Orb 2: Royal Violet & Vivid Magenta (Middle-Right)
+        // 2. Glowing Fluid Orb 2: Secondary Tone Region (Middle-Right)
         val orb2Center = Offset(w * 0.85f + orb2Offset, h * 0.42f + orb1Offset)
+        val o2a = currentTheme.orb2Colors.getOrElse(0) { Color(0xFFA855F7) }
+        val o2b = currentTheme.orb2Colors.getOrElse(1) { Color(0xFFEC4899) }
         drawCircle(
           brush = Brush.radialGradient(
             colors = listOf(
-              Color(0xFFA855F7).copy(alpha = (ambientAlpha * 0.75f).coerceIn(0f, 1f)),
-              Color(0xFFEC4899).copy(alpha = (ambientAlpha * 0.40f).coerceIn(0f, 1f)),
-              Color(0x00EC4899)
+              o2a.copy(alpha = (ambientAlpha * 0.75f).coerceIn(0f, 1f)),
+              o2b.copy(alpha = (ambientAlpha * 0.40f).coerceIn(0f, 1f)),
+              o2b.copy(alpha = 0f)
             ),
             center = orb2Center,
             radius = w * 0.80f * orb3Scale
@@ -277,14 +279,16 @@ fun FluidMeshBackground(
           radius = w * 0.80f * orb3Scale
         )
 
-        // 3. Glowing Fluid Orb 3: Radiant Amber & Golden Sunset (Bottom-Left)
+        // 3. Glowing Fluid Orb 3: Tertiary Atmosphere Region (Bottom-Left)
         val orb3Center = Offset(w * 0.15f - orb1Offset * 0.6f, h * 0.75f + orb2Offset * 0.4f)
+        val o3a = currentTheme.orb3Colors.getOrElse(0) { Color(0xFFFFB800) }
+        val o3b = currentTheme.orb3Colors.getOrElse(1) { Color(0xFFFF6B6B) }
         drawCircle(
           brush = Brush.radialGradient(
             colors = listOf(
-              Color(0xFFFFB800).copy(alpha = (ambientAlpha * 0.55f).coerceIn(0f, 1f)),
-              Color(0xFFFF6B6B).copy(alpha = (ambientAlpha * 0.30f).coerceIn(0f, 1f)),
-              Color(0x00FF6B6B)
+              o3a.copy(alpha = (ambientAlpha * 0.55f).coerceIn(0f, 1f)),
+              o3b.copy(alpha = (ambientAlpha * 0.30f).coerceIn(0f, 1f)),
+              o3b.copy(alpha = 0f)
             ),
             center = orb3Center,
             radius = w * 0.75f
@@ -293,14 +297,16 @@ fun FluidMeshBackground(
           radius = w * 0.75f
         )
 
-        // 4. Glowing Fluid Orb 4: Emerald Mint & Cyan Glow (Bottom-Right / Nav region)
+        // 4. Glowing Fluid Orb 4: Subtle Base Glow Region (Bottom-Right / Nav region)
         val orb4Center = Offset(w * 0.80f - orb2Offset * 0.5f, h * 0.88f)
+        val o4a = currentTheme.orb4Colors.getOrElse(0) { Color(0xFF10B981) }
+        val o4b = currentTheme.orb4Colors.getOrElse(1) { Color(0xFF06B6D4) }
         drawCircle(
           brush = Brush.radialGradient(
             colors = listOf(
-              Color(0xFF10B981).copy(alpha = (ambientAlpha * 0.50f).coerceIn(0f, 1f)),
-              Color(0xFF06B6D4).copy(alpha = (ambientAlpha * 0.25f).coerceIn(0f, 1f)),
-              Color(0x0006B6D4)
+              o4a.copy(alpha = (ambientAlpha * 0.50f).coerceIn(0f, 1f)),
+              o4b.copy(alpha = (ambientAlpha * 0.25f).coerceIn(0f, 1f)),
+              o4b.copy(alpha = 0f)
             ),
             center = orb4Center,
             radius = w * 0.70f
@@ -320,12 +326,13 @@ fun FluidMeshBackground(
 fun Modifier.liquidGlassEffect(
   shape: Shape = RoundedCornerShape(22.dp),
   isElevated: Boolean = false,
-  glowTint: Color? = Color(0xFF0A84FF),
+  glowTint: Color? = null,
   glassColor: Color? = null,
   borderBrush: Brush? = null,
   showTopGlare: Boolean = true
 ): Modifier = composed {
-  val effectiveGlowTint = glowTint ?: Color(0xFF0A84FF)
+  val currentTheme = com.example.ui.theme.LocalAppTheme.current
+  val effectiveGlowTint = glowTint ?: currentTheme.glowColor
   val surfaceColors = when {
     glassColor != null -> listOf(
       glassColor.copy(alpha = (glassColor.alpha * 0.85f).coerceIn(0.12f, 0.95f)),
@@ -339,12 +346,14 @@ fun Modifier.liquidGlassEffect(
     )
   }
 
-  val finalBorderBrush = borderBrush ?: when (effectiveGlowTint) {
-    TodGold -> LiquidGlassTheme.LiquidGoldBorder
-    Color(0xFFBF5AF2) -> LiquidGlassTheme.LiquidPurpleBorder
-    Color(0xFF30D158) -> LiquidGlassTheme.LiquidGreenBorder
-    else -> LiquidGlassTheme.LiquidBlueBorder
-  }
+  val finalBorderBrush = borderBrush ?: Brush.verticalGradient(
+    listOf(
+      Color(0x75FFFFFF),
+      effectiveGlowTint.copy(alpha = 0.45f),
+      Color(0x18FFFFFF),
+      effectiveGlowTint.copy(alpha = 0.30f)
+    )
+  )
 
   this
     .clip(shape)
@@ -671,6 +680,8 @@ fun LiquidGlassBottomBar(
     Pair(TodNavTab.MORE, "المزيد")
   )
 
+  val currentTheme = com.example.ui.theme.LocalAppTheme.current
+
   Box(
     modifier = modifier
       .fillMaxWidth()
@@ -683,13 +694,13 @@ fun LiquidGlassBottomBar(
         .liquidGlassEffect(
           shape = RoundedCornerShape(34.dp),
           isElevated = true,
-          glowTint = Color(0xFF0A84FF),
+          glowTint = currentTheme.glowColor,
           borderBrush = Brush.verticalGradient(
             listOf(
               Color(0x60FFFFFF),
-              Color(0x2864D2FF),
+              currentTheme.glowColor.copy(alpha = 0.40f),
               Color(0x10FFFFFF),
-              Color(0x250A84FF)
+              currentTheme.primaryColor.copy(alpha = 0.35f)
             )
           )
         )
@@ -723,16 +734,16 @@ fun LiquidGlassBottomBar(
                     .background(
                       Brush.horizontalGradient(
                         listOf(
-                          Color(0xFF0A84FF).copy(alpha = 0.35f),
-                          Color(0xFF0055D4).copy(alpha = 0.22f),
-                          Color(0xFF002B7A).copy(alpha = 0.15f)
+                          currentTheme.primaryColor.copy(alpha = 0.35f),
+                          currentTheme.glowColor.copy(alpha = 0.22f),
+                          currentTheme.primaryColor.copy(alpha = 0.15f)
                         )
                       )
                     )
                     .border(
                       width = 1.15.dp,
                       brush = Brush.horizontalGradient(
-                        listOf(Color(0xFF64D2FF), Color(0xFF0A84FF), Color(0x40FFFFFF))
+                        listOf(currentTheme.glowColor, currentTheme.primaryColor, Color(0x40FFFFFF))
                       ),
                       shape = RoundedCornerShape(26.dp)
                     )
@@ -765,15 +776,15 @@ fun LiquidGlassBottomBar(
               when (tab) {
                 TodNavTab.HOME -> TodNavHomeIcon(
                   isSelected = isSelected,
-                  primaryColor = if (isSelected) Color(0xFF64D2FF) else Color(0xFF8E8E93)
+                  primaryColor = if (isSelected) currentTheme.glowColor else Color(0xFF8E8E93)
                 )
                 TodNavTab.SEARCH -> TodNavSearchIcon(
                   isSelected = isSelected,
-                  primaryColor = if (isSelected) Color(0xFF00F0FF) else Color(0xFF8E8E93)
+                  primaryColor = if (isSelected) currentTheme.glowColor else Color(0xFF8E8E93)
                 )
                 TodNavTab.MORE -> TodNavMoreIcon(
                   isSelected = isSelected,
-                  primaryColor = if (isSelected) Color(0xFFBF5AF2) else Color(0xFF8E8E93)
+                  primaryColor = if (isSelected) currentTheme.glowColor else Color(0xFF8E8E93)
                 )
               }
 

@@ -108,6 +108,10 @@ fun TodPlayerView(
   onPreviousChannel: (() -> Unit)? = null,
   onToggleFavorite: () -> Unit = {},
   isFavorite: Boolean = false,
+  onOpenEqualizer: () -> Unit = {},
+  onOpenDualPlayer: () -> Unit = {},
+  onToggleLeanback: () -> Unit = {},
+  isLeanbackMode: Boolean = false,
   modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
@@ -456,6 +460,10 @@ fun TodPlayerView(
       onToggleFavorite = onToggleFavorite,
       isFavorite = isFavorite,
       onToggleMute = { playerManager.toggleMute() },
+      onOpenEqualizer = onOpenEqualizer,
+      onOpenDualPlayer = onOpenDualPlayer,
+      onToggleLeanback = onToggleLeanback,
+      isLeanbackMode = isLeanbackMode,
       brightnessLevel = brightnessPercent,
       onBrightnessChange = { newB ->
         brightnessPercent = newB

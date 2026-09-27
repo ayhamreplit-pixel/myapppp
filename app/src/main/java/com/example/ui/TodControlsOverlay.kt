@@ -41,6 +41,8 @@ import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Lock
@@ -50,6 +52,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -124,6 +127,10 @@ fun TodControlsOverlay(
   onToggleFavorite: () -> Unit = {},
   isFavorite: Boolean = false,
   onToggleMute: () -> Unit = {},
+  onOpenEqualizer: () -> Unit = {},
+  onOpenDualPlayer: () -> Unit = {},
+  onToggleLeanback: () -> Unit = {},
+  isLeanbackMode: Boolean = false,
   brightnessLevel: Float = 0.65f,
   onBrightnessChange: (Float) -> Unit = {},
   volumeLevel: Float = 0.5f,
@@ -307,7 +314,52 @@ fun TodControlsOverlay(
                 )
               }
 
-              // 2. Subtitles icon
+              // 2. Dual Player / Multi-View button
+              Box(
+                modifier = Modifier
+                  .iosBounceClick(scaleDown = 0.88f) { onOpenDualPlayer() }
+                  .clip(RoundedCornerShape(10.dp))
+                  .background(Color(0x3300E5FF))
+                  .border(0.75.dp, Color(0x6600E5FF), RoundedCornerShape(10.dp))
+                  .padding(horizontal = 8.dp, vertical = 5.dp),
+                contentAlignment = Alignment.Center
+              ) {
+                Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                  Icon(
+                    imageVector = Icons.Default.GridView,
+                    contentDescription = "قناتين معا",
+                    tint = Color(0xFF00E5FF),
+                    modifier = Modifier.size(15.dp)
+                  )
+                  Text(
+                    text = "قناتين",
+                    color = Color.White,
+                    fontSize = 11.5.sp,
+                    fontFamily = ThmanyahFontFamily,
+                    fontWeight = FontWeight.Bold
+                  )
+                }
+              }
+
+              // 3. Audio Equalizer & Bass Boost icon
+              Box(
+                modifier = Modifier
+                  .iosBounceClick(scaleDown = 0.84f) { onOpenEqualizer() }
+                  .size(36.dp),
+                contentAlignment = Alignment.Center
+              ) {
+                Icon(
+                  imageVector = Icons.Default.GraphicEq,
+                  contentDescription = "معادل الصوت",
+                  tint = TodGold,
+                  modifier = Modifier.size(22.dp)
+                )
+              }
+
+              // 4. Subtitles icon
               Box(
                 modifier = Modifier
                   .iosBounceClick(scaleDown = 0.84f) { onOpenSubtitles() }
@@ -320,7 +372,7 @@ fun TodControlsOverlay(
                 )
               }
 
-              // 3. Settings Cog with Play Triangle inside -> opens Audio/Quality modal
+              // 5. Settings Cog with Play Triangle inside -> opens Audio/Quality modal
               Box(
                 modifier = Modifier
                   .iosBounceClick(scaleDown = 0.84f) { onOpenQuality() }
@@ -330,7 +382,7 @@ fun TodControlsOverlay(
                 TodSettingsCogWithPlay(size = 24.dp, tint = Color.White)
               }
 
-              // 4. Modern iOS 18 Glass Channels Button -> opens channel drawer
+              // 6. Modern iOS 18 Glass Channels Button -> opens channel drawer
               Box(
                 modifier = Modifier
                   .iosBounceClick(scaleDown = 0.88f) { onOpenGrid() }
@@ -358,6 +410,21 @@ fun TodControlsOverlay(
                     fontWeight = FontWeight.Bold
                   )
                 }
+              }
+
+              // 7. Android TV / Leanback Split Screen Toggle
+              Box(
+                modifier = Modifier
+                  .iosBounceClick(scaleDown = 0.84f) { onToggleLeanback() }
+                  .size(36.dp),
+                contentAlignment = Alignment.Center
+              ) {
+                Icon(
+                  imageVector = Icons.Default.Tv,
+                  contentDescription = "واجهة TV",
+                  tint = if (isLeanbackMode) TodGold else Color.White.copy(alpha = 0.85f),
+                  modifier = Modifier.size(20.dp)
+                )
               }
 
               // 5. Aspect Ratio pill button (16:9, Fit, Zoom, Stretch)

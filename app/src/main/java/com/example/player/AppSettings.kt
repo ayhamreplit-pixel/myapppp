@@ -117,8 +117,22 @@ class AppSettings private constructor(context: Context) {
     private set
 
   // 8. Theme Accent Glow
-  var themeAccentName by mutableStateOf(prefs.getString("theme_accent", "أزرق ملكي") ?: "أزرق ملكي")
+  var themeAccentName by mutableStateOf(prefs.getString("theme_accent", "أزرق ملكي سافاير") ?: "أزرق ملكي سافاير")
     private set
+
+  // 9. Hardware Tunneling & Network Resiliency
+  var tunnelingEnabled by mutableStateOf(prefs.getBoolean("tunneling_enabled", true))
+    private set
+
+  var autoReconnectStrategy by mutableStateOf(prefs.getString("auto_reconnect", "ذكي متدرج (3s - 5s)") ?: "ذكي متدرج (3s - 5s)")
+    private set
+
+  init {
+    try {
+      com.example.ui.theme.ThemeStateHolder.currentTheme =
+        com.example.ui.theme.AppThemePreset.fromNameOrId(themeAccentName)
+    } catch (_: Exception) {}
+  }
 
   // Setters with persistent commit
   fun setHardwareDecodingEnabled(enabled: Boolean) {
@@ -279,6 +293,20 @@ class AppSettings private constructor(context: Context) {
   fun setThemeAccent(accent: String) {
     themeAccentName = accent
     prefs.edit().putString("theme_accent", accent).apply()
+    try {
+      com.example.ui.theme.ThemeStateHolder.currentTheme =
+        com.example.ui.theme.AppThemePreset.fromNameOrId(accent)
+    } catch (_: Exception) {}
+  }
+
+  fun setTunneling(enabled: Boolean) {
+    tunnelingEnabled = enabled
+    prefs.edit().putBoolean("tunneling_enabled", enabled).apply()
+  }
+
+  fun setReconnectStrategy(strategy: String) {
+    autoReconnectStrategy = strategy
+    prefs.edit().putString("auto_reconnect", strategy).apply()
   }
 
   fun resetToDefaults() {

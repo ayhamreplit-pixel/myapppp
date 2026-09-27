@@ -701,6 +701,44 @@ fun TodMoreScreen(
             onClick = { appSettings.setDiagnosticHud(!appSettings.streamDiagnosticHud) }
           )
 
+          // Direct Tunneling
+          IosListRow(
+            title = "نمط العرض النفقي المباشر (Direct Tunneling)",
+            subtitle = "تقليل استهلاك البطارية وتسريع إطارات 60fps عبر مسار مباشر لمعالج الشاشة",
+            iconBadge = {
+              IosCustomIconBadge(background = IosBadgeColors.Purple) {
+                TodVideoDecoderIcon()
+              }
+            },
+            trailing = {
+              IosSwitch(
+                checked = appSettings.tunnelingEnabled,
+                onCheckedChange = { appSettings.setTunneling(it) }
+              )
+            },
+            showChevron = false,
+            onClick = { appSettings.setTunneling(!appSettings.tunnelingEnabled) }
+          )
+
+          // Auto-reconnect strategy
+          val reconnectOptions = listOf("فوري (2 ثوان)", "ذكي متدرج (3s - 5s)", "هادئ (10 ثوان)")
+          val selectedReconnectIdx = reconnectOptions.indexOf(appSettings.autoReconnectStrategy).takeIf { it >= 0 } ?: 1
+          IosListRow(
+            title = "استراتيجية إعادة الاتصال التلقائي",
+            subtitle = "إعادة المحاولة الذكية عند تذبذب شبكة الواي فاي أو السيرفر",
+            value = appSettings.autoReconnectStrategy,
+            valueColor = Color(0xFF64D2FF),
+            iconBadge = {
+              IosCustomIconBadge(background = IosBadgeColors.Teal) {
+                TodServerSyncIcon()
+              }
+            },
+            onClick = {
+              val next = (selectedReconnectIdx + 1) % reconnectOptions.size
+              appSettings.setReconnectStrategy(reconnectOptions[next])
+            }
+          )
+
           // Toggle 3: Data Saver
           IosListRow(
             title = "وضع توفير باقة الإنترنت (Data Saver)",
@@ -1016,29 +1054,162 @@ fun TodMoreScreen(
         // SECTION: THEME ACCENT & AMBIENT AURA
         IosSectionHeader(title = "المظهر والوهج اللوني (Theme Ambient Aura)")
         IosListGroup {
-          val accentOptions = listOf("أزرق ملكي", "أزرق سماوي", "زمردي رياضي", "أرجواني ملكي", "ذهبي سائل", "تيتانيوم هادئ")
-          val selectedAccentIdx = accentOptions.indexOf(appSettings.themeAccentName).takeIf { it >= 0 } ?: 0
-          IosListRow(
-            title = "نمط الوهج والزجاجيات في التطبيق",
-            subtitle = "تخصيص لون الإضاءة المحيطة المنسابة خلف القوائم والأزرار",
-            value = appSettings.themeAccentName,
-            valueColor = Color(0xFF64D2FF),
-            iconBadge = {
-              IosCustomIconBadge(background = IosBadgeColors.Blue) {
-                TodThemePaletteIcon()
-              }
-            },
-            showDivider = false,
-            onClick = {
-              val next = (selectedAccentIdx + 1) % accentOptions.size
-              appSettings.setThemeAccent(accentOptions[next])
-              noticeMessage = "تم تعيين مظهر: ${accentOptions[next]}"
-              scope.launch {
-                delay(2000)
-                noticeMessage = null
+          val presets = com.example.ui.theme.AppThemePreset.entries
+          val activeTheme = com.example.ui.theme.LocalAppTheme.current
+
+          Column(
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(14.dp)
+          ) {
+            Text(
+              text = "اختر لون الإضاءة المحيطة والوهج الزجاجي",
+              color = Color.White,
+              fontSize = 13.5.sp,
+              fontWeight = FontWeight.Bold,
+              fontFamily = ThmanyahFontFamily
+            )
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(
+              text = "يغير الألوان الحية والوهج والخلفيات الانسيابية فوراً في كامل شاشات التطبيق",
+              color = Color(0xFF8E8E93),
+              fontSize = 11.5.sp,
+              fontFamily = ThmanyahFontFamily
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Interactive Color Swatches Row
+            Row(
+              modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+              horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+              presets.forEach { preset ->
+                val isSelected = activeTheme.id == preset.id || appSettings.themeAccentName == preset.titleAr
+                Column(
+                  horizontalAlignment = Alignment.CenterHorizontally,
+                  modifier = Modifier
+                    .iosBounceClick {
+                      appSettings.setThemeAccent(preset.titleAr)
+                      com.example.ui.theme.ThemeStateHolder.currentTheme = preset
+                      noticeMessage = "تم تفعيل مظهر: ${preset.titleAr}"
+                      scope.launch {
+                        delay(2200)
+                        noticeMessage = null
+                      }
+                    }
+                    .padding(vertical = 4.dp)
+                ) {
+                  Box(
+                    modifier = Modifier
+                      .size(54.dp)
+                      .clip(CircleShape)
+                      .background(
+                        Brush.linearGradient(
+                          listOf(preset.primaryColor, preset.glowColor)
+                        )
+                      )
+                      .border(
+                        width = if (isSelected) 3.dp else 1.dp,
+                        color = if (isSelected) Color.White else Color(0x35FFFFFF),
+                        shape = CircleShape
+                      ),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    if (isSelected) {
+                      Box(
+                        modifier = Modifier
+                          .size(20.dp)
+                          .clip(CircleShape)
+                          .background(Color.White.copy(alpha = 0.90f)),
+                        contentAlignment = Alignment.Center
+                      ) {
+                        Box(
+                          modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(preset.primaryColor)
+                        )
+                      }
+                    }
+                  }
+                  Spacer(modifier = Modifier.height(6.dp))
+                  Text(
+                    text = preset.titleAr,
+                    color = if (isSelected) preset.glowColor else Color(0xFFD1D5DB),
+                    fontSize = 11.sp,
+                    fontFamily = ThmanyahFontFamily,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                    textAlign = TextAlign.Center
+                  )
+                }
               }
             }
-          )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Live Theme Aura Preview Box
+            Box(
+              modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(
+                  Brush.linearGradient(
+                    listOf(
+                      activeTheme.primaryColor.copy(alpha = 0.25f),
+                      activeTheme.glowColor.copy(alpha = 0.15f),
+                      Color(0x10FFFFFF)
+                    )
+                  )
+                )
+                .border(
+                  1.2.dp,
+                  Brush.linearGradient(
+                    listOf(activeTheme.glowColor, activeTheme.primaryColor, Color(0x30FFFFFF))
+                  ),
+                  RoundedCornerShape(16.dp)
+                )
+                .padding(14.dp)
+            ) {
+              Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+              ) {
+                Box(
+                  modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(activeTheme.primaryColor)
+                    .padding(horizontal = 14.dp, vertical = 7.dp)
+                ) {
+                  Text(
+                    text = "معاينة الوهج",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    fontFamily = ThmanyahFontFamily
+                  )
+                }
+
+                Column(horizontalAlignment = Alignment.End) {
+                  Text(
+                    text = activeTheme.titleAr,
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = ThmanyahFontFamily
+                  )
+                  Text(
+                    text = activeTheme.subtitleAr,
+                    color = activeTheme.glowColor,
+                    fontSize = 11.sp,
+                    fontFamily = ThmanyahFontFamily
+                  )
+                }
+              }
+            }
+          }
         }
 
         // SECTION 9: PARENTAL CONTROL & SECURITY

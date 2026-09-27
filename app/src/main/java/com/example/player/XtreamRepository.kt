@@ -3,11 +3,17 @@ package com.example.player
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import com.example.db.CategoryEntity
+import com.example.db.ChannelEntity
+import com.example.db.IptvDatabase
+import com.example.model.BroadcastCatalog
 import com.example.model.XtreamAccountInfo
 import com.example.model.XtreamCategory
 import com.example.model.XtreamChannel
 import com.example.model.XtreamPlaylistConfig
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.ConnectionPool
 import okhttp3.Dispatcher
@@ -29,6 +35,8 @@ import javax.net.ssl.X509TrustManager
 
 class XtreamRepository(context: Context) {
   private val prefs = context.getSharedPreferences("xtream_prefs", Context.MODE_PRIVATE)
+  private val database = IptvDatabase.getDatabase(context)
+  private val dao = database.iptvDao()
 
   companion object {
     // In-memory cache for ultra-fast instant 0ms category & channel access
@@ -917,16 +925,6 @@ class XtreamRepository(context: Context) {
   fun getActivePlaylistConfig(): XtreamPlaylistConfig? {
     val all = getAllPlaylists()
     if (all.isEmpty()) {
-      // Check legacy single credentials
-      val legacy = getSavedCredentials()
-      if (legacy != null && legacy.first.isNotBlank() && legacy.second.isNotBlank()) {
-        return XtreamPlaylistConfig(
-          playlistName = legacy.second,
-          username = legacy.second,
-          password = legacy.third,
-          serverUrl = legacy.first
-        )
-      }
       return null
     }
     val activeKey = prefs.getString("active_playlist_key", null)
@@ -963,7 +961,36 @@ class XtreamRepository(context: Context) {
       obj.put("archivePeriod", p.archivePeriod)
       array.put(obj)
     }
-    prefs.edit().putString("saved_playlists_json", array.toString()).apply()
+    val editor = prefs.edit()
+    editor.putString("saved_playlists_json", array.toString())
+
+    val cleanServer = cleanServerUrl(config.serverUrl)
+    val cleanUser = config.username.trim()
+    val cacheKey = "$cleanServer|$cleanUser"
+    categoryCache.remove(cacheKey)
+    streamCache.remove(cacheKey)
+    editor.remove("cat_cache_$cacheKey")
+    editor.remove("stream_cache_$cacheKey")
+
+    val currentActiveKey = prefs.getString("active_playlist_key", null)
+    val deletedKey = if (config.isM3u) config.m3uUrl else "${config.serverUrl}_${config.username}"
+
+    if (current.isEmpty()) {
+      editor.remove("active_playlist_key")
+      editor.remove("server_url")
+      editor.remove("username")
+      editor.remove("password")
+    } else if (currentActiveKey == deletedKey) {
+      val next = current.first()
+      val nextKey = if (next.isM3u) next.m3uUrl else "${next.serverUrl}_${next.username}"
+      editor.putString("active_playlist_key", nextKey)
+      if (!next.isM3u) {
+        editor.putString("server_url", cleanServerUrl(next.serverUrl))
+        editor.putString("username", next.username.trim())
+        editor.putString("password", next.password.trim())
+      }
+    }
+    editor.apply()
   }
   fun getFavorites(): Set<String> {
     return prefs.getStringSet("favorite_channels", emptySet()) ?: emptySet()
@@ -1095,26 +1122,30 @@ class XtreamRepository(context: Context) {
     return java.io.File(channelCacheDir, "streams_$safeName.gz")
   }
 
-  // Instant 0ms Disk Cache for Categories and Streams
+  // Instant 0ms Room Database & Disk Cache for Categories and Streams
   fun getCachedCategories(cacheKey: String): List<XtreamCategory> {
-    val json = prefs.getString("disk_categories_$cacheKey", null) ?: return emptyList()
-    return try {
-      val array = JSONArray(json)
-      val list = mutableListOf<XtreamCategory>()
-      for (i in 0 until array.length()) {
-        val obj = array.getJSONObject(i)
-        list.add(
-          XtreamCategory(
-            categoryId = obj.optString("categoryId"),
-            categoryName = obj.optString("categoryName"),
-            channelCount = obj.optInt("channelCount", 0)
+    val json = prefs.getString("disk_categories_$cacheKey", null)
+    if (!json.isNullOrBlank()) {
+      try {
+        val array = JSONArray(json)
+        val list = mutableListOf<XtreamCategory>()
+        for (i in 0 until array.length()) {
+          val obj = array.getJSONObject(i)
+          list.add(
+            XtreamCategory(
+              categoryId = obj.optString("categoryId"),
+              categoryName = obj.optString("categoryName"),
+              channelCount = obj.optInt("channelCount", 0)
+            )
           )
-        )
+        }
+        if (list.isNotEmpty()) return list
+      } catch (e: Exception) {
+        // Continue to fallback
       }
-      list
-    } catch (e: Exception) {
-      emptyList()
     }
+    // Return curated demo categories on initial empty state
+    return BroadcastCatalog.getInitialDemoCategories()
   }
 
   fun saveCachedCategories(cacheKey: String, categories: List<XtreamCategory>) {
@@ -1128,13 +1159,27 @@ class XtreamRepository(context: Context) {
         array.put(obj)
       }
       prefs.edit().putString("disk_categories_$cacheKey", array.toString()).apply()
+
+      // Save to Room DB asynchronously
+      CoroutineScope(Dispatchers.IO).launch {
+        try {
+          val entities = categories.map {
+            CategoryEntity(
+              categoryId = it.categoryId,
+              categoryName = it.categoryName,
+              channelCount = it.channelCount,
+              serverKey = cacheKey
+            )
+          }
+          dao.insertCategories(entities)
+        } catch (ignored: Throwable) {}
+      }
     } catch (ignored: Exception) {}
   }
 
   fun getCachedStreams(cacheKey: String): List<XtreamChannel> {
     val file = getCacheFile(cacheKey)
     if (!file.exists() || file.length() == 0L) {
-      // Check legacy SharedPreferences once
       val legacy = prefs.getString("disk_streams_$cacheKey", null)
       if (!legacy.isNullOrBlank()) {
         try {
@@ -1156,7 +1201,8 @@ class XtreamRepository(context: Context) {
           return list
         } catch (ignored: Exception) {}
       }
-      return emptyList()
+      // Return curated demo channels on initial empty state for instant preview functionality
+      return BroadcastCatalog.getInitialDemoChannels()
     }
 
     val list = ArrayList<XtreamChannel>(1024)
@@ -1185,13 +1231,12 @@ class XtreamRepository(context: Context) {
     } catch (e: Exception) {
       Log.e("XtreamRepository", "Error reading compressed stream cache", e)
     }
-    return list
+    return if (list.isNotEmpty()) list else BroadcastCatalog.getInitialDemoChannels()
   }
 
   fun saveCachedStreams(cacheKey: String, channels: List<XtreamChannel>) {
     try {
       val file = getCacheFile(cacheKey)
-      // Save top 5000 channels compressed to GZIP (takes ~150-250KB only on disk!)
       val toSave = channels.take(5000)
       java.util.zip.GZIPOutputStream(java.io.FileOutputStream(file).buffered(16384)).use { gz ->
         val writer = gz.bufferedWriter(Charsets.UTF_8)
@@ -1209,10 +1254,52 @@ class XtreamRepository(context: Context) {
         }
         writer.flush()
       }
-      // Remove any heavy string from SharedPreferences to keep app storage super light
       prefs.edit().remove("disk_streams_$cacheKey").apply()
+
+      // Save to Room DB asynchronously for resilient indexing and search
+      CoroutineScope(Dispatchers.IO).launch {
+        try {
+          val entities = toSave.map {
+            ChannelEntity(
+              streamId = it.streamId,
+              name = it.name,
+              iconUrl = it.iconUrl,
+              categoryId = it.categoryId,
+              playUrl = it.playUrl,
+              serverKey = cacheKey
+            )
+          }
+          dao.insertChannels(entities)
+        } catch (ignored: Throwable) {}
+      }
     } catch (e: Exception) {
       Log.e("XtreamRepository", "Error writing compressed stream cache", e)
+    }
+  }
+
+  suspend fun syncPlaylistInBackground(config: XtreamPlaylistConfig): Result<Int> = withContext(Dispatchers.IO) {
+    try {
+      if (config.isM3u) {
+        val res = parseM3uPlaylist(config.m3uUrl)
+        res.onSuccess { list ->
+          val cleanServer = cleanServerUrl(config.m3uUrl)
+          val cacheKey = "m3u_$cleanServer"
+          saveCachedStreams(cacheKey, list)
+          updatePlaylistTimestampAndCount(config, list.size)
+          return@withContext Result.success(list.size)
+        }
+        Result.failure(Exception("Failed to sync M3U"))
+      } else {
+        val catsRes = fetchCategories(config.serverUrl, config.username, config.password, forceRefresh = true)
+        val streamsRes = fetchStreams(config.serverUrl, config.username, config.password, forceRefresh = true)
+        streamsRes.onSuccess { list ->
+          updatePlaylistTimestampAndCount(config, list.size)
+          return@withContext Result.success(list.size)
+        }
+        Result.failure(Exception("Failed to sync Xtream"))
+      }
+    } catch (e: Exception) {
+      Result.failure(e)
     }
   }
 
