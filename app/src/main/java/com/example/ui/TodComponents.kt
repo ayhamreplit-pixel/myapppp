@@ -142,36 +142,43 @@ fun TodLogo(
 
     Spacer(modifier = Modifier.width(8.dp))
 
-    // Modern IPTV Brand Text
+    // Modern TOD Brand Text
     Row(
       verticalAlignment = Alignment.CenterVertically
     ) {
       Text(
-        text = "IPTV",
-        color = Color.White,
+        text = "TOD",
+        color = Color(0xFFFFB800),
         fontSize = fontSize.sp,
         fontWeight = FontWeight.Black,
-        letterSpacing = 0.5.sp,
+        letterSpacing = 1.sp,
         fontFamily = AppFontFamily
       )
-      Spacer(modifier = Modifier.width(4.dp))
-      Text(
-        text = "PRO",
-        color = Color(0xFF64D2FF),
-        fontSize = (fontSize - 2).sp,
-        fontWeight = FontWeight.Black,
-        letterSpacing = 0.5.sp,
-        fontFamily = AppFontFamily
-      )
+      Spacer(modifier = Modifier.width(6.dp))
+      Box(
+        modifier = Modifier
+          .clip(RoundedCornerShape(6.dp))
+          .background(Color(0xFFE50914))
+          .padding(horizontal = 6.dp, vertical = 2.dp)
+      ) {
+        Text(
+          text = "LIVE",
+          color = Color.White,
+          fontSize = (fontSize - 12).coerceAtLeast(10).sp,
+          fontWeight = FontWeight.Black
+        )
+      }
     }
   }
 }
 
 /**
- * High-End Corporate Grade TOD Bottom Navigation Bar (Matching TOD iOS Reference)
+ * High-End Corporate Grade TOD Bottom Navigation Bar (Matching TOD Official App)
  */
 enum class TodNavTab {
   HOME,
+  MATCHES,
+  LIVE_TV,
   SEARCH,
   MORE
 }

@@ -135,14 +135,6 @@ fun TodQuickLinkScreen(
   // Stream history list
   var historyList by remember { mutableStateOf(xtreamRepo.getCustomUrlHistory()) }
 
-  // Quick testing stream presets
-  val quickSamples = listOf(
-    Pair("Mux BigBuck (HLS 1080p)", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"),
-    Pair("Akamai Live 1080p", "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8"),
-    Pair("Apple BipBop (HLS Multi)", "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8"),
-    Pair("Sintel Clear (DASH)", "https://bitdash-a.akamaihd.net/content/sintel/sintel.mpd")
-  )
-
   fun parseAndFill(input: String) {
     urlInput = input
     if (input.contains("|") || input.contains("#") || input.contains("drm", ignoreCase = true) || input.contains("user-agent", ignoreCase = true)) {
@@ -613,67 +605,6 @@ fun TodQuickLinkScreen(
           selectedIndex = selectedFormatIndex,
           onSelect = { selectedFormatIndex = it }
         )
-
-        // ==========================================
-        // SECTION 3: Quick Samples Carousel
-        // ==========================================
-        IosSectionHeader(title = "روابط تجريبية سريعة")
-        Row(
-          modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-          horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-          quickSamples.forEach { (name, sampleUrl) ->
-            val isCurrent = urlInput == sampleUrl
-            Box(
-              modifier = Modifier
-                .liquidGlassEffect(
-                  shape = RoundedCornerShape(16.dp),
-                  glowTint = Color(0xFF0A84FF),
-                  isElevated = isCurrent
-                )
-                .clickable {
-                  titleInput = name
-                  parseAndFill(sampleUrl)
-                }
-                .padding(horizontal = 14.dp, vertical = 10.dp)
-            ) {
-              Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-              ) {
-                Box(
-                  modifier = Modifier
-                    .size(28.dp)
-                    .clip(CircleShape)
-                    .background(if (isCurrent) IosSystemBlue else Color(0x22FFFFFF)),
-                  contentAlignment = Alignment.Center
-                ) {
-                  Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(16.dp)
-                  )
-                }
-                Column {
-                  Text(
-                    text = name,
-                    color = Color.White,
-                    fontSize = 12.5.sp,
-                    fontWeight = FontWeight.SemiBold
-                  )
-                  Text(
-                    text = if (sampleUrl.contains(".mpd")) "DASH Format" else "HLS Master",
-                    color = Color(0xFF8E8E93),
-                    fontSize = 10.5.sp
-                  )
-                }
-              }
-            }
-          }
-        }
 
         // ==========================================
         // SECTION 4: Recent Stream History (If available)

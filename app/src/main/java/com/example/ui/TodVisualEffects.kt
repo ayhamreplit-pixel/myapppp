@@ -664,6 +664,84 @@ fun TodNavMoreIcon(
 }
 
 /**
+ * Custom Bespoke Identity Canvas Vector: Matches & Sports Ball Icon
+ */
+@Composable
+fun TodNavMatchesIcon(
+  isSelected: Boolean,
+  primaryColor: Color,
+  modifier: Modifier = Modifier.size(24.dp)
+) {
+  Canvas(modifier = modifier) {
+    val w = size.width
+    val h = size.height
+    val center = Offset(w * 0.5f, h * 0.5f)
+    val r = w * 0.40f
+
+    // Outer soccer ball circle
+    drawCircle(
+      color = primaryColor,
+      radius = r,
+      center = center,
+      style = Stroke(width = if (isSelected) 2.4.dp.toPx() else 1.8.dp.toPx())
+    )
+
+    // Inner pentagon core
+    val pCore = Path().apply {
+      moveTo(center.x, center.y - r * 0.45f)
+      lineTo(center.x + r * 0.42f, center.y - r * 0.12f)
+      lineTo(center.x + r * 0.26f, center.y + r * 0.40f)
+      lineTo(center.x - r * 0.26f, center.y + r * 0.40f)
+      lineTo(center.x - r * 0.42f, center.y - r * 0.12f)
+      close()
+    }
+    drawPath(path = pCore, color = primaryColor.copy(alpha = if (isSelected) 0.95f else 0.65f))
+  }
+}
+
+/**
+ * Custom Bespoke Identity Canvas Vector: Live TV / Broadcast Screen Icon
+ */
+@Composable
+fun TodNavLiveTvIcon(
+  isSelected: Boolean,
+  primaryColor: Color,
+  modifier: Modifier = Modifier.size(24.dp)
+) {
+  Canvas(modifier = modifier) {
+    val w = size.width
+    val h = size.height
+
+    // TV Screen frame
+    drawRoundRect(
+      color = primaryColor,
+      topLeft = Offset(w * 0.14f, h * 0.22f),
+      size = Size(w * 0.72f, h * 0.56f),
+      cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx()),
+      style = Stroke(width = if (isSelected) 2.2.dp.toPx() else 1.8.dp.toPx())
+    )
+
+    // Live play indicator triangle inside screen
+    val playPath = Path().apply {
+      moveTo(w * 0.44f, h * 0.38f)
+      lineTo(w * 0.60f, h * 0.50f)
+      lineTo(w * 0.44f, h * 0.62f)
+      close()
+    }
+    drawPath(path = playPath, color = if (isSelected) Color(0xFFE50914) else primaryColor)
+
+    // TV base stand
+    drawLine(
+      color = primaryColor,
+      start = Offset(w * 0.36f, h * 0.84f),
+      end = Offset(w * 0.64f, h * 0.84f),
+      strokeWidth = 2.dp.toPx(),
+      cap = StrokeCap.Round
+    )
+  }
+}
+
+/**
  * Apple iOS Floating Liquid Glass Bottom Navigation Dock
  * Truly floating island dock: unselected shows icon only; selected expands smoothly to reveal icon + Arabic label.
  * Absolutely NO solid bar/header behind it! Pure floating translucent liquid glass.
@@ -676,8 +754,10 @@ fun LiquidGlassBottomBar(
 ) {
   val tabs = listOf(
     Pair(TodNavTab.HOME, "الرئيسية"),
+    Pair(TodNavTab.MATCHES, "المباريات"),
+    Pair(TodNavTab.LIVE_TV, "مباشر"),
     Pair(TodNavTab.SEARCH, "بحث"),
-    Pair(TodNavTab.MORE, "المزيد")
+    Pair(TodNavTab.MORE, "حسابي")
   )
 
   val currentTheme = com.example.ui.theme.LocalAppTheme.current
@@ -775,6 +855,14 @@ fun LiquidGlassBottomBar(
               // Custom Handcrafted Vector Identity Icon
               when (tab) {
                 TodNavTab.HOME -> TodNavHomeIcon(
+                  isSelected = isSelected,
+                  primaryColor = if (isSelected) currentTheme.glowColor else Color(0xFF8E8E93)
+                )
+                TodNavTab.MATCHES -> TodNavMatchesIcon(
+                  isSelected = isSelected,
+                  primaryColor = if (isSelected) currentTheme.glowColor else Color(0xFF8E8E93)
+                )
+                TodNavTab.LIVE_TV -> TodNavLiveTvIcon(
                   isSelected = isSelected,
                   primaryColor = if (isSelected) currentTheme.glowColor else Color(0xFF8E8E93)
                 )

@@ -3,6 +3,6 @@
     <item
         android:width="66dp"
         android:height="66dp"
-        android:drawable="@drawable/jawwy_icon"
+        android:drawable="@drawable/ic_tod_launcher_1790784656361"
         android:gravity="center" />
 </layer-list>

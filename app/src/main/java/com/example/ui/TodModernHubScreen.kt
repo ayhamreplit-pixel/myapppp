@@ -160,14 +160,16 @@ fun TodModernHubScreen(
   var formOriginIsOnboarding by remember { mutableStateOf(savedPlaylists.isEmpty()) }
   var playlistPendingDelete by remember { mutableStateOf<XtreamPlaylistConfig?>(null) }
 
-  // App Navigation View Mode
+  // App Navigation View Mode - Open directly into CATEGORIES (TOD Sports & Live Channels)
   var viewMode by remember {
-    mutableStateOf(if (savedPlaylists.isNotEmpty()) HubViewMode.CATEGORIES else HubViewMode.ONBOARDING)
+    mutableStateOf(HubViewMode.CATEGORIES)
   }
   var activeNavTab by remember { mutableStateOf(TodNavTab.HOME) }
 
-  // Match Detail Modal Sheet
-  var activeMatchDetail by remember { mutableStateOf<TodMatchDetail?>(null) }
+  // Sports Backend & Match Detail Modal State
+  val sportsBackendRepo = remember { com.example.data.SportsBackendRepository(context) }
+  var activeSportsMatch by remember { mutableStateOf<com.example.model.SportsMatch?>(null) }
+  var showProfileSelectModal by remember { mutableStateOf(false) }
 
   // Active Connection State
   var isXtreamLoading by remember { mutableStateOf(false) }
@@ -331,7 +333,8 @@ fun TodModernHubScreen(
   }
 
   // Handle Back Button inside Modern Hub
-  val hasBackOverride = activeMatchDetail != null ||
+  val hasBackOverride = activeSportsMatch != null ||
+      showProfileSelectModal ||
       showPlaylistsManagerModal ||
       showAccountInfoModal ||
       viewMode == HubViewMode.XTREAM_FORM ||
@@ -339,8 +342,10 @@ fun TodModernHubScreen(
       activeNavTab != TodNavTab.HOME
 
   BackHandler(enabled = hasBackOverride) {
-    if (activeMatchDetail != null) {
-      activeMatchDetail = null
+    if (activeSportsMatch != null) {
+      activeSportsMatch = null
+    } else if (showProfileSelectModal) {
+      showProfileSelectModal = false
     } else if (showPlaylistsManagerModal) {
       showPlaylistsManagerModal = false
     } else if (showAccountInfoModal) {
@@ -367,7 +372,8 @@ fun TodModernHubScreen(
       val forceRefresh = xtreamRepo.shouldRefreshPlaylist(activeConfig)
       loadPlaylistData(activeConfig, forceRefresh)
     } else {
-      viewMode = HubViewMode.ONBOARDING
+      // Direct access to TOD Sports & Channels hub
+      viewMode = HubViewMode.CATEGORIES
     }
   }
 
@@ -868,14 +874,123 @@ fun TodModernHubScreen(
                       onPlayStream(stream, streams)
                     },
                     onOpenMatchDetail = { match ->
-                      activeMatchDetail = match
+                      activeSportsMatch = match
+                    },
+                    onPlayMatchDirectly = { match ->
+                      val stream = BroadcastStream(
+                        id = match.id,
+                        title = match.title,
+                        subtitle = "${match.tournament} • ${match.channelName}",
+                        category = match.tournament,
+                        streamUrl = match.streamUrl.ifBlank { "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" },
+                        isLive = true
+                      )
+                      val fallbackList = allChannels.ifEmpty { sportsBackendRepo.sportsChannels.value }.map { ch ->
+                        BroadcastStream(
+                          id = ch.streamId,
+                          title = ch.name,
+                          subtitle = "قناة رياضية",
+                          category = "بث مباشر",
+                          streamUrl = ch.playUrl,
+                          isLive = true
+                        )
+                      }
+                      onPlayStream(stream, listOf(stream) + fallbackList)
                     },
                     onOpenProfile = {
                       activeNavTab = TodNavTab.MORE
                     },
-                    onOpenQuickLink = {
-                      onOpenQuickLinkScreen()
-                    }
+                    onOpenSearch = {
+                      activeNavTab = TodNavTab.SEARCH
+                    },
+                    sportsBackendRepo = sportsBackendRepo,
+                    initialTopSection = TodTopSection.HOME
+                  )
+                }
+                TodNavTab.MATCHES -> {
+                  TodHomeScreen(
+                    xtreamCategories = xtreamCategories,
+                    allChannels = allChannels,
+                    isLoading = isXtreamLoading,
+                    onPlayChannel = { ch, list, cat ->
+                      val (stream, streams) = buildOptimizedPlaybackList(ch, list, cat)
+                      onPlayStream(stream, streams)
+                    },
+                    onOpenMatchDetail = { match ->
+                      activeSportsMatch = match
+                    },
+                    onPlayMatchDirectly = { match ->
+                      val stream = BroadcastStream(
+                        id = match.id,
+                        title = match.title,
+                        subtitle = "${match.tournament} • ${match.channelName}",
+                        category = match.tournament,
+                        streamUrl = match.streamUrl.ifBlank { "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" },
+                        isLive = true
+                      )
+                      val fallbackList = allChannels.ifEmpty { sportsBackendRepo.sportsChannels.value }.map { ch ->
+                        BroadcastStream(
+                          id = ch.streamId,
+                          title = ch.name,
+                          subtitle = "قناة رياضية",
+                          category = "بث مباشر",
+                          streamUrl = ch.playUrl,
+                          isLive = true
+                        )
+                      }
+                      onPlayStream(stream, listOf(stream) + fallbackList)
+                    },
+                    onOpenProfile = {
+                      activeNavTab = TodNavTab.MORE
+                    },
+                    onOpenSearch = {
+                      activeNavTab = TodNavTab.SEARCH
+                    },
+                    sportsBackendRepo = sportsBackendRepo,
+                    initialTopSection = TodTopSection.MATCHES
+                  )
+                }
+                TodNavTab.LIVE_TV -> {
+                  TodHomeScreen(
+                    xtreamCategories = xtreamCategories,
+                    allChannels = allChannels,
+                    isLoading = isXtreamLoading,
+                    onPlayChannel = { ch, list, cat ->
+                      val (stream, streams) = buildOptimizedPlaybackList(ch, list, cat)
+                      onPlayStream(stream, streams)
+                    },
+                    onOpenMatchDetail = { match ->
+                      activeSportsMatch = match
+                    },
+                    onPlayMatchDirectly = { match ->
+                      val stream = BroadcastStream(
+                        id = match.id,
+                        title = match.title,
+                        subtitle = "${match.tournament} • ${match.channelName}",
+                        category = match.tournament,
+                        streamUrl = match.streamUrl.ifBlank { "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" },
+                        isLive = true
+                      )
+                      val fallbackList = allChannels.ifEmpty { sportsBackendRepo.sportsChannels.value }.map { ch ->
+                        BroadcastStream(
+                          id = ch.streamId,
+                          title = ch.name,
+                          subtitle = "قناة رياضية",
+                          category = "بث مباشر",
+                          streamUrl = ch.playUrl,
+                          isLive = true
+                        )
+                      }
+                      onPlayStream(stream, listOf(stream) + fallbackList)
+                    },
+                    onOpenProfile = {
+                      activeNavTab = TodNavTab.MORE
+                    },
+                    onOpenSearch = {
+                      activeNavTab = TodNavTab.SEARCH
+                    },
+                    sportsBackendRepo = sportsBackendRepo,
+                    initialTopSection = TodTopSection.LIVE_TV
                   )
                 }
                 TodNavTab.SEARCH -> {
@@ -939,6 +1054,47 @@ fun TodModernHubScreen(
                 .navigationBarsPadding()
                 .padding(bottom = 8.dp)
             )
+
+            // 3. Official TOD Match Detail Modal & Stats Sheet (Screenshots 19-24)
+            if (activeSportsMatch != null) {
+              val currentActive = activeSportsMatch!!
+              val relatedList = sportsBackendRepo.matches.value.filter { it.id != currentActive.id }
+              TodMatchDetailModal(
+                match = currentActive,
+                onClose = { activeSportsMatch = null },
+                onPlayStream = { stream ->
+                  activeSportsMatch = null
+                  val fallbackList = allChannels.ifEmpty { sportsBackendRepo.sportsChannels.value }.map { ch ->
+                    BroadcastStream(
+                      id = ch.streamId,
+                      title = ch.name,
+                      subtitle = "قناة رياضية",
+                      category = "بث مباشر",
+                      streamUrl = ch.playUrl,
+                      isLive = true
+                    )
+                  }
+                  scope.launch {
+                    sportsBackendRepo.sendSessionHeartbeat(sportsBackendRepo.getActiveProfile().name, stream.title)
+                  }
+                  onPlayStream(stream, listOf(stream) + fallbackList)
+                },
+                onSelectOtherMatch = { newMatch ->
+                  activeSportsMatch = newMatch
+                },
+                relatedMatches = relatedList
+              )
+            }
+
+            // 4. "من يشاهد الآن؟" (Who is Watching / Profile Gate Modal)
+            if (showProfileSelectModal) {
+              TodProfileSelectScreen(
+                sportsBackendRepo = sportsBackendRepo,
+                onProfileSelected = {
+                  showProfileSelectModal = false
+                }
+              )
+            }
 
           }
         }
@@ -1563,55 +1719,6 @@ fun TodModernHubScreen(
             }
           }
         }
-      }
-
-      // ========================================================
-      // MATCH DETAIL SHEET OVERLAY (Screenshots 1 & 2)
-      // ========================================================
-      activeMatchDetail?.let { match ->
-        TodMatchDetailSheet(
-          match = match,
-          onClose = { activeMatchDetail = null },
-          onPlayNow = {
-            val ch = allChannels.firstOrNull { it.name.contains("beIN", ignoreCase = true) }
-              ?: allChannels.firstOrNull()
-            if (ch != null) {
-              val (stream, streams) = buildOptimizedPlaybackList(ch, allChannels, "Jawwy Match")
-              onPlayStream(stream, streams)
-            }
-            activeMatchDetail = null
-          },
-          onPlayCatchup = {
-            val ch = allChannels.firstOrNull()
-            if (ch != null) {
-              val (stream, streams) = buildOptimizedPlaybackList(ch, allChannels, "Jawwy Catchup")
-              onPlayStream(stream, streams)
-            }
-            activeMatchDetail = null
-          },
-          onPlayMultiView = {
-            if (allChannels.size >= 2) {
-              val s1 = BroadcastStream(
-                id = allChannels[0].streamId,
-                title = allChannels[0].name,
-                subtitle = "Jawwy Multi 1",
-                category = "Live",
-                streamUrl = allChannels[0].playUrl,
-                isLive = true
-              )
-              val s2 = BroadcastStream(
-                id = allChannels[1].streamId,
-                title = allChannels[1].name,
-                subtitle = "Jawwy Multi 2",
-                category = "Live",
-                streamUrl = allChannels[1].playUrl,
-                isLive = true
-              )
-              onPlayDualStream(s1, s2)
-            }
-            activeMatchDetail = null
-          }
-        )
       }
 
       // ========================================================

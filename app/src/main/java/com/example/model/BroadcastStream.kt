@@ -29,8 +29,8 @@ data class MatchMoment(
 data class BroadcastStream(
   val id: String,
   val title: String,
-  val subtitle: String,
-  val category: String,
+  val subtitle: String = "بث مباشر",
+  val category: String = "قنوات مباشرة",
   val streamUrl: String,
   val format: StreamFormat = StreamFormat.HLS,
   val isLive: Boolean = false,

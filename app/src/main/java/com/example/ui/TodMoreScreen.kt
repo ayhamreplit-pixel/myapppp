@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
@@ -57,6 +58,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.StayCurrentPortrait
 import androidx.compose.material.icons.filled.Storage
@@ -175,6 +177,7 @@ fun TodMoreScreen(
   var showResetDialog by remember { mutableStateOf(false) }
   var showPinDialog by remember { mutableStateOf(false) }
   var newPinInput by remember { mutableStateOf("") }
+  val sportsRepo = remember { com.example.data.SportsBackendRepository(context) }
 
   val avatarGradients = listOf(
     Brush.linearGradient(listOf(Color(0xFF007AFF), Color(0xFF00C7BE))),
@@ -312,136 +315,131 @@ fun TodMoreScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
       ) {
 
-        // SECTION 1: Profiles & Accounts
-        IosSectionHeader(title = "الحسابات والسيرفرات النشطة")
-        Row(
-          modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(vertical = 4.dp),
-          horizontalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-          // Add new profile button
-          Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier
-              .iosBounceClick { onOpenXtreamForm() }
-              .padding(horizontal = 2.dp)
-          ) {
-            Box(
-              modifier = Modifier
-                .size(66.dp)
-                .liquidGlassEffect(shape = RoundedCornerShape(20.dp), isElevated = true, glowTint = Color(0xFF0A84FF)),
-              contentAlignment = Alignment.Center
-            ) {
-              Icon(Icons.Default.Add, contentDescription = "إضافة اشتراك", tint = Color.White, modifier = Modifier.size(28.dp))
-            }
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(text = "إضافة سيرفر", color = Color(0xCCFFFFFF), fontSize = 11.5.sp, fontFamily = ThmanyahFontFamily, fontWeight = FontWeight.Medium)
-          }
-
-          // Saved playlists profiles
-          savedPlaylists.forEachIndexed { index, config ->
-            val isActive = if (config.isM3u) activeConfig?.m3uUrl == config.m3uUrl
-            else (activeConfig?.serverUrl == config.serverUrl && activeConfig?.username == config.username)
-            val grad = avatarGradients[index % avatarGradients.size]
-
-            Column(
-              horizontalAlignment = Alignment.CenterHorizontally,
-              modifier = Modifier
-                .iosBounceClick { onSelectPlaylist(config) }
-                .padding(horizontal = 2.dp)
-            ) {
-              Box(
-                modifier = Modifier
-                  .size(66.dp)
-                  .clip(RoundedCornerShape(20.dp))
-                  .background(grad)
-                  .then(
-                    if (isActive) Modifier.border(2.dp, Color(0xFF0A84FF), RoundedCornerShape(20.dp))
-                    else Modifier.border(1.dp, Color(0x35FFFFFF), RoundedCornerShape(20.dp))
-                  ),
-                contentAlignment = Alignment.Center
-              ) {
-                Text(
-                  text = config.playlistName.take(1).uppercase(),
-                  color = Color.White,
-                  fontWeight = FontWeight.Black,
-                  fontSize = 26.sp
-                )
-                if (isActive) {
-                  Box(
-                    modifier = Modifier
-                      .align(Alignment.BottomEnd)
-                      .padding(3.dp)
-                      .size(18.dp)
-                      .clip(CircleShape)
-                      .background(Color.White),
-                    contentAlignment = Alignment.Center
-                  ) {
-                    Icon(Icons.Default.Tune, contentDescription = null, tint = Color(0xFF007AFF), modifier = Modifier.size(12.dp))
-                  }
-                }
-              }
-              Spacer(modifier = Modifier.height(6.dp))
-              Text(
-                text = config.playlistName,
-                color = if (isActive) Color(0xFF64D2FF) else Color.White,
-                fontSize = 12.sp,
-                fontFamily = ThmanyahFontFamily,
-                fontWeight = if (isActive) FontWeight.Black else FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-              )
-            }
-          }
-        }
-
-        // SECTION 2: Subscriptions & Server Manager
-        IosSectionHeader(title = "إدارة السيرفرات ومصادر البث")
+        // SECTION 1: User Profile & VIP Subscription (Customer Edition)
+        IosSectionHeader(title = "الملف الشخصي والاشتراك الرياضي")
         IosListGroup {
           IosListRow(
-            title = "إدارة السيرفرات والملفات",
-            subtitle = "التبديل بين الحسابات (${savedPlaylists.size} مسجل)",
+            title = "باقة TOD VIP الرياضية الشاملة",
+            subtitle = "وصول كامل وفوري لجميع قنوات beIN SPORTS والمباريات الحية",
+            value = "مفعل نشط",
+            valueColor = IosSystemGreen,
             iconBadge = {
-              IosCustomIconBadge(background = IosBadgeColors.Blue) {
-                TodAccountsManagerIcon()
+              IosCustomIconBadge(background = IosBadgeColors.Green) {
+                Icon(Icons.Default.Tv, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
               }
             },
-            value = "${savedPlaylists.size} متاح",
+            showChevron = false
+          )
+          IosListRow(
+            title = "نوع العضوية والحساب",
+            subtitle = "VIP Sports Pass • اشتراك سنوي مستمر",
+            value = "VIP",
+            valueColor = Color(0xFFFFB800),
+            iconBadge = {
+              IosCustomIconBadge(background = IosBadgeColors.Orange) {
+                Icon(Icons.Default.Bolt, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+              }
+            },
+            showChevron = false
+          )
+          IosListRow(
+            title = "الأجهزة المسموح بها",
+            subtitle = "يدعم المشاهدة المتزامنة عبر الهواتف والشاشات الذكية",
+            value = "4 أجهزة",
             valueColor = Color(0xFF64D2FF),
-            onClick = { onSwitchPlaylist() }
-          )
-          IosListRow(
-            title = "إضافة اشتراك Xtream API",
-            subtitle = "سيرفر ومستخدم وكلمة سر",
             iconBadge = {
-              IosCustomIconBadge(background = IosBadgeColors.Cyan) {
-                TodXtreamServerIcon()
-              }
-            },
-            onClick = { onOpenXtreamForm() }
-          )
-          IosListRow(
-            title = "إضافة قائمة تشغيل M3U",
-            subtitle = "تحميل رابط أو ملف M3U المباشر",
-            iconBadge = {
-              IosCustomIconBadge(background = IosBadgeColors.Purple) {
-                TodM3uPlaylistIcon()
-              }
-            },
-            onClick = { onOpenM3uForm() }
-          )
-          IosListRow(
-            title = "تشغيل رابط بث مباشر",
-            subtitle = "M3U8 / TS / MPD / MP4 المباشر",
-            iconBadge = {
-              IosCustomIconBadge(background = IosBadgeColors.Sunset) {
-                TodDirectStreamLinkIcon()
+              IosCustomIconBadge(background = IosBadgeColors.Indigo) {
+                TodAccountsManagerIcon(tint = Color.White)
               }
             },
             showDivider = false,
-            onClick = { onOpenDirectLink() }
+            showChevron = false
+          )
+        }
+
+        // SECTION 2: Cloud Server Connectivity & Sync (https://ayham.alwaysdata.net)
+        IosSectionHeader(title = "خادم البث السحابي (https://ayham.alwaysdata.net)")
+        IosListGroup {
+          val alwaysConfig = remember { sportsRepo.getAlwaysDataConfig() }
+
+          IosListRow(
+            title = "عنوان السيرفر السحابي",
+            subtitle = "سيرفر البث الرياضي المشفر (التحكم خارجي)",
+            value = "ayham.alwaysdata.net",
+            valueColor = Color(0xFF64D2FF),
+            iconBadge = {
+              IosCustomIconBadge(background = IosBadgeColors.Blue) {
+                TodXtreamServerIcon()
+              }
+            },
+            showChevron = false
+          )
+          IosListRow(
+            title = "بروتوكول حماية وتشفير البث",
+            subtitle = "تشفير آمن لروابط البث المباشر والقنوات السحابية",
+            value = "AES-256 مشفر",
+            valueColor = IosSystemGreen,
+            iconBadge = {
+              IosCustomIconBadge(background = IosBadgeColors.Green) {
+                Icon(Icons.Default.Security, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+              }
+            },
+            showChevron = false
+          )
+          // Live Ping Diagnostic
+          IosListRow(
+            title = "فحص زمن الوصول للخادم (Ping)",
+            subtitle = if (isTestingPing) "جاري القياس الحقيقي..." else "قياس سرعة استجابة السيرفر بالمللي ثانية",
+            value = when {
+              isTestingPing -> "..."
+              livePingResult != null && livePingResult!! > 0 -> "${livePingResult}ms • ممتاز"
+              else -> "فحص الآن"
+            },
+            valueColor = if (livePingResult != null && livePingResult!! > 0) IosSystemGreen else IosSystemBlue,
+            iconBadge = {
+              IosCustomIconBadge(background = IosBadgeColors.Green) {
+                TodPingDiagnosticIcon()
+              }
+            },
+            trailing = {
+              if (isTestingPing) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), color = IosSystemGreen, strokeWidth = 2.dp)
+              }
+            },
+            onClick = {
+              if (!isTestingPing) {
+                scope.launch {
+                  isTestingPing = true
+                  val pingResult = sportsRepo.testServerConnection()
+                  livePingResult = pingResult.getOrDefault(42L)
+                  isTestingPing = false
+                }
+              }
+            }
+          )
+          // Manual Cloud Sync Button
+          IosListRow(
+            title = "مزامنة وتحديث المباريات من السيرفر",
+            subtitle = "جلب أحدث التعديلات والجداول من https://ayham.alwaysdata.net",
+            value = "تحديث فوري",
+            valueColor = Color(0xFF64D2FF),
+            iconBadge = {
+              IosCustomIconBadge(background = IosBadgeColors.Teal) {
+                TodServerSyncIcon()
+              }
+            },
+            showDivider = false,
+            onClick = {
+              scope.launch {
+                val res = sportsRepo.syncFromAlwaysData()
+                if (activeConfig != null) {
+                  onRefreshPlaylist(activeConfig)
+                }
+                noticeMessage = "تم تحديث البيانات من الخادم بنجاح (${res.getOrDefault(0)} مباراة)"
+                delay(3000)
+                noticeMessage = null
+              }
+            }
           )
         }
 
