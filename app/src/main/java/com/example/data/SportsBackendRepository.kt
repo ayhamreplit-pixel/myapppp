@@ -65,7 +65,16 @@ class SportsBackendRepository(private val context: Context) {
   init {
     loadCachedOrBuiltInMatches()
     kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
-      syncFromAlwaysData()
+      while (true) {
+        try {
+          syncFromAlwaysData()
+          val activeProf = getActiveProfile()
+          sendSessionHeartbeat(activeProf.name, "")
+        } catch (e: Exception) {
+          Log.e("SportsBackendRepo", "Realtime background sync error", e)
+        }
+        kotlinx.coroutines.delay(5000)
+      }
     }
   }
 
@@ -285,6 +294,26 @@ class SportsBackendRepository(private val context: Context) {
     return list
   }
 
+  private fun JSONObject.optNullableInt(key: String): Int? {
+    if (!has(key) || isNull(key)) return null
+    return try {
+      val obj = opt(key)
+      when (obj) {
+        is Number -> obj.toInt()
+        is String -> obj.toIntOrNull()
+        else -> null
+      }
+    } catch (e: Exception) { null }
+  }
+
+  private fun JSONObject.optNullableString(key: String): String? {
+    if (!has(key) || isNull(key)) return null
+    return try {
+      val str = optString(key, "").trim()
+      if (str.isEmpty() || str.equals("null", ignoreCase = true)) null else str
+    } catch (e: Exception) { null }
+  }
+
   private fun parseMatchesJson(json: String, secretKey: String): List<SportsMatch> {
     val list = mutableListOf<SportsMatch>()
     try {
@@ -305,6 +334,11 @@ class SportsBackendRepository(private val context: Context) {
         val awayLogo = item.optString("awayLogo", item.optString("away_logo", item.optString("awayTeamLogo", "")))
         val awayFlag = item.optString("awayFlag", item.optString("away_flag", "⚽"))
 
+        val liveMin = item.optNullableString("liveMinute") ?: item.optNullableString("minute")
+        val scoreH = item.optNullableInt("scoreHome") ?: item.optNullableInt("home_score")
+        val scoreA = item.optNullableInt("scoreAway") ?: item.optNullableInt("away_score")
+        val countdown = item.optNullableString("countdownText") ?: item.optNullableString("countdown")
+
         val match = SportsMatch(
           id = item.optString("id", "m_$i"),
           title = item.optString("title", "$homeTeamName ضد $awayTeamName"),
@@ -321,16 +355,16 @@ class SportsBackendRepository(private val context: Context) {
           streamUrl = decryptedStream,
           isLive = item.optBoolean("isLive", item.optBoolean("is_live", false)),
           isEnded = item.optBoolean("isEnded", item.optBoolean("is_ended", false)),
-          liveMinute = if (item.has("liveMinute")) item.getString("liveMinute") else if (item.has("minute")) item.getString("minute") else null,
-          scoreHome = if (item.has("scoreHome")) item.getInt("scoreHome") else if (item.has("home_score")) item.getInt("home_score") else null,
-          scoreAway = if (item.has("scoreAway")) item.getInt("scoreAway") else if (item.has("away_score")) item.getInt("away_score") else null,
-          countdownText = if (item.has("countdown")) item.getString("countdown") else null,
+          liveMinute = liveMin,
+          scoreHome = scoreH,
+          scoreAway = scoreA,
+          countdownText = countdown,
           bannerUrl = item.optString("bannerUrl", item.optString("poster", ""))
         )
         list.add(match)
       }
     } catch (e: Exception) {
-      Log.e("SportsBackendRepo", "JSON parse error", e)
+      Log.e("SportsBackendRepo", "JSON parse error safely handled", e)
     }
     return list
   }
@@ -546,6 +580,31 @@ class SportsBackendRepository(private val context: Context) {
     }
 
     val defaultList = mutableListOf<SportsMatch>()
+
+    // 0. Featured Hero Match from TOD Screenshot: روما ضد برشلونة (4 - 0)
+    defaultList.add(
+      SportsMatch(
+        id = "roma_barca_uwcl",
+        title = "روما ضد برشلونة",
+        tournament = "دوري أبطال أوروبا للسيدات",
+        tournamentLogo = "https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/UEFA_Champions_League_logo_2.svg/512px-UEFA_Champions_League_logo_2.svg.png",
+        homeTeam = SportsTeam(name = "برشلونة", flagEmoji = "🔵🔴", code = "BAR", logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/512px-FC_Barcelona_%28crest%29.svg.png"),
+        awayTeam = SportsTeam(name = "روما", flagEmoji = "🟡🔴", code = "ROM", logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/f/f7/AS_Roma_logo_%282017%29.svg/512px-AS_Roma_logo_%282017%29.svg.png"),
+        kickoffTime = "19:45",
+        kickoffDate = "٣٠ سبتمبر",
+        stadium = "Stadio Tre Fontane",
+        commentator = "عصام الشوالي",
+        channelName = "beIN SPORTS 1 HD",
+        channelId = "bein_1",
+        streamUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+        bannerUrl = "android.resource://com.example/drawable/tod_hero_match_banner",
+        isLive = true,
+        liveMinute = "60'",
+        scoreHome = 4,
+        scoreAway = 0,
+        stats = MatchStats(possessionHome = 65, possessionAway = 35, shotsOnTargetHome = 9, shotsOnTargetAway = 2, totalShotsHome = 18, totalShotsAway = 5, cornersHome = 8, cornersAway = 2, foulsHome = 6, foulsAway = 10, yellowCardsHome = 1, yellowCardsAway = 2)
+      )
+    )
 
     // 1. Featured Hero Match 1 (Screenshot 8, 11, 15): ويلز ضد النرويج
     defaultList.add(

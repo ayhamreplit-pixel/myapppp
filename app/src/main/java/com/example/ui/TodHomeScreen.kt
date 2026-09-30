@@ -148,136 +148,15 @@ fun TodHomeScreen(
     val isTabletOrLandscape = screenWidth >= 700.dp
     val gridColumns = if (screenWidth >= 900.dp) 4 else if (isTabletOrLandscape) 3 else 2
 
-    Column(
+    // =========================================================================
+    // MAIN CONTENT (Starts at y=0 behind floating top header)
+    // =========================================================================
+    Box(
       modifier = Modifier
         .fillMaxSize()
         .widthIn(max = 1200.dp)
         .align(Alignment.TopCenter)
     ) {
-      // =========================================================================
-      // 1. OFFICIAL TOD LIQUID GLASS TOP HEADER (Logo + Search + Profile)
-      // =========================================================================
-      Column(
-        modifier = Modifier
-          .fillMaxWidth()
-          .background(
-            Brush.verticalGradient(
-              colors = listOf(
-                Color(0x350A1428),
-                Color(0x200C142A),
-                Color.Transparent
-              )
-            )
-          )
-          .statusBarsPadding()
-          .padding(top = 4.dp, bottom = 4.dp)
-      ) {
-        Row(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          // Left: Search & Profile Avatar
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-          ) {
-            // User Avatar with Gold Border
-            val avatarInteraction = remember { MutableInteractionSource() }
-            val isAvatarPressed by avatarInteraction.collectIsPressedAsState()
-            val avatarScale by animateFloatAsState(
-              targetValue = if (isAvatarPressed) 0.88f else 1.0f,
-              animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-              label = "avatarScale"
-            )
-
-            Box(
-              modifier = Modifier
-                .scale(avatarScale)
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(Brush.linearGradient(listOf(TodGold, Color(0xFFFF9500))))
-                .border(1.5.dp, Color(0x66FFFFFF), CircleShape)
-                .clickable(
-                  interactionSource = avatarInteraction,
-                  indication = null,
-                  onClick = onOpenProfile
-                ),
-              contentAlignment = Alignment.Center
-            ) {
-              Text(sportsBackendRepo.getActiveProfile().avatarEmoji, fontSize = 18.sp)
-            }
-
-            // Clean Search Button
-            IconButton(
-              onClick = onOpenSearch,
-              modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(Color(0x20FFFFFF))
-            ) {
-              Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = "بحث",
-                tint = Color.White,
-                modifier = Modifier.size(18.dp)
-              )
-            }
-          }
-
-          // Right: Official TOD by beIN Logo
-          TodLogo(fontSize = 24, showSubtext = true)
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        // =========================================================================
-        // 2. TOD TOP CATEGORY PILLS ROW (الرئيسية | المباريات | قنوات مباشرة | المنافسات | ملخصات)
-        // =========================================================================
-        Row(
-          modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 14.dp, vertical = 4.dp),
-          horizontalArrangement = Arrangement.spacedBy(8.dp),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          TodTopSection.entries.forEach { section ->
-            val isSelected = activeTopSection == section
-            Box(
-              modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
-                .background(if (isSelected) TodGold else Color(0x18FFFFFF))
-                .border(
-                  width = 1.dp,
-                  color = if (isSelected) TodGold else Color(0x26FFFFFF),
-                  shape = RoundedCornerShape(20.dp)
-                )
-                .clickable {
-                  activeTopSection = section
-                  selectedChannelCategoryId = null
-                  selectedTournamentFilter = null
-                }
-                .padding(horizontal = 16.dp, vertical = 7.dp),
-              contentAlignment = Alignment.Center
-            ) {
-              Text(
-                text = section.title,
-                color = if (isSelected) Color.Black else Color.White,
-                fontSize = 13.sp,
-                fontFamily = ThmanyahFontFamily,
-                fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold
-              )
-            }
-          }
-        }
-      }
-
-      // =========================================================================
-      // 3. MAIN SECTION CONTENT SWITCHER
-      // =========================================================================
       when (activeTopSection) {
         TodTopSection.HOME -> {
           // =====================================================================
@@ -796,6 +675,126 @@ fun TodHomeScreen(
                     )
                   }
                 }
+              }
+            }
+          }
+        }
+      }
+
+      // =========================================================================
+      // FLOATING OVERLAY HEADER (100% Matching TOD App Screenshot - Directly over Hero Banner)
+      // =========================================================================
+      Column(
+        modifier = Modifier
+          .fillMaxWidth()
+          .align(Alignment.TopCenter)
+          .background(
+            Brush.verticalGradient(
+              colors = listOf(
+                Color(0xDC000000),
+                Color(0x95000000),
+                Color(0x30000000),
+                Color.Transparent
+              )
+            )
+          )
+          .statusBarsPadding()
+          .padding(bottom = 6.dp)
+      ) {
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          // Left: Profile Avatar & Search
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+          ) {
+            val avatarInteraction = remember { MutableInteractionSource() }
+            val isAvatarPressed by avatarInteraction.collectIsPressedAsState()
+            val avatarScale by animateFloatAsState(
+              targetValue = if (isAvatarPressed) 0.88f else 1.0f,
+              animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+              label = "avatarScale"
+            )
+
+            Box(
+              modifier = Modifier
+                .scale(avatarScale)
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(Brush.linearGradient(listOf(TodGold, Color(0xFFFF9500))))
+                .border(1.5.dp, Color(0x66FFFFFF), CircleShape)
+                .clickable(
+                  interactionSource = avatarInteraction,
+                  indication = null,
+                  onClick = onOpenProfile
+                ),
+              contentAlignment = Alignment.Center
+            ) {
+              Text(sportsBackendRepo.getActiveProfile().avatarEmoji, fontSize = 18.sp)
+            }
+
+            IconButton(
+              onClick = onOpenSearch,
+              modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(Color(0x35000000))
+            ) {
+              Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = "بحث",
+                tint = Color.White,
+                modifier = Modifier.size(18.dp)
+              )
+            }
+          }
+
+          // Right: Official TOD by beIN Logo
+          TodLogo(fontSize = 24, showSubtext = true)
+        }
+
+        Spacer(modifier = Modifier.height(2.dp))
+
+        // Floating Categories Text Row (100% Identical to TOD Screenshot)
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+          horizontalArrangement = Arrangement.spacedBy(22.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          TodTopSection.entries.forEach { section ->
+            val isSelected = activeTopSection == section
+            Column(
+              horizontalAlignment = Alignment.CenterHorizontally,
+              modifier = Modifier.clickable {
+                activeTopSection = section
+                selectedChannelCategoryId = null
+                selectedTournamentFilter = null
+              }
+            ) {
+              Text(
+                text = section.title,
+                color = if (isSelected) Color.White else Color(0xB8FFFFFF),
+                fontSize = if (isSelected) 15.5.sp else 14.5.sp,
+                fontFamily = ThmanyahFontFamily,
+                fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold
+              )
+              if (isSelected) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Box(
+                  modifier = Modifier
+                    .width(18.dp)
+                    .height(2.5.dp)
+                    .clip(RoundedCornerShape(1.dp))
+                    .background(TodGold)
+                )
               }
             }
           }

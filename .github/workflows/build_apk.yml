@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: Build TOD Sports APK
+    name: Build TOD Sports Fast Release APK
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -26,15 +26,15 @@ jobs:
 
       - name: Prepare Project Structure & Gradle Wrapper
         run: |
-          echo "=== Inspecting workspace ==="
+          echo "=== Setting up project workspace ==="
           ls -la
 
-          # If project was placed in a subdirectory (e.g. nested folder during zip upload)
+          # If project was placed in a subdirectory during commit/upload
           if [ ! -f "settings.gradle.kts" ] && [ ! -f "settings.gradle" ]; then
             SUB_SETTINGS=$(find . -maxdepth 3 \( -name "settings.gradle.kts" -o -name "settings.gradle" \) | head -n 1)
             if [ -n "$SUB_SETTINGS" ]; then
               SUB_DIR=$(dirname "$SUB_SETTINGS")
-              echo "Android project detected in subfolder $SUB_DIR -> moving files to workspace root..."
+              echo "Moving Android project from $SUB_DIR to root..."
               shopt -s dotglob
               mv "$SUB_DIR"/* .
               shopt -u dotglob
@@ -43,7 +43,7 @@ jobs:
 
           # Ensure gradlew exists and is executable
           if [ ! -f "gradlew" ]; then
-            echo "gradlew not found at root, fetching official gradle wrapper..."
+            echo "Fetching official gradle wrapper script..."
             curl -sLo gradlew https://raw.githubusercontent.com/gradle/gradle/v8.10.2/gradlew
           fi
           chmod +x gradlew || true
@@ -51,44 +51,54 @@ jobs:
           # Ensure gradle-wrapper.jar exists
           mkdir -p gradle/wrapper
           if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-            echo "gradle-wrapper.jar missing, downloading wrapper jar..."
+            echo "Downloading gradle-wrapper.jar..."
             curl -sLo gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.10.2/gradle/wrapper/gradle-wrapper.jar
           fi
 
-      - name: Prepare Debug Keystore
+      - name: Prepare Release Signing Keystore
         run: |
           if [ -f debug.keystore.base64 ]; then
             base64 -d debug.keystore.base64 > debug.keystore
           fi
           if [ ! -f debug.keystore ]; then
-            keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+            keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=TOD Sports,O=TOD,C=US"
           fi
 
-      - name: Build APKs (Release & Debug)
+      - name: Build Ultra-Fast Smooth Release APK
         run: |
-          echo "=== Building Android APKs ==="
-          ./gradlew :app:assembleRelease :app:assembleDebug \
+          echo "=== Building Single Optimized Release APK ==="
+          ./gradlew :app:assembleRelease \
             --no-daemon \
             --no-configuration-cache \
-            --stacktrace \
-            -Dorg.gradle.workers.max=2 \
-            -Dorg.gradle.jvmargs="-Xmx2048m -XX:+UseParallelGC" \
+            --build-cache \
+            --parallel \
+            -Dorg.gradle.workers.max=4 \
+            -Dorg.gradle.jvmargs="-Xmx3072m -XX:+UseParallelGC" \
             -x test \
-            -x lint || ./gradlew assemble --no-daemon --no-configuration-cache -x test -x lint
+            -x lint
 
-      - name: Collect Generated APKs
+      - name: Prepare Release APK Artifact
         run: |
-          mkdir -p release_apks
-          echo "Searching for generated APK files..."
-          find . -name "*.apk" -not -path "*/intermediates/*" -exec cp -v {} release_apks/ \;
-          echo "Collected APKs:"
-          ls -la release_apks/
+          mkdir -p final_apk
+          if [ -f "app/build/outputs/apk/release/app-release.apk" ]; then
+            cp "app/build/outputs/apk/release/app-release.apk" final_apk/TOD-Sports-Release.apk
+          else
+            # Search for release apk
+            RELEASE_FILE=$(find app/build/outputs/apk -name "*release*.apk" | head -n 1)
+            if [ -n "$RELEASE_FILE" ]; then
+              cp "$RELEASE_FILE" final_apk/TOD-Sports-Release.apk
+            else
+              find . -name "*.apk" -not -path "*/intermediates/*" -exec cp -v {} final_apk/TOD-Sports-Release.apk \;
+            fi
+          fi
+          echo "Final Release APK prepared:"
+          ls -la final_apk/
 
-      - name: Upload APKs to Artifacts
+      - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TOD-Sports-APKs
-          path: release_apks/*.apk
+          name: TOD-Sports-Release-APK
+          path: final_apk/TOD-Sports-Release.apk
           if-no-files-found: error
 
       - name: Create GitHub Release
@@ -97,12 +107,11 @@ jobs:
         continue-on-error: true
         with:
           tag_name: v${{ github.run_number }}
-          name: "📱 TOD Sports APK (Release #${{ github.run_number }})"
+          name: "📱 TOD Sports VIP (Release v${{ github.run_number }})"
           body: |
-            ### ⚽ تم بناء تطبيق TOD Sports بنجاح وسرعة فائقة! 🚀
+            ### ⚡ تم بناء النسخة الرسمية السريعة والسلسة (Release Only)! 🚀
             
-            - 🌟 **app-release.apk**: النسخة المعتمدة والمحسنة للأداء العالي وتوفير الذاكرة.
-            - 🛠️ **app-debug.apk**: النسخة التجريبية.
-          files: release_apks/*.apk
+            - 🌟 **TOD-Sports-Release.apk**: النسخة الرسمية الصافية فائقة السرعة والخفة، مصممة للعمل بسلاسة تامة على كافة الهواتف وبأعلى أداء ممكن لتشغيل البث والمباريات.
+          files: final_apk/TOD-Sports-Release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

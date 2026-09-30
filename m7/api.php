@@ -179,6 +179,38 @@ switch ($action) {
         break;
 
     // -------------------------------------------------------------
+    // 7.5 QUICK REALTIME UPDATE MATCH (تحديث فوري وسريع للنتيجة والدقيقة)
+    // -------------------------------------------------------------
+    case 'quick_update_match':
+        $matchId = $input['id'] ?? ($_POST['id'] ?? '');
+        if ($matchId) {
+            $matchesData = json_decode(file_get_contents($matchesFile), true) ?: ['matches' => []];
+            $found = false;
+            foreach ($matchesData['matches'] as &$m) {
+                if ($m['id'] === $matchId) {
+                    if (isset($input['scoreHome'])) $m['scoreHome'] = $input['scoreHome'] !== '' && $input['scoreHome'] !== null ? (int)$input['scoreHome'] : null;
+                    if (isset($input['scoreAway'])) $m['scoreAway'] = $input['scoreAway'] !== '' && $input['scoreAway'] !== null ? (int)$input['scoreAway'] : null;
+                    if (isset($input['isLive'])) $m['isLive'] = filter_var($input['isLive'], FILTER_VALIDATE_BOOLEAN);
+                    if (isset($input['isEnded'])) $m['isEnded'] = filter_var($input['isEnded'], FILTER_VALIDATE_BOOLEAN);
+                    if (isset($input['liveMinute'])) $m['liveMinute'] = $input['liveMinute'];
+                    if (isset($input['streamUrl'])) $m['streamUrl'] = $input['streamUrl'];
+                    if (isset($input['channelName'])) $m['channelName'] = $input['channelName'];
+                    $found = true;
+                    break;
+                }
+            }
+            if ($found) {
+                file_put_contents($matchesFile, json_encode($matchesData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+                echo json_encode(['status' => 'success', 'message' => 'Match updated instantly in real-time']);
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Match not found']);
+            }
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Match id required']);
+        }
+        break;
+
+    // -------------------------------------------------------------
     // 8. SAVE MATCH (إضافة أو تعديل مباراة مع اللوقو والبث)
     // -------------------------------------------------------------
     case 'save_match':
