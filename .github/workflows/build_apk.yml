@@ -7,14 +7,16 @@ on:
 
 jobs:
   build:
-    name: Fast Build APK
+    name: Build TOD Sports APK
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
-      - name: Checkout Code
+      - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -22,52 +24,36 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Locate project and ensure Gradle wrapper
+      - name: Prepare Project Structure & Gradle Wrapper
         run: |
-          echo "=== Checking repository files ==="
+          echo "=== Inspecting workspace ==="
           ls -la
 
-          # If project was placed in a subdirectory during commit/upload, move to root
+          # If project was placed in a subdirectory (e.g. nested folder during zip upload)
           if [ ! -f "settings.gradle.kts" ] && [ ! -f "settings.gradle" ]; then
             SUB_SETTINGS=$(find . -maxdepth 3 \( -name "settings.gradle.kts" -o -name "settings.gradle" \) | head -n 1)
             if [ -n "$SUB_SETTINGS" ]; then
               SUB_DIR=$(dirname "$SUB_SETTINGS")
-              echo "Android project detected in $SUB_DIR, moving to root..."
+              echo "Android project detected in subfolder $SUB_DIR -> moving files to workspace root..."
               shopt -s dotglob
               mv "$SUB_DIR"/* .
               shopt -u dotglob
             fi
           fi
 
-          # Ensure gradlew file exists
+          # Ensure gradlew exists and is executable
           if [ ! -f "gradlew" ]; then
-            echo "gradlew not found in root! Searching subdirectories..."
-            SUB_GRADLEW=$(find . -name "gradlew" -type f | head -n 1)
-            if [ -n "$SUB_GRADLEW" ]; then
-              echo "Found gradlew in: $SUB_GRADLEW"
-              cp "$SUB_GRADLEW" ./gradlew
-            else
-              echo "Restoring official gradlew script..."
-              curl -sLo gradlew https://raw.githubusercontent.com/gradle/gradle/v8.10.2/gradlew
-            fi
+            echo "gradlew not found at root, fetching official gradle wrapper..."
+            curl -sLo gradlew https://raw.githubusercontent.com/gradle/gradle/v8.10.2/gradlew
           fi
+          chmod +x gradlew || true
 
           # Ensure gradle-wrapper.jar exists
           mkdir -p gradle/wrapper
           if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-            echo "gradle-wrapper.jar missing! Restoring..."
+            echo "gradle-wrapper.jar missing, downloading wrapper jar..."
             curl -sLo gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.10.2/gradle/wrapper/gradle-wrapper.jar
           fi
-
-          # Grant execution permissions safely
-          chmod +x gradlew || true
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '9.3.1'
-          cache-read-only: false
-          gradle-home-cache-cleanup: true
 
       - name: Prepare Debug Keystore
         run: |
@@ -78,42 +64,45 @@ jobs:
             keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           fi
 
-      - name: Build Optimized Release and Debug APKs
+      - name: Build APKs (Release & Debug)
         run: |
-          echo "=== Starting Gradle APK Build ==="
+          echo "=== Building Android APKs ==="
           ./gradlew :app:assembleRelease :app:assembleDebug \
             --no-daemon \
-            --build-cache \
-            --parallel \
+            --no-configuration-cache \
+            --stacktrace \
             -Dorg.gradle.workers.max=2 \
             -Dorg.gradle.jvmargs="-Xmx2048m -XX:+UseParallelGC" \
             -x test \
-            -x lint || ./gradlew assembleDebug --no-daemon -x test -x lint
+            -x lint || ./gradlew assemble --no-daemon --no-configuration-cache -x test -x lint
+
+      - name: Collect Generated APKs
+        run: |
+          mkdir -p release_apks
+          echo "Searching for generated APK files..."
+          find . -name "*.apk" -not -path "*/intermediates/*" -exec cp -v {} release_apks/ \;
+          echo "Collected APKs:"
+          ls -la release_apks/
 
       - name: Upload APKs to Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: TOD-Broadcast-APKs
-          path: |
-            app/build/outputs/apk/release/app-release.apk
-            app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: warn
+          name: TOD-Sports-APKs
+          path: release_apks/*.apk
+          if-no-files-found: error
 
-      - name: Create Automatic Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: success()
         continue-on-error: true
         with:
-          tag_name: build-${{ github.run_number }}
-          name: "📱 TOD Broadcast APK (Build #${{ github.run_number }})"
+          tag_name: v${{ github.run_number }}
+          name: "📱 TOD Sports APK (Release #${{ github.run_number }})"
           body: |
-            ### تم بناء التطبيق بنجاح وسرعة فائقة! ⚡🚀
+            ### ⚽ تم بناء تطبيق TOD Sports بنجاح وسرعة فائقة! 🚀
             
-            اختر النسخة المناسبة لجهازك:
-            - 🚀 **app-release.apk** (النسخة السريعة فائقة الخفة والأداء): **ينصح بتثبيتها لهاتفك (مثل Honor X7 والأجهزة المتوسطة) - مُحسنة عبر R8 و ProGuard ومدمجة لتشغيل سلس بدون أي ثقل أو تهنيج.**
-            - 🛠️ **app-debug.apk**: نسخة التطوير التجريبية.
-          files: |
-            app/build/outputs/apk/release/app-release.apk
-            app/build/outputs/apk/debug/app-debug.apk
+            - 🌟 **app-release.apk**: النسخة المعتمدة والمحسنة للأداء العالي وتوفير الذاكرة.
+            - 🛠️ **app-debug.apk**: النسخة التجريبية.
+          files: release_apks/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

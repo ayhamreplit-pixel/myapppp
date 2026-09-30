@@ -1,0 +1,39 @@
+{
+  "channels": [
+    {
+      "streamId": "ch_bein_1",
+      "name": "beIN SPORTS 1 HD",
+      "iconUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/BeIN_Sports_1_logo.svg/512px-BeIN_Sports_1_logo.svg.png",
+      "categoryId": "قنوات beIN SPORTS",
+      "playUrl": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+    },
+    {
+      "streamId": "ch_bein_2",
+      "name": "beIN SPORTS 2 HD",
+      "iconUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/BeIN_Sports_2_logo.svg/512px-BeIN_Sports_2_logo.svg.png",
+      "categoryId": "قنوات beIN SPORTS",
+      "playUrl": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+    },
+    {
+      "streamId": "ch_bein_3",
+      "name": "beIN SPORTS 3 HD",
+      "iconUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d4/BeIN_Sports_3_logo.svg/512px-BeIN_Sports_3_logo.svg.png",
+      "categoryId": "قنوات beIN SPORTS",
+      "playUrl": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+    },
+    {
+      "streamId": "ch_bein_news",
+      "name": "beIN SPORTS الإخبارية",
+      "iconUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/BeIN_Sports_News_logo.svg/512px-BeIN_Sports_News_logo.svg.png",
+      "categoryId": "قنوات beIN SPORTS",
+      "playUrl": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+    },
+    {
+      "streamId": "ch_alkass_1",
+      "name": "الكأس 1 HD",
+      "iconUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Al_Kass_Sports_Channels_logo.svg/512px-Al_Kass_Sports_Channels_logo.svg.png",
+      "categoryId": "قنوات الكأس",
+      "playUrl": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+    }
+  ]
+}
