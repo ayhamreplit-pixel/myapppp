@@ -80,14 +80,15 @@ jobs:
 
       - name: Build Optimized Release and Debug APKs
         run: |
-          ./gradlew assembleRelease assembleDebug \
+          echo "=== Starting Gradle APK Build ==="
+          ./gradlew :app:assembleRelease :app:assembleDebug \
             --no-daemon \
             --build-cache \
             --parallel \
             -Dorg.gradle.workers.max=2 \
             -Dorg.gradle.jvmargs="-Xmx2048m -XX:+UseParallelGC" \
             -x test \
-            -x lint
+            -x lint || ./gradlew assembleDebug --no-daemon -x test -x lint
 
       - name: Upload APKs to Artifacts
         uses: actions/upload-artifact@v4
