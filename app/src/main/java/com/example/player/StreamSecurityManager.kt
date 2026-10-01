@@ -50,6 +50,8 @@ object StreamSecurityManager {
       .removePrefix("enc:")
       .removePrefix("aes:")
       .removePrefix("sec:")
+      .removePrefix("m7:")
+      .removePrefix("m7enc:")
       .trim()
 
     if (cleanCipher.isEmpty()) return ""

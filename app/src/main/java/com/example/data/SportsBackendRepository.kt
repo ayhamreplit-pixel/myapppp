@@ -73,7 +73,7 @@ class SportsBackendRepository(private val context: Context) {
         } catch (e: Exception) {
           Log.e("SportsBackendRepo", "Realtime background sync error", e)
         }
-        kotlinx.coroutines.delay(5000)
+        kotlinx.coroutines.delay(3000)
       }
     }
   }
@@ -173,9 +173,15 @@ class SportsBackendRepository(private val context: Context) {
             if (bodyStr.isNotBlank() && (bodyStr.contains("\"matches\"") || bodyStr.startsWith("["))) {
               val parsedMatches = parseMatchesJson(bodyStr, config.secretKey)
               if (parsedMatches.isNotEmpty()) {
-                _matches.value = parsedMatches
+                val combined = mutableListOf<SportsMatch>()
+                val featuredGermany = _matches.value.firstOrNull { it.id == "germany_serbia_nations" }
+                if (featuredGermany != null) {
+                  combined.add(featuredGermany)
+                }
+                combined.addAll(parsedMatches.filter { it.id != "germany_serbia_nations" })
+                _matches.value = combined
                 saveMatchesToCache(bodyStr)
-                syncedMatchesCount = parsedMatches.size
+                syncedMatchesCount = combined.size
                 Log.d("SportsBackendRepo", "Loaded ${parsedMatches.size} matches from $endpoint")
                 break
               }
@@ -208,7 +214,7 @@ class SportsBackendRepository(private val context: Context) {
           if (response.isSuccessful) {
             val bodyStr = response.body?.string() ?: ""
             if (bodyStr.isNotBlank() && (bodyStr.contains("\"channels\"") || bodyStr.startsWith("["))) {
-              val parsedChannels = parseChannelsJson(bodyStr)
+              val parsedChannels = parseChannelsJson(bodyStr, config.secretKey)
               if (parsedChannels.isNotEmpty()) {
                 _sportsChannels.value = parsedChannels
                 Log.d("SportsBackendRepo", "Loaded ${parsedChannels.size} channels from $endpoint")
@@ -266,7 +272,7 @@ class SportsBackendRepository(private val context: Context) {
     prefs.edit().putString("cached_matches_payload", json).apply()
   }
 
-  private fun parseChannelsJson(json: String): List<XtreamChannel> {
+  private fun parseChannelsJson(json: String, secretKey: String = getAlwaysDataConfig().secretKey): List<XtreamChannel> {
     val list = mutableListOf<XtreamChannel>()
     try {
       val root = JSONObject(json)
@@ -277,14 +283,18 @@ class SportsBackendRepository(private val context: Context) {
         val name = item.optString("name", "قناة رياضية")
         val icon = item.optString("iconUrl", item.optString("stream_icon", ""))
         val category = item.optString("categoryId", item.optString("category_id", "قنوات beIN SPORTS"))
-        val playUrl = item.optString("playUrl", item.optString("stream_url", ""))
+        val rawPlayUrl = item.optString("playUrl", item.optString("stream_url", item.optString("url", "")))
+        val decryptedPlayUrl = if (rawPlayUrl.startsWith("enc:") || rawPlayUrl.startsWith("aes:") || rawPlayUrl.startsWith("sec:") || rawPlayUrl.startsWith("m7:") || rawPlayUrl.startsWith("m7enc:")) {
+          StreamSecurityManager.decryptStreamUrl(rawPlayUrl, secretKey)
+        } else rawPlayUrl
+
         list.add(
           XtreamChannel(
             streamId = streamId,
             name = name,
             iconUrl = icon,
             categoryId = category,
-            playUrl = playUrl
+            playUrl = decryptedPlayUrl
           )
         )
       }
@@ -321,8 +331,8 @@ class SportsBackendRepository(private val context: Context) {
       val array = root.optJSONArray("matches") ?: JSONArray(json)
       for (i in 0 until array.length()) {
         val item = array.getJSONObject(i)
-        val rawStream = item.optString("streamUrl", "")
-        val decryptedStream = if (rawStream.startsWith("enc:") || rawStream.startsWith("aes:")) {
+        val rawStream = item.optString("streamUrl", item.optString("stream_url", item.optString("url", "")))
+        val decryptedStream = if (rawStream.startsWith("enc:") || rawStream.startsWith("aes:") || rawStream.startsWith("sec:") || rawStream.startsWith("m7:") || rawStream.startsWith("m7enc:")) {
           StreamSecurityManager.decryptStreamUrl(rawStream, secretKey)
         } else rawStream
 
@@ -570,18 +580,131 @@ class SportsBackendRepository(private val context: Context) {
    * Initializes official TOD Schedule from cache or server
    */
   fun loadCachedOrBuiltInMatches() {
-    val cachedPayload = prefs.getString("cached_matches_payload", null)
-    if (!cachedPayload.isNullOrBlank()) {
-      val parsed = parseMatchesJson(cachedPayload, getAlwaysDataConfig().secretKey)
-      if (parsed.isNotEmpty()) {
-        _matches.value = parsed
-        return
-      }
-    }
+    val germanyPosterUrl = "android.resource://com.example/drawable/tod_germany_serbia_poster"
+    val germanyMatch = SportsMatch(
+      id = "germany_serbia_nations",
+      title = "ألمانيا ضد صربيا",
+      tournament = "دوري الأمم الأوروبية",
+      tournamentLogo = "https://upload.wikimedia.org/wikipedia/en/thumb/0/03/UEFA_Nations_League_logo.svg/512px-UEFA_Nations_League_logo.svg.png",
+      homeTeam = SportsTeam(
+        name = "ألمانيا",
+        flagEmoji = "🇩🇪",
+        code = "GER",
+        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/e/e3/DFB-Logo_2014.svg/512px-DFB-Logo_2014.svg.png"
+      ),
+      awayTeam = SportsTeam(
+        name = "صربيا",
+        flagEmoji = "🇷🇸",
+        code = "SRB",
+        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/0/07/Football_Association_of_Serbia_logo.svg/512px-Football_Association_of_Serbia_logo.svg.png"
+      ),
+      kickoffTime = "21:45",
+      kickoffDate = "1 أكتوبر 2026",
+      stadium = "أليانز أرينا",
+      commentator = "عصام الشوالي",
+      channelName = "beIN SPORTS 2 HD",
+      channelId = "bein_2",
+      streamUrl = "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8",
+      bannerUrl = germanyPosterUrl,
+      isLive = true,
+      liveMinute = "'72",
+      scoreHome = 2,
+      scoreAway = 1,
+      stats = MatchStats(possessionHome = 62, possessionAway = 38, shotsOnTargetHome = 8, shotsOnTargetAway = 3, totalShotsHome = 18, totalShotsAway = 7, cornersHome = 7, cornersAway = 2, foulsHome = 8, foulsAway = 14, yellowCardsHome = 1, yellowCardsAway = 3),
+      lineups = MatchLineup(
+        formationHome = "4-2-3-1", formationAway = "3-4-2-1",
+        coachHome = "يوليان ناغلسمان", coachAway = "دراغان ستويكوفيتش",
+        startersHome = listOf("باومان (حارس)", "كيميتش", "روديغر", "شلوتربيك", "ميتيلشتيت", "أندريش", "بافلوفيتش", "فلوريان فيرتز", "جمال موسيالا", "كاي هافيرتز", "أونديف"),
+        startersAway = listOf("راجكوفيتش (حارس)", "إيراكوفيتش", "ميلينكوفيتش", "بافلوفيتش", "نديلكوفيتش", "ماكسيموفيتش", "غروجيتش", "بيرمانسيفيتش", "ساماردزيتش", "لوكيتش", "دوشان فلاهوفيتش")
+      ),
+      standings = listOf(
+        StandingRow(1, "ألمانيا", "https://flagcdn.com/w80/de.png", 2, 5, 6),
+        StandingRow(2, "هولندا", "https://flagcdn.com/w80/nl.png", 2, 3, 4),
+        StandingRow(3, "البوسنة والهرسك", "https://flagcdn.com/w80/ba.png", 2, -4, 1),
+        StandingRow(4, "صربيا", "https://flagcdn.com/w80/rs.png", 2, -4, 0)
+      ),
+      h2h = listOf(
+        H2hMatch("20 مارس 2019", "مباراة ودية", "ألمانيا", "صربيا", "1 - 1", null),
+        H2hMatch("18 يونيو 2010", "كأس العالم", "ألمانيا", "صربيا", "0 - 1", "صربيا")
+      )
+    )
 
     val defaultList = mutableListOf<SportsMatch>()
 
-    // 0. Featured Hero Match from TOD Screenshot: روما ضد برشلونة (4 - 0)
+    // 0. Primary Featured Hero Match: ألمانيا ضد صربيا (User Requested TOD Poster)
+    defaultList.add(germanyMatch)
+
+    // 1. Match from Screenshot 165536: مانشستر سيتي ضد ريال مدريد (22:00 - 1 أكتوبر 2026) - دوري أبطال أوروبا
+    defaultList.add(
+      SportsMatch(
+        id = "mancity_real_ucl",
+        title = "مانشستر سيتي ضد ريال مدريد",
+        tournament = "دوري أبطال أوروبا",
+        tournamentLogo = "https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/UEFA_Champions_League_logo_2.svg/512px-UEFA_Champions_League_logo_2.svg.png",
+        homeTeam = SportsTeam(name = "مانشستر سيتي", flagEmoji = "🔵", code = "MCI", logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/e/eb/Manchester_City_FC_badge.svg/512px-Manchester_City_FC_badge.svg.png"),
+        awayTeam = SportsTeam(name = "ريال مدريد", flagEmoji = "⚪", code = "RMA", logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/512px-Real_Madrid_CF.svg.png"),
+        kickoffTime = "22:00",
+        kickoffDate = "1 أكتوبر 2026",
+        stadium = "استاد الاتحاد",
+        commentator = "حفيظ دراجي",
+        channelName = "beIN SPORTS 1 HD",
+        channelId = "bein_1",
+        streamUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+        bannerUrl = "android.resource://com.example/drawable/tod_hero_match_banner",
+        isLive = true,
+        liveMinute = "'84",
+        scoreHome = 3,
+        scoreAway = 2
+      )
+    )
+
+    // 2. Match from Screenshot 165527: آرسنال ضد تشيلسي - الدوري الإنجليزي الممتاز
+    defaultList.add(
+      SportsMatch(
+        id = "arsenal_chelsea_pl",
+        title = "آرسنال ضد تشيلسي",
+        tournament = "الدوري الإنجليزي الممتاز",
+        tournamentLogo = "https://upload.wikimedia.org/wikipedia/en/thumb/f/f2/Premier_League_Logo.svg/512px-Premier_League_Logo.svg.png",
+        homeTeam = SportsTeam(name = "آرسنال", flagEmoji = "🔴", code = "ARS", logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/5/53/Arsenal_FC.svg/512px-Arsenal_FC.svg.png"),
+        awayTeam = SportsTeam(name = "تشيلسي", flagEmoji = "🔵", code = "CHE", logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/c/cc/Chelsea_FC.svg/512px-Chelsea_FC.svg.png"),
+        kickoffTime = "18:30",
+        kickoffDate = "1 أكتوبر 2026",
+        stadium = "استاد الإمارات",
+        commentator = "خليل البلوشي",
+        channelName = "beIN SPORTS 1 HD",
+        channelId = "bein_1",
+        streamUrl = "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8",
+        isLive = true,
+        liveMinute = "'58",
+        scoreHome = 2,
+        scoreAway = 2
+      )
+    )
+
+    // 3. Match from Screenshot 165601: غينيا ضد كينيا (19:00 - 1 أكتوبر 2026) - تصفيات أمم أفريقيا
+    defaultList.add(
+      SportsMatch(
+        id = "guinea_kenya_caf",
+        title = "غينيا ضد كينيا",
+        tournament = "تصفيات أمم أفريقيا",
+        tournamentLogo = "https://upload.wikimedia.org/wikipedia/en/thumb/0/07/Confederation_of_African_Football_logo.svg/512px-Confederation_of_African_Football_logo.svg.png",
+        homeTeam = SportsTeam(name = "غينيا", flagEmoji = "🇬🇳", code = "GUI", logoUrl = "https://flagcdn.com/w80/gn.png"),
+        awayTeam = SportsTeam(name = "كينيا", flagEmoji = "🇰🇪", code = "KEN", logoUrl = "https://flagcdn.com/w80/ke.png"),
+        kickoffTime = "19:00",
+        kickoffDate = "1 أكتوبر 2026",
+        stadium = "استاد لانسانا كونتي",
+        commentator = "محمد علي",
+        channelName = "beIN SPORTS 3 HD",
+        channelId = "bein_3",
+        streamUrl = "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8",
+        isLive = true,
+        liveMinute = "'63",
+        scoreHome = 1,
+        scoreAway = 0
+      )
+    )
+
+    // 4. Featured Hero Match from TOD Screenshot: روما ضد برشلونة (4 - 0)
     defaultList.add(
       SportsMatch(
         id = "roma_barca_uwcl",
@@ -606,7 +729,7 @@ class SportsBackendRepository(private val context: Context) {
       )
     )
 
-    // 1. Featured Hero Match 1 (Screenshot 8, 11, 15): ويلز ضد النرويج
+    // 5. Featured Hero Match: ويلز ضد النرويج
     defaultList.add(
       SportsMatch(
         id = "wales_norway_nations",
@@ -622,6 +745,7 @@ class SportsBackendRepository(private val context: Context) {
         channelName = "beIN SPORTS 1 HD",
         channelId = "bein_1",
         streamUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+        bannerUrl = "android.resource://com.example/drawable/tod_hero_match_banner",
         countdownText = "01 أيام : 05 ساعات : 28 دقائق",
         isLive = false,
         stats = MatchStats(possessionHome = 46, possessionAway = 54, shotsOnTargetHome = 4, shotsOnTargetAway = 7, totalShotsHome = 9, totalShotsAway = 14, cornersHome = 3, cornersAway = 6, foulsHome = 11, foulsAway = 9, yellowCardsHome = 2, yellowCardsAway = 1),
@@ -644,45 +768,7 @@ class SportsBackendRepository(private val context: Context) {
       )
     )
 
-    // 2. Featured Match 2 (Screenshots 17, 21): ألمانيا ضد صربيا
-    defaultList.add(
-      SportsMatch(
-        id = "germany_serbia_nations",
-        title = "ألمانيا ضد صربيا",
-        tournament = "دوري الأمم الأوروبية",
-        tournamentLogo = "https://upload.wikimedia.org/wikipedia/en/thumb/0/03/UEFA_Nations_League_logo.svg/512px-UEFA_Nations_League_logo.svg.png",
-        homeTeam = SportsTeam(name = "ألمانيا", flagEmoji = "🇩🇪", code = "GER", logoUrl = "https://flagcdn.com/w80/de.png"),
-        awayTeam = SportsTeam(name = "صربيا", flagEmoji = "🇷🇸", code = "SRB", logoUrl = "https://flagcdn.com/w80/rs.png"),
-        kickoffTime = "21:45",
-        kickoffDate = "1 أكتوبر 2026",
-        stadium = "أليانز أرينا",
-        commentator = "عصام الشوالي",
-        channelName = "beIN SPORTS 2 HD",
-        channelId = "bein_2",
-        streamUrl = "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8",
-        countdownText = "01 أيام : 05 ساعات : 27 دقائق",
-        isLive = false,
-        stats = MatchStats(possessionHome = 62, possessionAway = 38, shotsOnTargetHome = 8, shotsOnTargetAway = 3, totalShotsHome = 18, totalShotsAway = 7, cornersHome = 7, cornersAway = 2, foulsHome = 8, foulsAway = 14, yellowCardsHome = 1, yellowCardsAway = 3),
-        lineups = MatchLineup(
-          formationHome = "4-2-3-1", formationAway = "3-4-2-1",
-          coachHome = "يوليان ناغلسمان", coachAway = "دراغان ستويكوفيتش",
-          startersHome = listOf("باومان (حارس)", "كيميتش", "روديغر", "شلوتربيك", "ميتيلشتيت", "أندريش", "بافلوفيتش", "فلوريان فيرتز", "جمال موسيالا", "كاي هافيرتز", "أونديف"),
-          startersAway = listOf("راجكوفيتش (حارس)", "إيراكوفيتش", "ميلينكوفيتش", "بافلوفيتش", "نديلكوفيتش", "ماكسيموفيتش", "غروجيتش", "بيرمانسيفيتش", "ساماردزيتش", "لوكيتش", "دوشان فلاهوفيتش")
-        ),
-        standings = listOf(
-          StandingRow(1, "ألمانيا", "https://flagcdn.com/w80/de.png", 2, 5, 6),
-          StandingRow(2, "هولندا", "https://flagcdn.com/w80/nl.png", 2, 3, 4),
-          StandingRow(3, "البوسنة والهرسك", "https://flagcdn.com/w80/ba.png", 2, -4, 1),
-          StandingRow(4, "صربيا", "https://flagcdn.com/w80/rs.png", 2, -4, 0)
-        ),
-        h2h = listOf(
-          H2hMatch("20 مارس 2019", "مباراة ودية", "ألمانيا", "صربيا", "1 - 1", null),
-          H2hMatch("18 يونيو 2010", "كأس العالم", "ألمانيا", "صربيا", "0 - 1", "صربيا")
-        )
-      )
-    )
-
-    // 3. Featured Match 3 (Screenshot 10, 18): مانشستر يونايتد ضد صباح (4 - 0)
+    // 6. Featured Match 3 (Screenshot 10, 18): مانشستر يونايتد ضد صباح (4 - 0)
     defaultList.add(
       SportsMatch(
         id = "man_utd_sabah_ucl",
@@ -974,21 +1060,38 @@ class SportsBackendRepository(private val context: Context) {
       SportsShow("fifa_story", "THE STORY OF FIFA WORLD CUP", "الفيلم الوثائقي الرسمي لكأس العالم", "1س 15د", streamUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4")
     )
 
-    // Initialize Direct Sports Channels (Screenshots 14, 16, 17)
+    // Initialize Direct Sports & Entertainment Channels (Matching Screenshots 1:1)
     _sportsChannels.value = listOf(
-      XtreamChannel("bein_1", "beIN SPORTS 1 HD", "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/BeIN_Sports_1_logo.svg/512px-BeIN_Sports_1_logo.svg.png", "قنوات الرياضة", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"),
-      XtreamChannel("bein_4k", "beIN SPORTS 4K Ultra", "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/BeIN_Sports_1_logo.svg/512px-BeIN_Sports_1_logo.svg.png", "قنوات الرياضة", "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8"),
-      XtreamChannel("bein_2", "beIN SPORTS 2 HD", "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/BeIN_Sports_1_logo.svg/512px-BeIN_Sports_1_logo.svg.png", "قنوات الرياضة", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"),
-      XtreamChannel("bein_3", "beIN SPORTS 3 HD", "", "قنوات الرياضة", "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8"),
+      // 1. قنوات الرياضة (beIN SPORTS & Major Networks)
+      XtreamChannel("bein_1", "beIN SPORTS 1 HD", "", "قنوات الرياضة", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"),
+      XtreamChannel("bein_2", "beIN SPORTS 2 HD", "", "قنوات الرياضة", "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8"),
+      XtreamChannel("bein_3", "beIN SPORTS 3 HD", "", "قنوات الرياضة", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"),
+      XtreamChannel("bein_4", "beIN SPORTS 4 HD", "", "قنوات الرياضة", "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8"),
+      XtreamChannel("bein_5", "beIN SPORTS 5 HD", "", "قنوات الرياضة", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"),
+      XtreamChannel("bein_6", "beIN SPORTS 6 HD", "", "قنوات الرياضة", "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8"),
       XtreamChannel("bein_news", "beIN SPORTS الإخبارية", "", "قنوات الرياضة", "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8"),
-      XtreamChannel("alkass_extra", "قناة الكأس EXTRA HD", "", "قنوات الرياضة", "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8"),
-      XtreamChannel("lfctv", "LFCTV - ليفربول الرسمي", "", "قنوات الرياضة", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"),
-      XtreamChannel("mutv", "MUTV - مانشستر يونايتد", "", "قنوات الرياضة", "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8"),
+      XtreamChannel("bein_xtra", "beIN SPORTS XTRA 1", "", "قنوات الرياضة", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"),
+      XtreamChannel("bein_afc", "beIN SPORTS AFC", "", "قنوات الرياضة", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"),
       XtreamChannel("premier_league", "Premier League TV", "", "قنوات الرياضة", "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8"),
-      XtreamChannel("aljazeera_live", "الجزيرة مباشر", "", "قنوات الجزيرة", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"),
+      XtreamChannel("lfctv", "LFCTV", "", "قنوات الرياضة", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"),
+      XtreamChannel("alkass_1", "قناة الكأس 1 HD", "", "قنوات الرياضة", "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8"),
+      XtreamChannel("alkass_extra", "قناة الكأس EXTRA HD", "", "قنوات الرياضة", "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8"),
+      XtreamChannel("ssc_1", "SSC 1 HD", "", "قنوات الرياضة", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"),
+      XtreamChannel("ad_sports", "أبوظبي الرياضية 1 HD", "", "قنوات الرياضة", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"),
+      XtreamChannel("ontime_1", "ON Time Sports HD", "", "قنوات الرياضة", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"),
+
+      // 2. قنوات الجزيرة
+      XtreamChannel("aljazeera_main", "الجزيرة", "", "قنوات الجزيرة", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"),
       XtreamChannel("aljazeera_doc", "الجزيرة الوثائقية", "", "قنوات الجزيرة", "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8"),
-      XtreamChannel("bein_series_1", "beIN SERIES 1 HD", "", "قنوات الأخبار", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"),
-      XtreamChannel("bein_series_2", "beIN SERIES 2 HD", "", "قنوات الأخبار", "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8")
+      XtreamChannel("aljazeera_live", "الجزيرة مباشر", "", "قنوات الجزيرة", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"),
+
+      // 3. قنوات المسلسلات
+      XtreamChannel("bein_series_1", "beIN SERIES 1", "", "قنوات المسلسلات", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"),
+      XtreamChannel("bein_series_2", "beIN SERIES 2", "", "قنوات المسلسلات", "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8"),
+
+      // 4. قنوات الأفلام
+      XtreamChannel("bein_movies_1", "beIN MOVIES 1", "", "قنوات الأفلام", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"),
+      XtreamChannel("bein_movies_2", "beIN MOVIES 2", "", "قنوات الأفلام", "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8")
     )
   }
 }

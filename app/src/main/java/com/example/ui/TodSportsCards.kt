@@ -3,6 +3,7 @@ package com.example.ui
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,14 +15,18 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -32,12 +37,15 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material.icons.filled.Tv
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,6 +53,8 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -52,6 +62,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import com.example.model.SportsCompetition
 import com.example.model.SportsMatch
 import com.example.model.SportsShow
@@ -90,43 +102,175 @@ val TodSpecularBorder = Brush.linearGradient(
 )
 
 /**
- * High-resolution Team Crest Component (Supports real logo URL from server dashboard + flag emoji fallback)
+ * High-resolution Team Crest Component (Pure transparent crests - NO circle underneath per user instruction)
  */
 @Composable
 fun TodTeamCrest(
   team: SportsTeam,
-  size: Dp = 54.dp,
+  size: Dp = 46.dp,
   borderGlowColor: Color = Color(0xFF64D2FF),
   modifier: Modifier = Modifier
 ) {
-  if (!team.logoUrl.isNullOrBlank()) {
-    Box(
-      modifier = modifier.size(size),
-      contentAlignment = Alignment.Center
-    ) {
-      AsyncImage(
-        model = team.logoUrl,
-        contentDescription = team.name,
-        modifier = Modifier.fillMaxSize(),
-        contentScale = ContentScale.Fit
-      )
-    }
-  } else {
-    Box(
-      modifier = modifier
-        .size(size)
-        .clip(CircleShape)
-        .background(
-          Brush.radialGradient(
-            listOf(borderGlowColor.copy(alpha = 0.35f), Color(0x18FFFFFF))
-          )
+  Box(
+    modifier = modifier.size(size),
+    contentAlignment = Alignment.Center
+  ) {
+    when {
+      team.name.contains("ألمانيا") || team.code == "GER" -> {
+        Image(
+          painter = painterResource(id = R.drawable.ic_crest_germany),
+          contentDescription = team.name,
+          modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)),
+          contentScale = ContentScale.Fit
         )
-        .border(1.2.dp, borderGlowColor.copy(alpha = 0.6f), CircleShape),
-      contentAlignment = Alignment.Center
+      }
+      team.name.contains("صربيا") || team.code == "SRB" -> {
+        Image(
+          painter = painterResource(id = R.drawable.ic_crest_serbia),
+          contentDescription = team.name,
+          modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)),
+          contentScale = ContentScale.Fit
+        )
+      }
+      team.name.contains("غينيا") || team.code == "GUI" -> {
+        Image(
+          painter = painterResource(id = R.drawable.ic_crest_guinea),
+          contentDescription = team.name,
+          modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)),
+          contentScale = ContentScale.Fit
+        )
+      }
+      team.name.contains("كينيا") || team.code == "KEN" -> {
+        Image(
+          painter = painterResource(id = R.drawable.ic_crest_kenya),
+          contentDescription = team.name,
+          modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)),
+          contentScale = ContentScale.Fit
+        )
+      }
+      !team.logoUrl.isNullOrBlank() -> {
+        AsyncImage(
+          model = team.logoUrl,
+          contentDescription = team.name,
+          modifier = Modifier.fillMaxSize(),
+          contentScale = ContentScale.Fit
+        )
+      }
+      else -> {
+        // Clean transparent crest display (Zero circles underneath)
+        Text(
+          text = team.flagEmoji,
+          fontSize = (size.value * 0.72f).sp,
+          textAlign = TextAlign.Center
+        )
+      }
+    }
+  }
+}
+
+/**
+ * Official App Brand Logo for Poster Top Right (PNG / Emblemed TOD Logo)
+ */
+@Composable
+fun TodPosterTopRightLogo(modifier: Modifier = Modifier) {
+  Row(
+    modifier = modifier
+      .clip(RoundedCornerShape(12.dp))
+      .background(Color(0x40000000))
+      .border(0.75.dp, Color(0x35FFFFFF), RoundedCornerShape(12.dp))
+      .padding(horizontal = 8.dp, vertical = 4.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(6.dp)
+  ) {
+    Text(
+      text = "TOD",
+      color = Color(0xFFFFB800),
+      fontSize = 20.sp,
+      fontWeight = FontWeight.Black,
+      letterSpacing = 1.sp,
+      fontFamily = ThmanyahFontFamily
+    )
+    Image(
+      painter = painterResource(id = R.drawable.tod_icon),
+      contentDescription = "TOD",
+      modifier = Modifier
+        .size(24.dp)
+        .clip(RoundedCornerShape(6.dp)),
+      contentScale = ContentScale.Crop
+    )
+  }
+}
+
+/**
+ * Countdown timer pill bar matching TOD Screenshots (04 ساعات : 45 دقائق : 18 ثوانى)
+ */
+@Composable
+fun TodCountdownPillBar(
+  hours: String = "04",
+  minutes: String = "45",
+  seconds: String = "18",
+  modifier: Modifier = Modifier
+) {
+  Row(
+    modifier = modifier,
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(5.dp)
+  ) {
+    // 1. Seconds Pill (Left in RTL / Front)
+    TodTimerPill(label = "ثوانى", value = seconds)
+
+    Text(
+      text = ":",
+      color = Color(0xFFFFB800),
+      fontSize = 14.sp,
+      fontWeight = FontWeight.Black
+    )
+
+    // 2. Minutes Pill (Center)
+    TodTimerPill(label = "دقائق", value = minutes)
+
+    Text(
+      text = ":",
+      color = Color(0xFFFFB800),
+      fontSize = 14.sp,
+      fontWeight = FontWeight.Black
+    )
+
+    // 3. Hours Pill (Right in RTL / Back)
+    TodTimerPill(label = "ساعات", value = hours)
+  }
+}
+
+@Composable
+fun TodTimerPill(
+  label: String,
+  value: String
+) {
+  Box(
+    modifier = Modifier
+      .clip(RoundedCornerShape(8.dp))
+      .background(Color(0x851E2638))
+      .border(0.75.dp, Color(0x35FFFFFF), RoundedCornerShape(8.dp))
+      .padding(horizontal = 10.dp, vertical = 4.dp),
+    contentAlignment = Alignment.Center
+  ) {
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(5.dp)
     ) {
       Text(
-        text = team.flagEmoji,
-        fontSize = (size.value * 0.46f).sp
+        text = label,
+        color = Color(0xFFE2E8F0),
+        fontSize = 12.5.sp,
+        fontFamily = ThmanyahFontFamily,
+        fontWeight = FontWeight.Bold
+      )
+      Text(
+        text = value,
+        color = Color(0xFFFFB800),
+        fontSize = 14.5.sp,
+        fontFamily = ThmanyahFontFamily,
+        fontWeight = FontWeight.Black
       )
     }
   }
@@ -142,178 +286,188 @@ fun TodMatchCountdownHero(
   match: SportsMatch,
   onPlayMatch: (SportsMatch) -> Unit,
   onOpenDetails: (SportsMatch) -> Unit,
+  currentIndex: Int = 0,
+  totalCount: Int = 1,
+  onSelectIndex: (Int) -> Unit = {},
   modifier: Modifier = Modifier
 ) {
-  val playInteraction = remember { MutableInteractionSource() }
-  val isPlayPressed by playInteraction.collectIsPressedAsState()
-  val playScale by animateFloatAsState(
-    targetValue = if (isPlayPressed) 0.95f else 1.0f,
-    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-    label = "heroPlayScale"
-  )
-
   Box(
     modifier = modifier
       .fillMaxWidth()
-      .liquidGlassEffect(
-        shape = RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp),
-        isElevated = true,
-        glowTint = Color(0xFF0A84FF),
-        borderBrush = LiquidGlassTheme.LiquidSpecularBorder
-      )
+      .height(600.dp)
+      .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
   ) {
-    // Backdrop Cinematic Composite (Players + Stadium atmosphere)
-    val heroBackdrop = if (!match.bannerUrl.isNullOrBlank()) match.bannerUrl else "android.resource://com.example/drawable/tod_hero_match_banner"
-    AsyncImage(
-      model = heroBackdrop,
-      contentDescription = null,
-      contentScale = ContentScale.Crop,
-      modifier = Modifier
-        .fillMaxWidth()
-        .height(490.dp)
-        .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
-    )
+    // 1. Full-bleed Poster Image (Hero Composite)
+    val isGermanyPoster = match.id == "germany_serbia_nations" ||
+      match.title.contains("ألمانيا") ||
+      match.bannerUrl?.contains("87c142b3") == true ||
+      match.bannerUrl?.contains("tod_germany_serbia_poster") == true
 
-    // Deep smooth glass overlay gradient fading down
+    if (isGermanyPoster) {
+      Image(
+        painter = painterResource(id = R.drawable.tod_germany_serbia_poster),
+        contentDescription = match.title,
+        contentScale = ContentScale.Crop,
+        alignment = Alignment.TopCenter,
+        modifier = Modifier.fillMaxSize()
+      )
+    } else {
+      val heroBackdrop = if (!match.bannerUrl.isNullOrBlank()) match.bannerUrl else "android.resource://com.example/drawable/tod_hero_match_banner"
+      AsyncImage(
+        model = heroBackdrop,
+        contentDescription = match.title,
+        contentScale = ContentScale.Crop,
+        alignment = Alignment.TopCenter,
+        modifier = Modifier.fillMaxSize()
+      )
+    }
+
+    // 2. Top Subtle Glow Gradient (Keeps top header readable without masking poster)
+    val currentTheme = com.example.ui.theme.LocalAppTheme.current
     Box(
       modifier = Modifier
-        .matchParentSize()
+        .fillMaxWidth()
+        .height(140.dp)
+        .align(Alignment.TopCenter)
         .background(
           Brush.verticalGradient(
             listOf(
-              Color(0x50000000),
-              Color(0x20050E20),
-              Color(0x80070B16),
-              Color(0xE007090E),
-              Color(0xFA07090E)
+              Color(0x70000000),
+              Color(0x30000000),
+              Color.Transparent
             )
           )
         )
     )
 
+    // 3. Top Header: "رياضة  ->" on Top Right (Matching all 5 screenshots)
+    Row(
+      modifier = Modifier
+        .fillMaxWidth()
+        .statusBarsPadding()
+        .padding(horizontal = 18.dp, vertical = 12.dp)
+        .align(Alignment.TopCenter),
+      horizontalArrangement = Arrangement.End,
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+          .clip(RoundedCornerShape(12.dp))
+          .background(Color(0x40000000))
+          .padding(horizontal = 12.dp, vertical = 6.dp)
+      ) {
+        Text(
+          text = "رياضة",
+          color = Color.White,
+          fontSize = 17.sp,
+          fontFamily = ThmanyahFontFamily,
+          fontWeight = FontWeight.Bold
+        )
+        Icon(
+          imageVector = Icons.AutoMirrored.Filled.ArrowBack, // Pointing right in RTL
+          contentDescription = "رياضة",
+          tint = Color.White,
+          modifier = Modifier.size(18.dp)
+        )
+      }
+    }
+
+    // 4. Subtle Bottom Gradient (Transparent at top, only shading text area at bottom)
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .height(260.dp)
+        .align(Alignment.BottomCenter)
+        .background(
+          Brush.verticalGradient(
+            colors = listOf(
+              Color.Transparent,
+              Color(0x20081024),
+              Color(0x80081024),
+              Color(0xE0081024),
+              Color(0xFF0A1024)
+            )
+          )
+        )
+    )
+
+    // 5. Bottom Overlay Content (Logos, Title, Countdown, Metadata, My TOD / Play Button, Dots)
     Column(
       modifier = Modifier
         .fillMaxWidth()
-        .padding(start = 16.dp, end = 16.dp, top = 105.dp, bottom = 16.dp)
+        .align(Alignment.BottomCenter)
+        .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+      horizontalAlignment = Alignment.End
     ) {
-      // Top Header: Right "رياضة ->"
+      // 5.1 Logos / Flags Row (Right side in Arabic RTL)
       Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(bottom = 8.dp),
-        horizontalArrangement = Arrangement.End,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.padding(bottom = 8.dp)
       ) {
-        Row(
+        // Away Team Flag / Crest (Left in RTL)
+        Box(
           modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color(0x25000000))
-            .padding(horizontal = 10.dp, vertical = 4.dp),
-          verticalAlignment = Alignment.CenterVertically
+            .width(54.dp)
+            .height(38.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color(0x30000000))
+            .border(1.5.dp, Color.White, RoundedCornerShape(8.dp)),
+          contentAlignment = Alignment.Center
         ) {
-          Text(
-            text = "رياضة",
-            color = Color.White,
-            fontSize = 13.sp,
-            fontFamily = ThmanyahFontFamily,
-            fontWeight = FontWeight.Bold
-          )
-          Spacer(modifier = Modifier.width(6.dp))
-          Icon(
-            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.size(16.dp)
-          )
+          TodTeamCrest(team = match.awayTeam, size = 36.dp)
+        }
+
+        // Center Dash "-"
+        Text(
+          text = "-",
+          color = Color.White,
+          fontSize = 18.sp,
+          fontWeight = FontWeight.Black
+        )
+
+        // Home Team Flag / Crest (Right in RTL)
+        Box(
+          modifier = Modifier
+            .width(54.dp)
+            .height(38.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color(0x30000000))
+            .border(1.5.dp, Color.White, RoundedCornerShape(8.dp)),
+          contentAlignment = Alignment.Center
+        ) {
+          TodTeamCrest(team = match.homeTeam, size = 36.dp)
         }
       }
 
-      Spacer(modifier = Modifier.height(60.dp))
-
-      // Duel Row: Home Crest [Left]  Score & Minute [Center]  Away Crest [Right]
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        // Home Team Crest (Left)
-        TodTeamCrest(
-          team = match.homeTeam,
-          size = 68.dp,
-          borderGlowColor = Color(0xFF64D2FF)
-        )
-
-        // Center Score & Live Minute Pill
-        Column(
-          horizontalAlignment = Alignment.CenterHorizontally,
-          verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-          if (match.scoreHome != null && match.scoreAway != null) {
-            Text(
-              text = "${match.scoreHome}  -  ${match.scoreAway}",
-              color = Color.White,
-              fontSize = 34.sp,
-              fontWeight = FontWeight.Black,
-              letterSpacing = 2.sp
-            )
-          } else {
-            Text(
-              text = match.kickoffTime,
-              color = Color.White,
-              fontSize = 26.sp,
-              fontWeight = FontWeight.Black
-            )
-          }
-
-          // Minute Pill (e.g. '70)
-          val displayMinute = match.liveMinute ?: if (match.isLive) "'70" else null
-          if (displayMinute != null) {
-            Box(
-              modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color(0x80000000))
-                .border(0.75.dp, Color(0x40FFFFFF), RoundedCornerShape(8.dp))
-                .padding(horizontal = 10.dp, vertical = 3.dp)
-            ) {
-              Text(
-                text = displayMinute,
-                color = Color.White,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Black
-              )
-            }
-          }
-        }
-
-        // Away Team Crest (Right)
-        TodTeamCrest(
-          team = match.awayTeam,
-          size = 68.dp,
-          borderGlowColor = Color(0xFFBF5AF2)
-        )
-      }
-
-      Spacer(modifier = Modifier.height(18.dp))
-
-      // Match Title (Bold White, RTL aligned)
+      // 5.2 Match Title (Bold White, RTL Right-aligned)
       Text(
         text = match.title,
         color = Color.White,
-        fontSize = 21.sp,
+        fontSize = 20.sp,
         fontWeight = FontWeight.Black,
         fontFamily = ThmanyahFontFamily,
         textAlign = TextAlign.Right,
         modifier = Modifier.fillMaxWidth()
       )
 
-      Spacer(modifier = Modifier.height(4.dp))
+      Spacer(modifier = Modifier.height(8.dp))
 
-      // Match Subtitle Metadata: "٣٠ سبتمبر • ١٩:٤٥ • Stadio Tre Fontane • دوري أبطال أوروبا"
+      // 5.3 Countdown Timer Pills: [ 04 ساعات ] : [ 45 دقائق ] : [ 18 ثوانى ]
+      TodCountdownPillBar(
+        hours = "04",
+        minutes = "45",
+        seconds = "18"
+      )
+
+      Spacer(modifier = Modifier.height(8.dp))
+
+      // 5.4 Match Subtitle Metadata
       Text(
         text = "${match.kickoffDate} • ${match.kickoffTime} • ${match.stadium.ifBlank { "الملعب الرئيسي" }} • ${match.tournament}",
-        color = Color(0xFFB5BAC9),
+        color = Color(0xFFD0D8E8),
         fontSize = 12.sp,
         fontFamily = ThmanyahFontFamily,
         fontWeight = FontWeight.Medium,
@@ -323,159 +477,1135 @@ fun TodMatchCountdownHero(
         modifier = Modifier.fillMaxWidth()
       )
 
-      Spacer(modifier = Modifier.height(8.dp))
+      Spacer(modifier = Modifier.height(14.dp))
 
-      // Live Red Pill Badge (RTL aligned on right)
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.End
-      ) {
-        if (match.isLive) {
+      // 5.5 Action Button (Screenshot 1, 2, 5: Wide "My TOD [+]" or Screenshot 3, 4: "[+] | تشغيل ▶")
+      if (match.isLive) {
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(10.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          // Plus Box Button
           Box(
             modifier = Modifier
-              .clip(RoundedCornerShape(6.dp))
-              .background(Color(0xFFE50914))
-              .padding(horizontal = 10.dp, vertical = 3.dp)
+              .size(48.dp)
+              .clip(RoundedCornerShape(12.dp))
+              .background(Color(0x902C3444))
+              .border(0.75.dp, Color(0x40FFFFFF), RoundedCornerShape(12.dp))
+              .clickable { onOpenDetails(match) },
+            contentAlignment = Alignment.Center
           ) {
-            Text(
-              text = "مباشر",
-              color = Color.White,
-              fontSize = 11.5.sp,
-              fontWeight = FontWeight.Black,
-              fontFamily = ThmanyahFontFamily
-            )
+            Box(
+              modifier = Modifier
+                .size(22.dp)
+                .border(1.5.dp, Color.White, RoundedCornerShape(5.dp)),
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+            }
           }
-        } else if (!match.countdownText.isNullOrBlank()) {
+
+          // Large Yellow "تشغيل ▶" Button
           Box(
             modifier = Modifier
-              .clip(RoundedCornerShape(6.dp))
-              .background(Color(0x30FFFFFF))
-              .border(0.75.dp, Color(0x40FFFFFF), RoundedCornerShape(6.dp))
-              .padding(horizontal = 10.dp, vertical = 3.dp)
+              .weight(1f)
+              .height(48.dp)
+              .clip(RoundedCornerShape(12.dp))
+              .background(Color(0xFFFFB800))
+              .clickable { onPlayMatch(match) },
+            contentAlignment = Alignment.Center
           ) {
-            Text(
-              text = match.countdownText,
-              color = TodGold,
-              fontSize = 11.5.sp,
-              fontWeight = FontWeight.Bold,
-              fontFamily = ThmanyahFontFamily
-            )
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.Center
+            ) {
+              Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.Black, modifier = Modifier.size(24.dp))
+              Spacer(modifier = Modifier.width(6.dp))
+              Text(
+                text = "تشغيل",
+                color = Color.Black,
+                fontSize = 17.sp,
+                fontFamily = ThmanyahFontFamily,
+                fontWeight = FontWeight.Black
+              )
+            }
           }
         }
-      }
-
-      Spacer(modifier = Modifier.height(16.dp))
-
-      // Bottom Action Bar (3 Buttons: [+] Add | ↺ Replay | ▶ تابع الآن Golden Liquid Glass)
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        // 1. [+] Add to watchlist / My TOD button (Settings Liquid Glass)
+      } else {
+        // Wide "My TOD [+]" Button (Screenshot 1, 2, 5)
         Box(
           modifier = Modifier
-            .iosBounceClick(scaleDown = 0.90f, onClick = { onOpenDetails(match) })
-            .size(50.dp)
-            .liquidGlassEffect(
-              shape = RoundedCornerShape(16.dp),
-              isElevated = true,
-              glowTint = Color(0xFF0A84FF),
-              borderBrush = LiquidGlassTheme.LiquidBlueBorder
-            ),
-          contentAlignment = Alignment.Center
-        ) {
-          Icon(
-            imageVector = Icons.Default.AddBox,
-            contentDescription = "إضافة للمفضلة",
-            tint = Color.White,
-            modifier = Modifier.size(22.dp)
-          )
-        }
-
-        // 2. ↺ Replay / Restart button (Settings Liquid Glass)
-        Box(
-          modifier = Modifier
-            .iosBounceClick(scaleDown = 0.90f, onClick = { onPlayMatch(match) })
-            .size(50.dp)
-            .liquidGlassEffect(
-              shape = RoundedCornerShape(16.dp),
-              isElevated = true,
-              glowTint = Color(0xFFBF5AF2),
-              borderBrush = LiquidGlassTheme.LiquidPurpleBorder
-            ),
-          contentAlignment = Alignment.Center
-        ) {
-          Icon(
-            imageVector = Icons.Default.Replay,
-            contentDescription = "إعادة البث",
-            tint = Color.White,
-            modifier = Modifier.size(22.dp)
-          )
-        }
-
-        // 3. ▶ Golden Liquid Glass Wide "تابع الآن" Button (Settings Glowing Gold Sheen)
-        Box(
-          modifier = Modifier
-            .weight(1f)
-            .height(50.dp)
-            .iosBounceClick(scaleDown = 0.95f, onClick = { onPlayMatch(match) })
-            .liquidGlassEffect(
-              shape = RoundedCornerShape(16.dp),
-              isElevated = true,
-              glowTint = TodGold,
-              glassColor = Color(0xFFFDB913),
-              borderBrush = LiquidGlassTheme.LiquidGoldBorder
-            ),
+            .fillMaxWidth()
+            .height(48.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0x952C3444))
+            .border(0.75.dp, Color(0x40FFFFFF), RoundedCornerShape(12.dp))
+            .clickable { onOpenDetails(match) },
           contentAlignment = Alignment.Center
         ) {
           Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
           ) {
-            Icon(
-              imageVector = Icons.Default.PlayArrow,
-              contentDescription = null,
-              tint = Color.Black,
-              modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
             Text(
-              text = "تابع الآن",
-              color = Color.Black,
-              fontSize = 16.5.sp,
+              text = "My TOD",
+              color = Color.White,
+              fontSize = 16.sp,
               fontFamily = ThmanyahFontFamily,
-              fontWeight = FontWeight.Black
+              fontWeight = FontWeight.Bold
             )
+            Spacer(modifier = Modifier.width(8.dp))
+            Box(
+              modifier = Modifier
+                .size(20.dp)
+                .border(1.5.dp, Color.White, RoundedCornerShape(4.dp)),
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+            }
           }
         }
       }
 
-      Spacer(modifier = Modifier.height(10.dp))
+      Spacer(modifier = Modifier.height(12.dp))
 
-      // Carousel Indicator Dots (• • ── • • •)
+      // 5.6 Carousel Indicator Dots: • • • ───── • • •
       Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Box(modifier = Modifier.size(4.dp).clip(CircleShape).background(Color(0x55FFFFFF)))
-        Spacer(modifier = Modifier.width(4.dp))
-        Box(modifier = Modifier.size(4.dp).clip(CircleShape).background(Color(0x55FFFFFF)))
-        Spacer(modifier = Modifier.width(4.dp))
-        Box(modifier = Modifier.width(22.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(Color.White))
-        Spacer(modifier = Modifier.width(4.dp))
-        Box(modifier = Modifier.size(4.dp).clip(CircleShape).background(Color(0x55FFFFFF)))
-        Spacer(modifier = Modifier.width(4.dp))
-        Box(modifier = Modifier.size(4.dp).clip(CircleShape).background(Color(0x55FFFFFF)))
+        val count = totalCount.coerceAtLeast(1)
+        if (count > 1) {
+          for (idx in 0 until count) {
+            val isCurrent = idx == currentIndex
+            Box(
+              modifier = Modifier
+                .clickable { onSelectIndex(idx) }
+                .padding(horizontal = 2.5.dp, vertical = 4.dp)
+            ) {
+              if (isCurrent) {
+                Box(
+                  modifier = Modifier
+                    .width(24.dp)
+                    .height(3.5.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color.White)
+                )
+              } else {
+                Box(
+                  modifier = Modifier
+                    .size(4.5.dp)
+                    .clip(CircleShape)
+                    .background(Color(0x60FFFFFF))
+                )
+              }
+            }
+          }
+        } else {
+          Box(modifier = Modifier.size(4.5.dp).clip(CircleShape).background(Color(0x60FFFFFF)))
+          Spacer(modifier = Modifier.width(3.dp))
+          Box(modifier = Modifier.width(24.dp).height(3.5.dp).clip(RoundedCornerShape(2.dp)).background(Color.White))
+        }
       }
     }
   }
 }
 
 /**
- * 2. Live Multi-Sports Horizontal Rail (Screenshots 4, 11, 14)
- * "البث المباشر - رياضات متعددة"
+ * Dynamic Multi-Poster Hero Banner Carousel (Screenshots 11, 15)
+ * Supports multiple posters with auto-advance, smooth horizontal pager,
+ * dynamic indicator dots, and automatic cards generation.
+ */
+@Composable
+fun TodHeroBannerCarousel(
+  matches: List<SportsMatch>,
+  onPlayMatch: (SportsMatch) -> Unit,
+  onOpenDetails: (SportsMatch) -> Unit,
+  modifier: Modifier = Modifier
+) {
+  if (matches.isEmpty()) return
+
+  if (matches.size == 1) {
+    TodMatchCountdownHero(
+      match = matches[0],
+      onPlayMatch = onPlayMatch,
+      onOpenDetails = onOpenDetails,
+      currentIndex = 0,
+      totalCount = 1,
+      modifier = modifier
+    )
+    return
+  }
+
+  val pagerState = rememberPagerState(pageCount = { matches.size })
+  val coroutineScope = rememberCoroutineScope()
+
+  // Gentle auto-scroll every 6 seconds
+  LaunchedEffect(pagerState, matches.size) {
+    while (true) {
+      delay(6000)
+      if (!pagerState.isScrollInProgress) {
+        val nextPage = (pagerState.currentPage + 1) % matches.size
+        pagerState.animateScrollToPage(nextPage)
+      }
+    }
+  }
+
+  Box(modifier = modifier.fillMaxWidth()) {
+    HorizontalPager(
+      state = pagerState,
+      modifier = Modifier.fillMaxWidth()
+    ) { page ->
+      TodMatchCountdownHero(
+        match = matches[page],
+        onPlayMatch = onPlayMatch,
+        onOpenDetails = onOpenDetails,
+        currentIndex = pagerState.currentPage,
+        totalCount = matches.size,
+        onSelectIndex = { targetIdx ->
+          coroutineScope.launch {
+            pagerState.animateScrollToPage(targetIdx)
+          }
+        }
+      )
+    }
+  }
+}
+
+/**
+ * 2. Official Vector Channel Logo Renderer (100% Matches Screenshots 161610 & 161607)
+ * Renders pure logos directly on transparent background: beIN Sports, Al Jazeera, beIN Series, Premier League, LFCTV
+ */
+@Composable
+fun TodDrawnOfficialChannelLogo(channelName: String, modifier: Modifier = Modifier) {
+  val nameLower = channelName.lowercase()
+  when {
+    nameLower.contains("premier") || nameLower.contains("بريمير") -> {
+      // Premier League White Lion Emblem + Text (Screenshot 161607)
+      Column(
+        modifier = modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+      ) {
+        Icon(
+          imageVector = Icons.Default.SportsSoccer,
+          contentDescription = null,
+          tint = Color.White,
+          modifier = Modifier.size(26.dp)
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+          text = "Premier\nLeague",
+          color = Color.White,
+          fontSize = 11.sp,
+          fontWeight = FontWeight.Black,
+          fontFamily = ThmanyahFontFamily,
+          lineHeight = 12.sp,
+          textAlign = TextAlign.Center
+        )
+      }
+    }
+    nameLower.contains("lfc") || nameLower.contains("liverpool") -> {
+      // LFCTV Pure White Typography (Screenshot 161607)
+      Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+      ) {
+        Text(
+          text = "LFCTV",
+          color = Color.White,
+          fontSize = 22.sp,
+          fontWeight = FontWeight.Black,
+          fontFamily = ThmanyahFontFamily,
+          letterSpacing = 1.sp
+        )
+      }
+    }
+    nameLower.contains("جزيرة") || nameLower.contains("jazeera") -> {
+      // Al Jazeera Iconic Gold Flame Calligraphy (Screenshots 161610 & 161607)
+      Column(
+        modifier = modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+      ) {
+        Text(
+          text = "الجزيرة",
+          color = Color(0xFFE5A823),
+          fontSize = 22.sp,
+          fontWeight = FontWeight.Black,
+          fontFamily = ThmanyahFontFamily
+        )
+        if (nameLower.contains("وثائق") || nameLower.contains("doc")) {
+          Text(
+            text = "الوثائقية\nDOCUMENTARY",
+            color = Color(0xFFE5A823),
+            fontSize = 7.5.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = ThmanyahFontFamily,
+            lineHeight = 9.sp,
+            textAlign = TextAlign.Center
+          )
+        } else if (nameLower.contains("مباشر") || nameLower.contains("live")) {
+          Text(
+            text = "مباشر",
+            color = Color(0xFFE5A823),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = ThmanyahFontFamily
+          )
+        }
+      }
+    }
+    nameLower.contains("series") || nameLower.contains("مسلسل") -> {
+      // beIN Series Blue Badge (Screenshots 161610 & 161607)
+      val seriesNum = if (nameLower.contains("2")) "2" else "1"
+      Box(
+        modifier = modifier
+          .width(108.dp)
+          .height(56.dp)
+          .clip(RoundedCornerShape(12.dp))
+          .background(Color(0xFF0091DF))
+          .padding(horizontal = 8.dp, vertical = 5.dp),
+        contentAlignment = Alignment.Center
+      ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+              text = "beIN",
+              color = Color.White,
+              fontSize = 15.sp,
+              fontWeight = FontWeight.Black,
+              fontFamily = ThmanyahFontFamily
+            )
+            Spacer(modifier = Modifier.width(5.dp))
+            Box(
+              modifier = Modifier
+                .size(18.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(Color(0x30000000)),
+              contentAlignment = Alignment.Center
+            ) {
+              Text(
+                text = seriesNum,
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Black
+              )
+            }
+          }
+          Text(
+            text = "SERIES",
+            color = Color.White,
+            fontSize = 10.5.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 1.sp
+          )
+        }
+      }
+    }
+    nameLower.contains("movie") || nameLower.contains("أفلام") || nameLower.contains("افلام") -> {
+      // beIN Movies Ruby Badge (Screenshot 161610)
+      val movieNum = if (nameLower.contains("2")) "2" else "1"
+      Box(
+        modifier = modifier
+          .width(108.dp)
+          .height(56.dp)
+          .clip(RoundedCornerShape(12.dp))
+          .background(Color(0xFFD61834))
+          .padding(horizontal = 8.dp, vertical = 5.dp),
+        contentAlignment = Alignment.Center
+      ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+              text = "beIN",
+              color = Color.White,
+              fontSize = 15.sp,
+              fontWeight = FontWeight.Black,
+              fontFamily = ThmanyahFontFamily
+            )
+            Spacer(modifier = Modifier.width(5.dp))
+            Box(
+              modifier = Modifier
+                .size(18.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(Color(0x30000000)),
+              contentAlignment = Alignment.Center
+            ) {
+              Text(
+                text = movieNum,
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Black
+              )
+            }
+          }
+          Text(
+            text = "MOVIES",
+            color = Color.White,
+            fontSize = 10.5.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 1.sp
+          )
+        }
+      }
+    }
+    nameLower.contains("kass") || nameLower.contains("كأس") -> {
+      // Alkass Sports Maroon Emblem
+      val isExtra = nameLower.contains("extra") || nameLower.contains("إكسترا")
+      Box(
+        modifier = modifier
+          .width(108.dp)
+          .height(56.dp)
+          .clip(RoundedCornerShape(12.dp))
+          .background(Color(0xFF6B0B24))
+          .border(0.75.dp, Color(0x35FFFFFF), RoundedCornerShape(12.dp))
+          .padding(horizontal = 8.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center
+      ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+          Text(
+            text = "الكأس",
+            color = Color.White,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Black,
+            fontFamily = ThmanyahFontFamily
+          )
+          Text(
+            text = if (isExtra) "EXTRA HD" else "ALKASS 1",
+            color = Color(0xFFFFD700),
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.5.sp
+          )
+        }
+      }
+    }
+    nameLower.contains("ssc") -> {
+      // SSC Saudi Sports Company Emblem
+      Box(
+        modifier = modifier
+          .width(108.dp)
+          .height(56.dp)
+          .clip(RoundedCornerShape(12.dp))
+          .background(Color(0xFF091A2E))
+          .border(0.75.dp, Color(0x3500E676), RoundedCornerShape(12.dp))
+          .padding(horizontal = 8.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center
+      ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+          Text(
+            text = "SSC",
+            color = Color(0xFF00E676),
+            fontSize = 17.sp,
+            fontWeight = FontWeight.Black,
+            fontFamily = ThmanyahFontFamily,
+            letterSpacing = 1.sp
+          )
+          Text(
+            text = "1 HD",
+            color = Color.White,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold
+          )
+        }
+      }
+    }
+    nameLower.contains("أبوظبي") || nameLower.contains("ad sport") -> {
+      // Abu Dhabi Sports Emblem
+      Box(
+        modifier = modifier
+          .width(108.dp)
+          .height(56.dp)
+          .clip(RoundedCornerShape(12.dp))
+          .background(Color(0xFF0284C7))
+          .border(0.75.dp, Color(0x35FFFFFF), RoundedCornerShape(12.dp))
+          .padding(horizontal = 8.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center
+      ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+          Text(
+            text = "أبوظبي",
+            color = Color.White,
+            fontSize = 13.5.sp,
+            fontWeight = FontWeight.Black,
+            fontFamily = ThmanyahFontFamily
+          )
+          Text(
+            text = "SPORTS 1",
+            color = Color(0xFFE0F2FE),
+            fontSize = 9.5.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.8.sp
+          )
+        }
+      }
+    }
+    nameLower.contains("ontime") || nameLower.contains("on time") -> {
+      // ON Time Sports Emblem
+      Box(
+        modifier = modifier
+          .width(108.dp)
+          .height(56.dp)
+          .clip(RoundedCornerShape(12.dp))
+          .background(Color(0xFFB91C1C))
+          .border(0.75.dp, Color(0x35FFFFFF), RoundedCornerShape(12.dp))
+          .padding(horizontal = 8.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center
+      ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+          Text(
+            text = "ON Time",
+            color = Color.White,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Black,
+            fontFamily = ThmanyahFontFamily
+          )
+          Text(
+            text = "SPORTS",
+            color = Color.White,
+            fontSize = 9.5.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.8.sp
+          )
+        }
+      }
+    }
+    else -> {
+      // beIN Sports Iconic Purple Badge (Screenshots 161610 & 161607)
+      val isNews = nameLower.contains("إخبار") || nameLower.contains("news")
+      val channelNum = when {
+        nameLower.contains("1") -> "1"
+        nameLower.contains("2") -> "2"
+        nameLower.contains("3") -> "3"
+        nameLower.contains("4") -> "4"
+        nameLower.contains("5") -> "5"
+        nameLower.contains("6") -> "6"
+        nameLower.contains("xtra") -> "XTRA"
+        nameLower.contains("afc") -> "AFC"
+        else -> null
+      }
+
+      Box(
+        modifier = modifier
+          .width(112.dp)
+          .height(58.dp)
+          .clip(RoundedCornerShape(12.dp))
+          .background(Color(0xFF4B1669))
+          .border(0.75.dp, Color(0x35FFFFFF), RoundedCornerShape(12.dp))
+          .padding(horizontal = 7.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center
+      ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+          ) {
+            Text(
+              text = "beIN",
+              color = Color.White,
+              fontSize = 15.sp,
+              fontWeight = FontWeight.Black,
+              fontFamily = ThmanyahFontFamily
+            )
+            if (channelNum != null) {
+              Spacer(modifier = Modifier.width(4.dp))
+              Box(
+                modifier = Modifier
+                  .clip(RoundedCornerShape(4.dp))
+                  .background(Color(0x40000000))
+                  .border(0.5.dp, Color(0x30FFFFFF), RoundedCornerShape(4.dp))
+                  .padding(horizontal = 4.dp, vertical = 1.dp)
+              ) {
+                Text(
+                  text = channelNum,
+                  color = Color.White,
+                  fontSize = 10.sp,
+                  fontWeight = FontWeight.Black
+                )
+              }
+            }
+          }
+          Text(
+            text = "SPORTS",
+            color = Color.White,
+            fontSize = 10.5.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 0.8.sp
+          )
+          if (isNews) {
+            Text(
+              text = "الإخبارية",
+              color = Color(0xFFFFB800),
+              fontSize = 8.5.sp,
+              fontWeight = FontWeight.Bold,
+              fontFamily = ThmanyahFontFamily
+            )
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Pure Channel Logo (NO card, NO box, NO border - Pure logo floating directly on screen)
+ */
+@Composable
+fun TodPureChannelLogo(
+  channel: XtreamChannel,
+  onClick: () -> Unit,
+  modifier: Modifier = Modifier
+) {
+  Box(
+    modifier = modifier
+      .width(120.dp)
+      .height(68.dp)
+      .iosBounceClick(scaleDown = 0.92f, onClick = onClick)
+      .padding(horizontal = 4.dp, vertical = 4.dp),
+    contentAlignment = Alignment.Center
+  ) {
+    if (!channel.iconUrl.isNullOrBlank()) {
+      AsyncImage(
+        model = channel.iconUrl,
+        contentDescription = channel.name,
+        modifier = Modifier
+          .fillMaxSize()
+          .padding(2.dp),
+        contentScale = ContentScale.Fit
+      )
+    } else {
+      TodDrawnOfficialChannelLogo(channelName = channel.name)
+    }
+  }
+}
+
+/**
+ * Channel Category Rail without cards - pure channel logos (Screenshots 161610 & 161607)
+ */
+@Composable
+fun TodChannelsGroupRail(
+  title: String,
+  channels: List<XtreamChannel>,
+  onPlayChannel: (XtreamChannel) -> Unit,
+  modifier: Modifier = Modifier
+) {
+  if (channels.isEmpty()) return
+
+  Column(
+    modifier = modifier
+      .fillMaxWidth()
+      .padding(vertical = 8.dp)
+  ) {
+    Text(
+      text = title,
+      color = Color.White,
+      fontSize = 18.sp,
+      fontFamily = ThmanyahFontFamily,
+      fontWeight = FontWeight.Black,
+      textAlign = TextAlign.Right,
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 20.dp, vertical = 6.dp)
+    )
+
+    Spacer(modifier = Modifier.height(4.dp))
+
+    LazyRow(
+      contentPadding = PaddingValues(horizontal = 20.dp),
+      horizontalArrangement = Arrangement.spacedBy(22.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      items(channels, key = { it.streamId }) { channel ->
+        TodPureChannelLogo(
+          channel = channel,
+          onClick = { onPlayChannel(channel) }
+        )
+      }
+    }
+  }
+}
+
+/**
+ * Tournament Visual Style definition for match cards (Screenshots 165527, 165536, 165601)
+ * Colors vary strictly according to tournament brand identity and blend with user settings glow.
+ */
+data class TournamentCardStyle(
+  val tournamentKey: String,
+  val displayName: String,
+  val bgGradient: List<Color>,
+  val accentColor: Color,
+  val secondaryColor: Color,
+  val logoUrl: String
+)
+
+fun getTournamentCardStyle(tournamentName: String): TournamentCardStyle {
+  val name = tournamentName.lowercase()
+  return when {
+    name.contains("أبطال أوروبا") || name.contains("champions league") || name.contains("ucl") -> {
+      // UEFA Champions League: Starball Midnight Blue & Electric Cyan (Screenshot 165536)
+      TournamentCardStyle(
+        tournamentKey = "ucl",
+        displayName = "دوري أبطال أوروبا",
+        bgGradient = listOf(
+          Color(0xFF091E44),
+          Color(0xFF06132C),
+          Color(0xFF030917)
+        ),
+        accentColor = Color(0xFF00D4FF),
+        secondaryColor = Color(0xFF0077B6),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/UEFA_Champions_League_logo_2.svg/512px-UEFA_Champions_League_logo_2.svg.png"
+      )
+    }
+    name.contains("إنجليزي") || name.contains("premier") || name.contains("بريمير") -> {
+      // Premier League: Regal Deep Purple & Neon Magenta/Mint (Screenshot 165527)
+      TournamentCardStyle(
+        tournamentKey = "pl",
+        displayName = "الدوري الإنجليزي الممتاز",
+        bgGradient = listOf(
+          Color(0xFF380242),
+          Color(0xFF22002A),
+          Color(0xFF110016)
+        ),
+        accentColor = Color(0xFF00FF85),
+        secondaryColor = Color(0xFFE90052),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/f/f2/Premier_League_Logo.svg/512px-Premier_League_Logo.svg.png"
+      )
+    }
+    name.contains("أفريقيا") || name.contains("caf") || name.contains("افريقيا") -> {
+      // African Cup of Nations / CAF: Deep Savannah Earth & Vibrant Gold/Emerald (Screenshot 165601)
+      TournamentCardStyle(
+        tournamentKey = "caf",
+        displayName = "تصفيات أمم أفريقيا",
+        bgGradient = listOf(
+          Color(0xFF1E280C),
+          Color(0xFF131A07),
+          Color(0xFF090D03)
+        ),
+        accentColor = Color(0xFFFFC72C),
+        secondaryColor = Color(0xFF22C55E),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/0/07/Confederation_of_African_Football_logo.svg/512px-Confederation_of_African_Football_logo.svg.png"
+      )
+    }
+    name.contains("إسباني") || name.contains("لا ليغا") || name.contains("laliga") || name.contains("اسباني") -> {
+      // La Liga: Deep Spanish Burgundy & Crimson Red
+      TournamentCardStyle(
+        tournamentKey = "laliga",
+        displayName = "الدوري الإسباني",
+        bgGradient = listOf(
+          Color(0xFF3B0813),
+          Color(0xFF220309),
+          Color(0xFF110104)
+        ),
+        accentColor = Color(0xFFFF2E50),
+        secondaryColor = Color(0xFFFF6B6B),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/LaLiga_logo_2023.svg/512px-LaLiga_logo_2023.svg.png"
+      )
+    }
+    name.contains("أمم") || name.contains("nations") -> {
+      // UEFA Nations League: Deep Midnight Space Slate & Azure Blue
+      TournamentCardStyle(
+        tournamentKey = "nations",
+        displayName = "دوري الأمم الأوروبية",
+        bgGradient = listOf(
+          Color(0xFF121B33),
+          Color(0xFF0A1020),
+          Color(0xFF050810)
+        ),
+        accentColor = Color(0xFF38BDF8),
+        secondaryColor = Color(0xFF64D2FF),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/0/03/UEFA_Nations_League_logo.svg/512px-UEFA_Nations_League_logo.svg.png"
+      )
+    }
+    name.contains("روشن") || name.contains("سعودي") || name.contains("آسيا") || name.contains("afc") -> {
+      // Saudi Pro League & AFC: Deep Royal Emerald & Gold
+      TournamentCardStyle(
+        tournamentKey = "spl",
+        displayName = "دوري روشن السعودي",
+        bgGradient = listOf(
+          Color(0xFF092918),
+          Color(0xFF05170D),
+          Color(0xFF020B06)
+        ),
+        accentColor = Color(0xFF00E676),
+        secondaryColor = Color(0xFFF59E0B),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Saudi_Pro_League_logo.svg/512px-Saudi_Pro_League_logo.svg.png"
+      )
+    }
+    name.contains("فيفا") || name.contains("دولي") || name.contains("عالم") -> {
+      // International / FIFA: Rich Imperial Burgundy & Pure Gold
+      TournamentCardStyle(
+        tournamentKey = "fifa",
+        displayName = "مباريات دولية",
+        bgGradient = listOf(
+          Color(0xFF2B0E1E),
+          Color(0xFF1B0712),
+          Color(0xFF0E0309)
+        ),
+        accentColor = Color(0xFFFFB800),
+        secondaryColor = Color(0xFFFF3B30),
+        logoUrl = ""
+      )
+    }
+    else -> {
+      // Universal Sports Match
+      TournamentCardStyle(
+        tournamentKey = "general",
+        displayName = tournamentName,
+        bgGradient = listOf(
+          Color(0xFF141F3B),
+          Color(0xFF0C1326),
+          Color(0xFF060914)
+        ),
+        accentColor = Color(0xFF64D2FF),
+        secondaryColor = Color(0xFF0A84FF),
+        logoUrl = ""
+      )
+    }
+  }
+}
+
+/**
+ * 2. High-Precision Tournament Match Card (100% Matches Screenshots 165527, 165536, 165601)
+ * Features:
+ * - Dynamic tournament theme color gradient (UCL Blue, PL Purple, CAF Green/Gold, La Liga Crimson)
+ * - Harmonious blending with user settings glow aura (LocalAppTheme.current)
+ * - Pure team crests with NO circular discs underneath
+ * - Prominent live score or athletic glowing VS
+ * - Kickoff time / live minute chip
+ * - Footer with channel, commentator, and "تابع الآن" action button
+ */
+@Composable
+fun TodTournamentMatchCard(
+  match: SportsMatch,
+  onClick: () -> Unit,
+  onPlayClick: () -> Unit,
+  modifier: Modifier = Modifier,
+  isCompactWidth: Boolean = true
+) {
+  val tournamentStyle = getTournamentCardStyle(match.tournament)
+  val activeTheme = com.example.ui.theme.LocalAppTheme.current
+
+  // Card Border: Blends tournament identity with active user settings glow
+  val cardBorder = Brush.linearGradient(
+    listOf(
+      tournamentStyle.accentColor.copy(alpha = 0.70f),
+      activeTheme.glowColor.copy(alpha = 0.50f),
+      tournamentStyle.secondaryColor.copy(alpha = 0.35f),
+      Color(0x28FFFFFF)
+    )
+  )
+
+  // Card Background: Rich Tournament Gradient
+  val cardBackground = Brush.verticalGradient(
+    listOf(
+      tournamentStyle.bgGradient[0],
+      tournamentStyle.bgGradient[1],
+      tournamentStyle.bgGradient[2]
+    )
+  )
+
+  Box(
+    modifier = modifier
+      .then(if (isCompactWidth) Modifier.width(315.dp).height(178.dp) else Modifier.fillMaxWidth())
+      .iosBounceClick(scaleDown = 0.97f, onClick = onClick)
+      .clip(RoundedCornerShape(20.dp))
+      .background(cardBackground)
+      .border(1.dp, cardBorder, RoundedCornerShape(20.dp))
+  ) {
+    // Top Ambient Glow Reflection (Mirrors User Theme from Settings)
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .height(55.dp)
+        .align(Alignment.TopCenter)
+        .background(
+          Brush.verticalGradient(
+            listOf(
+              activeTheme.primaryColor.copy(alpha = 0.16f),
+              tournamentStyle.accentColor.copy(alpha = 0.08f),
+              Color.Transparent
+            )
+          )
+        )
+    )
+
+    Column(
+      modifier = Modifier
+        .fillMaxSize()
+        .padding(horizontal = 14.dp, vertical = 11.dp),
+      verticalArrangement = Arrangement.SpaceBetween
+    ) {
+      // 1. Top Header Row: Tournament Badge + Live / Time Chip
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        // Tournament Logo & Name (Right side in Arabic RTL)
+        Row(
+          modifier = Modifier.weight(1f),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          val logoUrl = if (match.tournamentLogo.isNotBlank()) match.tournamentLogo else tournamentStyle.logoUrl
+          if (logoUrl.isNotBlank()) {
+            AsyncImage(
+              model = logoUrl,
+              contentDescription = match.tournament,
+              modifier = Modifier.size(20.dp),
+              contentScale = ContentScale.Fit
+            )
+          } else {
+            Icon(
+              Icons.Default.SportsSoccer,
+              contentDescription = null,
+              tint = tournamentStyle.accentColor,
+              modifier = Modifier.size(18.dp)
+            )
+          }
+          Spacer(modifier = Modifier.width(7.dp))
+          Text(
+            text = match.tournament,
+            color = Color(0xFFE2E8F0),
+            fontSize = 12.sp,
+            fontFamily = ThmanyahFontFamily,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+          )
+        }
+
+        // Live Indicator or Kickoff Time
+        if (match.isLive) {
+          Box(
+            modifier = Modifier
+              .clip(RoundedCornerShape(6.dp))
+              .background(Color(0xFFE50914))
+              .padding(horizontal = 8.dp, vertical = 3.dp)
+          ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Icon(
+                Icons.Default.FiberManualRecord,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(6.dp)
+              )
+              Spacer(modifier = Modifier.width(4.dp))
+              val minuteText = if (!match.liveMinute.isNullOrBlank()) "مباشر ${match.liveMinute}" else "مباشر"
+              Text(
+                text = minuteText,
+                color = Color.White,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Black,
+                fontFamily = ThmanyahFontFamily
+              )
+            }
+          }
+        } else if (match.isEnded) {
+          Box(
+            modifier = Modifier
+              .clip(RoundedCornerShape(6.dp))
+              .background(Color(0x30FFFFFF))
+              .padding(horizontal = 8.dp, vertical = 3.dp)
+          ) {
+            Text(
+              text = "انتهت",
+              color = Color(0xFFB0B0B0),
+              fontSize = 10.5.sp,
+              fontWeight = FontWeight.Bold,
+              fontFamily = ThmanyahFontFamily
+            )
+          }
+        } else {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+              text = match.kickoffTime,
+              color = TodGold,
+              fontSize = 13.5.sp,
+              fontWeight = FontWeight.Black,
+              fontFamily = ThmanyahFontFamily
+            )
+            Spacer(modifier = Modifier.width(5.dp))
+            Text(
+              text = match.kickoffDate,
+              color = Color(0x99FFFFFF),
+              fontSize = 11.sp,
+              fontFamily = ThmanyahFontFamily
+            )
+          }
+        }
+      }
+
+      // 2. Middle Teams Duel Row (Pure Crests - Zero Circles Underneath)
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        // Home Team (Right in RTL)
+        Row(
+          modifier = Modifier.weight(1f),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          TodTeamCrest(
+            team = match.homeTeam,
+            size = 42.dp
+          )
+          Spacer(modifier = Modifier.width(8.dp))
+          Text(
+            text = match.homeTeam.name,
+            color = Color.White,
+            fontSize = 14.5.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = ThmanyahFontFamily,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+          )
+        }
+
+        // Center: Live Score or VS Badge
+        Box(
+          modifier = Modifier.padding(horizontal = 8.dp),
+          contentAlignment = Alignment.Center
+        ) {
+          if (match.scoreHome != null && match.scoreAway != null) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+              Text(
+                text = "${match.scoreHome} - ${match.scoreAway}",
+                color = if (match.isLive) tournamentStyle.accentColor else Color.White,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Black,
+                fontFamily = ThmanyahFontFamily
+              )
+              if (match.isLive && !match.liveMinute.isNullOrBlank()) {
+                Text(
+                  text = match.liveMinute ?: "",
+                  color = Color(0xFFE50914),
+                  fontSize = 10.sp,
+                  fontWeight = FontWeight.Black
+                )
+              }
+            }
+          } else {
+            Box(
+              modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(tournamentStyle.accentColor.copy(alpha = 0.15f))
+                .border(0.75.dp, tournamentStyle.accentColor.copy(alpha = 0.40f), RoundedCornerShape(8.dp))
+                .padding(horizontal = 10.dp, vertical = 4.dp),
+              contentAlignment = Alignment.Center
+            ) {
+              Text(
+                text = "VS",
+                color = tournamentStyle.accentColor,
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.sp,
+                fontFamily = ThmanyahFontFamily
+              )
+            }
+          }
+        }
+
+        // Away Team (Left in RTL)
+        Row(
+          modifier = Modifier.weight(1f),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.End
+        ) {
+          Text(
+            text = match.awayTeam.name,
+            color = Color.White,
+            fontSize = 14.5.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = ThmanyahFontFamily,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.End
+          )
+          Spacer(modifier = Modifier.width(8.dp))
+          TodTeamCrest(
+            team = match.awayTeam,
+            size = 42.dp
+          )
+        }
+      }
+
+      // 3. Bottom Footer Strip: Channel, Commentator, and Quick Action Button
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(10.dp))
+          .background(Color(0x20000000))
+          .border(0.5.dp, Color(0x18FFFFFF), RoundedCornerShape(10.dp))
+          .padding(horizontal = 9.dp, vertical = 5.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        // Channel Pill
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Text("📺", fontSize = 11.sp)
+          Spacer(modifier = Modifier.width(4.dp))
+          Text(
+            text = match.channelName,
+            color = tournamentStyle.accentColor,
+            fontSize = 11.sp,
+            fontFamily = ThmanyahFontFamily,
+            fontWeight = FontWeight.Bold
+          )
+        }
+
+        // Commentator Pill
+        if (!match.commentator.isNullOrBlank()) {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("🎙️", fontSize = 10.sp)
+            Spacer(modifier = Modifier.width(3.dp))
+            Text(
+              text = match.commentator,
+              color = Color(0xFFB0B8C8),
+              fontSize = 10.5.sp,
+              fontFamily = ThmanyahFontFamily
+            )
+          }
+        }
+
+        // Action Button: "تابع الآن"
+        Box(
+          modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (match.isLive) Color(0xFFFFB800) else Color(0x25FFFFFF))
+            .clickable { onPlayClick() }
+            .padding(horizontal = 9.dp, vertical = 3.5.dp)
+        ) {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+              Icons.Default.PlayArrow,
+              contentDescription = null,
+              tint = if (match.isLive) Color.Black else Color.White,
+              modifier = Modifier.size(13.dp)
+            )
+            Spacer(modifier = Modifier.width(3.dp))
+            Text(
+              text = if (match.isLive) "تابع الآن" else "مشاهدة",
+              color = if (match.isLive) Color.Black else Color.White,
+              fontSize = 10.5.sp,
+              fontWeight = FontWeight.Black,
+              fontFamily = ThmanyahFontFamily
+            )
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * 2. Live Football Matches Rail (Screenshots 165527, 165536, 165601)
+ * "مباريات كرة القدم بث مباشر"
  */
 @Composable
 fun TodLiveSportsRail(
@@ -487,354 +1617,63 @@ fun TodLiveSportsRail(
   if (matches.isEmpty()) return
 
   Column(modifier = modifier.fillMaxWidth()) {
-    Text(
-      text = "البث المباشر - رياضات متعددة",
-      color = Color.White,
-      fontSize = 17.5.sp,
-      fontFamily = AppFontFamily,
-      fontWeight = FontWeight.Bold,
-      modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-    )
+    Row(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 16.dp, vertical = 6.dp),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      Text(
+        text = "مباريات كرة القدم بث مباشر",
+        color = Color.White,
+        fontSize = 18.sp,
+        fontFamily = ThmanyahFontFamily,
+        fontWeight = FontWeight.Black
+      )
+      Text(
+        text = "${matches.size} مباريات",
+        color = Color(0x99FFFFFF),
+        fontSize = 12.sp,
+        fontFamily = ThmanyahFontFamily
+      )
+    }
 
-    Spacer(modifier = Modifier.height(6.dp))
+    Spacer(modifier = Modifier.height(8.dp))
 
     LazyRow(
       contentPadding = PaddingValues(horizontal = 16.dp),
-      horizontalArrangement = Arrangement.spacedBy(12.dp)
+      horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
       items(matches, key = { it.id }) { match ->
-        Box(
-          modifier = Modifier
-            .width(285.dp)
-            .height(156.dp)
-            .clip(RoundedCornerShape(22.dp))
-            .background(TodCardGradient)
-            .border(1.dp, TodSpecularBorder, RoundedCornerShape(22.dp))
-            .clickable { onOpenDetails(match) }
-            .padding(14.dp)
-        ) {
-          Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.SpaceBetween
-          ) {
-            // Header Row: Tournament + Red Pulsing "مباشر" Badge
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically
-              ) {
-                if (match.tournamentLogo.isNotBlank()) {
-                  AsyncImage(
-                    model = match.tournamentLogo,
-                    contentDescription = match.tournament,
-                    modifier = Modifier.size(16.dp),
-                    contentScale = ContentScale.Fit
-                  )
-                  Spacer(modifier = Modifier.width(4.dp))
-                }
-                Text(
-                  text = match.tournament,
-                  color = Color(0xFFAAAAAA),
-                  fontSize = 11.5.sp,
-                  fontFamily = AppFontFamily,
-                  fontWeight = FontWeight.SemiBold,
-                  maxLines = 1,
-                  overflow = TextOverflow.Ellipsis
-                )
-              }
-
-              Box(
-                modifier = Modifier
-                  .clip(RoundedCornerShape(6.dp))
-                  .background(Color(0xFFE50914))
-                  .padding(horizontal = 8.dp, vertical = 3.dp)
-              ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                  Icon(Icons.Default.FiberManualRecord, contentDescription = null, tint = Color.White, modifier = Modifier.size(7.dp))
-                  Spacer(modifier = Modifier.width(3.dp))
-                  Text("مباشر", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black, fontFamily = AppFontFamily)
-                }
-              }
-            }
-
-            // Middle: Match Title + Score with team logos
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically
-              ) {
-                TodTeamCrest(team = match.homeTeam, size = 30.dp)
-                Spacer(modifier = Modifier.width(6.dp))
-                TodTeamCrest(team = match.awayTeam, size = 30.dp)
-                Spacer(modifier = Modifier.width(8.dp))
-                Column {
-                  Text(
-                    text = match.title,
-                    color = Color.White,
-                    fontSize = 13.5.sp,
-                    fontFamily = AppFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                  )
-                  if (match.liveMinute != null) {
-                    Text(match.liveMinute, color = TodGold, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold)
-                  }
-                }
-              }
-
-              if (match.scoreHome != null && match.scoreAway != null) {
-                Text(
-                  text = "${match.scoreHome} - ${match.scoreAway}",
-                  color = Color.White,
-                  fontSize = 20.sp,
-                  fontWeight = FontWeight.Black
-                )
-              }
-            }
-
-            // Bottom: Quick Play Button + Channel
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Tv, contentDescription = null, tint = Color(0xFF64D2FF), modifier = Modifier.size(14.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                  text = match.channelName,
-                  color = Color(0xFF9EA3B5),
-                  fontSize = 11.5.sp,
-                  fontFamily = AppFontFamily
-                )
-              }
-
-              Box(
-                modifier = Modifier
-                  .size(34.dp)
-                  .clip(CircleShape)
-                  .background(TodGold)
-                  .clickable { onPlayMatch(match) },
-                contentAlignment = Alignment.Center
-              ) {
-                Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.Black, modifier = Modifier.size(20.dp))
-              }
-            }
-          }
-        }
+        TodTournamentMatchCard(
+          match = match,
+          onClick = { onOpenDetails(match) },
+          onPlayClick = { onPlayMatch(match) },
+          isCompactWidth = true
+        )
       }
     }
   }
 }
 
 /**
- * 3. Upcoming Football Fixture Cards (Screenshots 12, 13, 15)
- * Official TOD Fixture Card with Team Crests, Tournament Badge, and Luxury Dark Gradients.
+ * 3. Football Fixture Card Wrapper
  */
 @Composable
 fun TodMatchFixtureCard(
   match: SportsMatch,
   onClick: () -> Unit,
+  onPlayClick: (() -> Unit)? = null,
   modifier: Modifier = Modifier
 ) {
-  Box(
-    modifier = modifier
-      .width(285.dp)
-      .height(185.dp)
-      .clip(RoundedCornerShape(22.dp))
-      .background(TodCardGradient)
-      .border(1.dp, TodSpecularBorder, RoundedCornerShape(22.dp))
-      .clickable(onClick = onClick)
-      .padding(14.dp)
-  ) {
-    Column(
-      modifier = Modifier.fillMaxSize(),
-      verticalArrangement = Arrangement.SpaceBetween
-    ) {
-      // Top Row: Tournament Title & Match Status / Kickoff
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Row(
-          modifier = Modifier.weight(1f),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          if (match.tournamentLogo.isNotBlank()) {
-            AsyncImage(
-              model = match.tournamentLogo,
-              contentDescription = match.tournament,
-              modifier = Modifier.size(16.dp),
-              contentScale = ContentScale.Fit
-            )
-          } else {
-            Icon(
-              Icons.Default.SportsSoccer,
-              contentDescription = null,
-              tint = Color(0xFF64D2FF),
-              modifier = Modifier.size(16.dp)
-            )
-          }
-          Spacer(modifier = Modifier.width(6.dp))
-          Text(
-            text = match.tournament,
-            color = Color(0xFFCCCCCC),
-            fontSize = 11.5.sp,
-            fontFamily = AppFontFamily,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-          )
-        }
-
-        if (match.isLive) {
-          Box(
-            modifier = Modifier
-              .clip(RoundedCornerShape(6.dp))
-              .background(Color(0xFFE50914))
-              .padding(horizontal = 8.dp, vertical = 2.dp)
-          ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(Icons.Default.FiberManualRecord, contentDescription = null, tint = Color.White, modifier = Modifier.size(6.dp))
-              Spacer(modifier = Modifier.width(3.dp))
-              Text("مباشر ${match.liveMinute ?: ""}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, fontFamily = AppFontFamily)
-            }
-          }
-        } else {
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-              text = match.kickoffTime,
-              color = TodGold,
-              fontSize = 13.5.sp,
-              fontWeight = FontWeight.Black
-            )
-            Spacer(modifier = Modifier.width(5.dp))
-            Text(
-              text = match.kickoffDate,
-              color = Color(0x99FFFFFF),
-              fontSize = 10.5.sp,
-              fontFamily = AppFontFamily
-            )
-          }
-        }
-      }
-
-      // Middle: Teams Duel Rows (Official TOD style with Team Crests)
-      Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-      ) {
-        // Home Team Row
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Row(
-            modifier = Modifier.weight(1f),
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            TodTeamCrest(
-              team = match.homeTeam,
-              size = 36.dp,
-              borderGlowColor = Color(0xFF64D2FF)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-              text = match.homeTeam.name,
-              color = Color.White,
-              fontSize = 14.5.sp,
-              fontFamily = AppFontFamily,
-              fontWeight = FontWeight.Bold,
-              maxLines = 1,
-              overflow = TextOverflow.Ellipsis
-            )
-          }
-
-          if (match.scoreHome != null) {
-            Text(
-              text = "${match.scoreHome}",
-              color = if (match.isLive) Color(0xFF64D2FF) else Color.White,
-              fontSize = 18.sp,
-              fontWeight = FontWeight.Black
-            )
-          }
-        }
-
-        // Away Team Row
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Row(
-            modifier = Modifier.weight(1f),
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            TodTeamCrest(
-              team = match.awayTeam,
-              size = 36.dp,
-              borderGlowColor = Color(0xFFBF5AF2)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-              text = match.awayTeam.name,
-              color = Color.White,
-              fontSize = 14.5.sp,
-              fontFamily = AppFontFamily,
-              fontWeight = FontWeight.Bold,
-              maxLines = 1,
-              overflow = TextOverflow.Ellipsis
-            )
-          }
-
-          if (match.scoreAway != null) {
-            Text(
-              text = "${match.scoreAway}",
-              color = if (match.isLive) Color(0xFF64D2FF) else Color.White,
-              fontSize = 18.sp,
-              fontWeight = FontWeight.Black
-            )
-          }
-        }
-      }
-
-      // Bottom Row: Channel & Commentator Information Pill
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(8.dp))
-          .background(Color(0x15FFFFFF))
-          .padding(horizontal = 8.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Text(
-          text = "📺 ${match.channelName}",
-          color = Color(0xFF64D2FF),
-          fontSize = 10.5.sp,
-          fontFamily = AppFontFamily,
-          fontWeight = FontWeight.Bold
-        )
-        Text(
-          text = "🎙️ ${match.commentator}",
-          color = Color(0xFFB0B0C0),
-          fontSize = 10.sp,
-          fontFamily = AppFontFamily
-        )
-      }
-    }
-  }
+  TodTournamentMatchCard(
+    match = match,
+    onClick = onClick,
+    onPlayClick = { onPlayClick?.invoke() ?: onClick() },
+    modifier = modifier,
+    isCompactWidth = true
+  )
 }
 
 /**

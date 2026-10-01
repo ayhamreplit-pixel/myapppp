@@ -37,6 +37,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
@@ -143,103 +144,145 @@ fun TodHomeScreen(
     selectedTournamentFilter = null
   }
 
-  BoxWithConstraints(modifier = modifier.fillMaxSize().background(DarkBg)) {
-    val screenWidth = maxWidth
-    val isTabletOrLandscape = screenWidth >= 700.dp
-    val gridColumns = if (screenWidth >= 900.dp) 4 else if (isTabletOrLandscape) 3 else 2
+  FluidMeshBackground(
+    modifier = modifier.fillMaxSize(),
+    ambientAlpha = 0.70f
+  ) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+      val screenWidth = maxWidth
+      val isTabletOrLandscape = screenWidth >= 700.dp
+      val gridColumns = if (screenWidth >= 900.dp) 4 else if (isTabletOrLandscape) 3 else 2
 
-    // =========================================================================
-    // MAIN CONTENT (Starts at y=0 behind floating top header)
-    // =========================================================================
-    Box(
-      modifier = Modifier
-        .fillMaxSize()
-        .widthIn(max = 1200.dp)
-        .align(Alignment.TopCenter)
-    ) {
-      when (activeTopSection) {
-        TodTopSection.HOME -> {
-          // =====================================================================
-          // TAB 1: TOD HOME FEED (Hero Banner + Live Rails + Fixtures + beIN Channels)
-          // =====================================================================
-          LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 100.dp)
-          ) {
-            // 1. Featured Match Countdown Hero Banner (Screenshots 11, 15)
-            if (featuredMatch != null) {
-              item(key = "hero_featured_match") {
-                TodMatchCountdownHero(
-                  match = featuredMatch,
-                  onPlayMatch = onPlayMatchDirectly,
-                  onOpenDetails = onOpenMatchDetail
-                )
-                Spacer(modifier = Modifier.height(14.dp))
-              }
+      // =========================================================================
+      // MAIN CONTENT (Starts at y=0 behind floating top header)
+      // =========================================================================
+      Box(
+        modifier = Modifier
+          .fillMaxSize()
+          .widthIn(max = 1200.dp)
+          .align(Alignment.TopCenter)
+      ) {
+        when (activeTopSection) {
+          TodTopSection.HOME -> {
+            // =====================================================================
+            // TAB 1: TOD HOME FEED (Multi-Poster Hero Carousel + Live Rails + Fixtures + beIN Channels)
+            // =====================================================================
+            val heroMatches = remember(sportsMatches) {
+              val withPoster = sportsMatches.filter { !it.bannerUrl.isNullOrBlank() }
+              if (withPoster.isNotEmpty()) withPoster else sportsMatches.take(5)
             }
 
-            // 2. Live Multi-Sports Horizontal Rail ("البث المباشر - رياضات متعددة") (Screenshots 4, 11, 14)
-            if (liveMatches.isNotEmpty()) {
-              item(key = "live_sports_rail") {
-                TodLiveSportsRail(
-                  matches = liveMatches,
-                  onPlayMatch = onPlayMatchDirectly,
-                  onOpenDetails = onOpenMatchDetail
-                )
-                Spacer(modifier = Modifier.height(18.dp))
-              }
-            }
+            val allList = effectiveChannels.ifEmpty { sportsBackendRepo.sportsChannels.value }
 
-            // 3. Upcoming Football Fixtures Rail ("أفضل مباريات كرة القدم مباشرةً هذا الأسبوع") (Screenshots 12, 13, 15)
-            if (upcomingMatches.isNotEmpty()) {
-              item(key = "upcoming_matches_rail") {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                  Text(
-                    text = "أفضل مباريات كرة القدم مباشرةً هذا الأسبوع",
-                    color = Color.White,
-                    fontSize = 17.5.sp,
-                    fontFamily = ThmanyahFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+            val sportsGroup = allList.filter { ch ->
+              (ch.name.contains("bein", ignoreCase = true) && !ch.name.contains("series", ignoreCase = true) && !ch.name.contains("movie", ignoreCase = true)) ||
+              ch.name.contains("sport", ignoreCase = true) ||
+              ch.name.contains("premier", ignoreCase = true) ||
+              ch.name.contains("lfc", ignoreCase = true) ||
+              ch.name.contains("kass", ignoreCase = true) ||
+              ch.categoryId?.contains("رياض", ignoreCase = true) == true
+            }.ifEmpty { sportsBackendRepo.sportsChannels.value.filter { it.categoryId == "قنوات الرياضة" } }
+
+            val jazeeraGroup = allList.filter { ch ->
+              ch.name.contains("جزيرة", ignoreCase = true) ||
+              ch.name.contains("jazeera", ignoreCase = true) ||
+              ch.categoryId?.contains("جزيرة", ignoreCase = true) == true
+            }.ifEmpty { sportsBackendRepo.sportsChannels.value.filter { it.categoryId == "قنوات الجزيرة" } }
+
+            val seriesGroup = allList.filter { ch ->
+              ch.name.contains("series", ignoreCase = true) ||
+              ch.name.contains("مسلسل", ignoreCase = true) ||
+              ch.categoryId?.contains("مسلسل", ignoreCase = true) == true
+            }.ifEmpty { sportsBackendRepo.sportsChannels.value.filter { it.categoryId == "قنوات المسلسلات" } }
+
+            val moviesGroup = allList.filter { ch ->
+              ch.name.contains("movie", ignoreCase = true) ||
+              ch.name.contains("فلم", ignoreCase = true) ||
+              ch.name.contains("أفلام", ignoreCase = true) ||
+              ch.name.contains("افلام", ignoreCase = true) ||
+              ch.categoryId?.contains("أفلام", ignoreCase = true) == true
+            }.ifEmpty { sportsBackendRepo.sportsChannels.value.filter { it.categoryId == "قنوات الأفلام" } }
+
+            LazyColumn(
+              modifier = Modifier.fillMaxSize(),
+              contentPadding = PaddingValues(bottom = 100.dp)
+            ) {
+              // 1. Dynamic Multi-Poster Hero Banner Carousel
+              if (heroMatches.isNotEmpty()) {
+                item(key = "hero_carousel") {
+                  TodHeroBannerCarousel(
+                    matches = heroMatches,
+                    onPlayMatch = onPlayMatchDirectly,
+                    onOpenDetails = onOpenMatchDetail
                   )
-                  Spacer(modifier = Modifier.height(6.dp))
-
-                  LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                  ) {
-                    items(upcomingMatches, key = { it.id }) { match ->
-                      TodMatchFixtureCard(
-                        match = match,
-                        onClick = { onOpenMatchDetail(match) }
-                      )
-                    }
-                  }
+                  Spacer(modifier = Modifier.height(10.dp))
                 }
-                Spacer(modifier = Modifier.height(18.dp))
               }
-            }
 
-            // 4. Direct Sports Channels Rail ("قنوات الرياضة والبث المباشر") (Screenshots 14, 16, 17)
-            item(key = "sports_channels_rail") {
-              val sportsOnlyChannels = effectiveChannels.filter {
-                it.name.contains("bein", ignoreCase = true) ||
-                it.name.contains("kass", ignoreCase = true) ||
-                it.name.contains("sport", ignoreCase = true) ||
-                it.name.contains("lfc", ignoreCase = true) ||
-                it.name.contains("mutv", ignoreCase = true) ||
-                it.name.contains("league", ignoreCase = true) ||
-                it.categoryId?.contains("رياض", ignoreCase = true) == true
-              }.ifEmpty { effectiveChannels.take(12) }
-
-              TodSportsChannelsRail(
-                channels = sportsOnlyChannels,
-                onPlayChannel = { channel ->
-                  onPlayChannel(channel, effectiveChannels, "قنوات الرياضة")
+              // 2. بطاقات مباريات كرة القدم (Screenshots 165527, 165536, 165601)
+              // تختلف الألوان حسب البطولة مع التدرجات المناسبة من الإعدادات
+              if (sportsMatches.isNotEmpty()) {
+                item(key = "live_and_today_matches") {
+                  TodLiveSportsRail(
+                    matches = sportsMatches,
+                    onPlayMatch = onPlayMatchDirectly,
+                    onOpenDetails = onOpenMatchDetail
+                  )
+                  Spacer(modifier = Modifier.height(14.dp))
                 }
-              )
-              Spacer(modifier = Modifier.height(18.dp))
-            }
+              }
+
+              // 2. قنوات الرياضة (Screenshots 161610 & 161607 - Pure Channel Logos without Cards)
+              if (sportsGroup.isNotEmpty()) {
+                item(key = "channels_sports") {
+                  TodChannelsGroupRail(
+                    title = "قنوات الرياضة",
+                    channels = sportsGroup,
+                    onPlayChannel = { channel ->
+                      onPlayChannel(channel, allList, "قنوات الرياضة")
+                    }
+                  )
+                }
+              }
+
+              // 3. قنوات الجزيرة (Screenshots 161610 & 161607 - Pure Channel Logos without Cards)
+              if (jazeeraGroup.isNotEmpty()) {
+                item(key = "channels_jazeera") {
+                  TodChannelsGroupRail(
+                    title = "قنوات الجزيرة",
+                    channels = jazeeraGroup,
+                    onPlayChannel = { channel ->
+                      onPlayChannel(channel, allList, "قنوات الجزيرة")
+                    }
+                  )
+                }
+              }
+
+              // 4. قنوات المسلسلات (Screenshots 161610 & 161607 - Pure Channel Logos without Cards)
+              if (seriesGroup.isNotEmpty()) {
+                item(key = "channels_series") {
+                  TodChannelsGroupRail(
+                    title = "قنوات المسلسلات",
+                    channels = seriesGroup,
+                    onPlayChannel = { channel ->
+                      onPlayChannel(channel, allList, "قنوات المسلسلات")
+                    }
+                  )
+                }
+              }
+
+              // 5. قنوات الأفلام (Screenshots 161610 & 161607 - Pure Channel Logos without Cards)
+              if (moviesGroup.isNotEmpty()) {
+                item(key = "channels_movies") {
+                  TodChannelsGroupRail(
+                    title = "قنوات الأفلام",
+                    channels = moviesGroup,
+                    onPlayChannel = { channel ->
+                      onPlayChannel(channel, allList, "قنوات الأفلام")
+                    }
+                  )
+                }
+              }
 
             // 5. Competitions Rail ("المنافسات") (Screenshots 10, 16, 18)
             item(key = "competitions_rail") {
@@ -682,130 +725,84 @@ fun TodHomeScreen(
       }
 
       // =========================================================================
-      // FLOATING OVERLAY HEADER (100% Matching TOD App Screenshot - Directly over Hero Banner)
+      // TOP HEADER (Only shown on secondary tabs - Completely removed from HOME per request)
       // =========================================================================
-      Column(
-        modifier = Modifier
-          .fillMaxWidth()
-          .align(Alignment.TopCenter)
-          .background(
-            Brush.verticalGradient(
-              colors = listOf(
-                Color(0xDC000000),
-                Color(0x95000000),
-                Color(0x30000000),
-                Color.Transparent
-              )
-            )
-          )
-          .statusBarsPadding()
-          .padding(bottom = 6.dp)
-      ) {
-        Row(
+      if (activeTopSection != TodTopSection.HOME) {
+        Column(
           modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          // Left: Profile Avatar & Search
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-          ) {
-            val avatarInteraction = remember { MutableInteractionSource() }
-            val isAvatarPressed by avatarInteraction.collectIsPressedAsState()
-            val avatarScale by animateFloatAsState(
-              targetValue = if (isAvatarPressed) 0.88f else 1.0f,
-              animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-              label = "avatarScale"
+            .align(Alignment.TopCenter)
+            .background(
+              Brush.verticalGradient(
+                colors = listOf(
+                  Color(0xF0071328),
+                  Color(0xD0071328),
+                  Color(0x80071328),
+                  Color.Transparent
+                )
+              )
             )
-
+            .statusBarsPadding()
+            .padding(bottom = 6.dp)
+        ) {
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            // Return to Home button
             Box(
               modifier = Modifier
-                .scale(avatarScale)
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(Brush.linearGradient(listOf(TodGold, Color(0xFFFF9500))))
-                .border(1.5.dp, Color(0x66FFFFFF), CircleShape)
-                .clickable(
-                  interactionSource = avatarInteraction,
-                  indication = null,
-                  onClick = onOpenProfile
-                ),
-              contentAlignment = Alignment.Center
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0x35FFFFFF))
+                .clickable {
+                  activeTopSection = TodTopSection.HOME
+                  selectedChannelCategoryId = null
+                  selectedTournamentFilter = null
+                }
+                .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
-              Text(sportsBackendRepo.getActiveProfile().avatarEmoji, fontSize = 18.sp)
-            }
-
-            IconButton(
-              onClick = onOpenSearch,
-              modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(Color(0x35000000))
-            ) {
-              Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = "بحث",
-                tint = Color.White,
-                modifier = Modifier.size(18.dp)
-              )
-            }
-          }
-
-          // Right: Official TOD by beIN Logo
-          TodLogo(fontSize = 24, showSubtext = true)
-        }
-
-        Spacer(modifier = Modifier.height(2.dp))
-
-        // Floating Categories Text Row (100% Identical to TOD Screenshot)
-        Row(
-          modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-          horizontalArrangement = Arrangement.spacedBy(22.dp),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          TodTopSection.entries.forEach { section ->
-            val isSelected = activeTopSection == section
-            Column(
-              horizontalAlignment = Alignment.CenterHorizontally,
-              modifier = Modifier.clickable {
-                activeTopSection = section
-                selectedChannelCategoryId = null
-                selectedTournamentFilter = null
-              }
-            ) {
-              Text(
-                text = section.title,
-                color = if (isSelected) Color.White else Color(0xB8FFFFFF),
-                fontSize = if (isSelected) 15.5.sp else 14.5.sp,
-                fontFamily = ThmanyahFontFamily,
-                fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold
-              )
-              if (isSelected) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Box(
-                  modifier = Modifier
-                    .width(18.dp)
-                    .height(2.5.dp)
-                    .clip(RoundedCornerShape(1.dp))
-                    .background(TodGold)
+              Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+              ) {
+                Icon(
+                  imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                  contentDescription = "الرجوع للرئيسية",
+                  tint = Color.White,
+                  modifier = Modifier.size(16.dp)
+                )
+                Text(
+                  text = "الرئيسية",
+                  color = Color.White,
+                  fontSize = 13.sp,
+                  fontFamily = ThmanyahFontFamily,
+                  fontWeight = FontWeight.Bold
                 )
               }
             }
+
+            // Section Title
+            Text(
+              text = activeTopSection.title,
+              color = Color.White,
+              fontSize = 17.sp,
+              fontFamily = ThmanyahFontFamily,
+              fontWeight = FontWeight.Black
+            )
           }
         }
       }
     }
   }
 }
+}
 
 /**
  * TOD Match Schedule Fixture Card for the "المباريات" Section
+ * 100% Matches Screenshots 165527, 165536, 165601 with tournament-specific colors & settings glow.
  */
 @Composable
 fun TodMatchScheduleCard(
@@ -814,200 +811,13 @@ fun TodMatchScheduleCard(
   onOpenDetails: (SportsMatch) -> Unit,
   modifier: Modifier = Modifier
 ) {
-  Box(
-    modifier = modifier
-      .fillMaxWidth()
-      .clip(RoundedCornerShape(22.dp))
-      .background(
-        Brush.verticalGradient(
-          listOf(
-            Color(0xFF1B1E32),
-            Color(0xFF111322),
-            Color(0xFF090A14)
-          )
-        )
-      )
-      .border(
-        1.dp,
-        Brush.linearGradient(
-          listOf(
-            Color(0x4564D2FF),
-            Color(0x35BF5AF2),
-            Color(0x20FFFFFF)
-          )
-        ),
-        RoundedCornerShape(22.dp)
-      )
-      .clickable { onOpenDetails(match) }
-      .padding(16.dp)
-  ) {
-    Column(
-      modifier = Modifier.fillMaxWidth(),
-      verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-      // Header: Tournament + Live/Time Badge
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          modifier = Modifier.weight(1f)
-        ) {
-          Icon(Icons.Default.SportsSoccer, contentDescription = null, tint = Color(0xFF64D2FF), modifier = Modifier.size(16.dp))
-          Spacer(modifier = Modifier.width(6.dp))
-          Text(
-            text = match.tournament,
-            color = Color(0xFFCCCCCC),
-            fontSize = 12.sp,
-            fontFamily = ThmanyahFontFamily,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-          )
-        }
-
-        if (match.isLive) {
-          Box(
-            modifier = Modifier
-              .clip(RoundedCornerShape(6.dp))
-              .background(Color(0xFFE50914))
-              .padding(horizontal = 8.dp, vertical = 3.dp)
-          ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(Icons.Default.FiberManualRecord, contentDescription = null, tint = Color.White, modifier = Modifier.size(6.dp))
-              Spacer(modifier = Modifier.width(3.dp))
-              Text(match.liveMinute ?: "مباشر الآن", color = Color.White, fontSize = 10.5.sp, fontWeight = FontWeight.Black)
-            }
-          }
-        } else {
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-              text = match.kickoffTime,
-              color = TodGold,
-              fontSize = 13.5.sp,
-              fontWeight = FontWeight.Black
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-              text = match.kickoffDate,
-              color = Color(0x99FFFFFF),
-              fontSize = 11.sp,
-              fontFamily = ThmanyahFontFamily
-            )
-          }
-        }
-      }
-
-      // Teams Rows
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        // Teams
-        Column(
-          modifier = Modifier.weight(1f),
-          verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-              modifier = Modifier
-                .size(34.dp)
-                .clip(CircleShape)
-                .background(Color(0x22FFFFFF))
-                .border(1.dp, Color(0x35FFFFFF), CircleShape),
-              contentAlignment = Alignment.Center
-            ) {
-              Text(match.homeTeam.flagEmoji, fontSize = 18.sp)
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(match.homeTeam.name, color = Color.White, fontSize = 14.5.sp, fontWeight = FontWeight.Bold, fontFamily = ThmanyahFontFamily)
-          }
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-              modifier = Modifier
-                .size(34.dp)
-                .clip(CircleShape)
-                .background(Color(0x22FFFFFF))
-                .border(1.dp, Color(0x35FFFFFF), CircleShape),
-              contentAlignment = Alignment.Center
-            ) {
-              Text(match.awayTeam.flagEmoji, fontSize = 18.sp)
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(match.awayTeam.name, color = Color.White, fontSize = 14.5.sp, fontWeight = FontWeight.Bold, fontFamily = ThmanyahFontFamily)
-          }
-        }
-
-        // Scores or Action Button
-        Column(
-          horizontalAlignment = Alignment.End,
-          verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          if (match.scoreHome != null && match.scoreAway != null) {
-            Text(
-              text = "${match.scoreHome} - ${match.scoreAway}",
-              color = if (match.isLive) Color(0xFF64D2FF) else Color.White,
-              fontSize = 20.sp,
-              fontWeight = FontWeight.Black
-            )
-          }
-
-          Box(
-            modifier = Modifier
-              .clip(RoundedCornerShape(12.dp))
-              .background(if (match.isLive) TodGold else Color(0x25FFFFFF))
-              .border(0.75.dp, if (match.isLive) TodGold else Color(0x35FFFFFF), RoundedCornerShape(12.dp))
-              .clickable { onPlayMatch(match) }
-              .padding(horizontal = 12.dp, vertical = 6.dp)
-          ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(Icons.Default.PlayArrow, contentDescription = null, tint = if (match.isLive) Color.Black else Color.White, modifier = Modifier.size(16.dp))
-              Spacer(modifier = Modifier.width(4.dp))
-              Text(
-                text = if (match.isLive) "شاهد الآن" else "البث المباشر",
-                color = if (match.isLive) Color.Black else Color.White,
-                fontSize = 11.5.sp,
-                fontWeight = FontWeight.Bold,
-                fontFamily = ThmanyahFontFamily
-              )
-            }
-          }
-        }
-      }
-
-      // Footer: Stadium & Channel
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(8.dp))
-          .background(Color(0x15FFFFFF))
-          .padding(horizontal = 10.dp, vertical = 5.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Icon(Icons.Default.Tv, contentDescription = null, tint = Color(0xFF64D2FF), modifier = Modifier.size(13.dp))
-          Spacer(modifier = Modifier.width(4.dp))
-          Text(
-            text = match.channelName,
-            color = Color(0xFF64D2FF),
-            fontSize = 11.sp,
-            fontFamily = ThmanyahFontFamily,
-            fontWeight = FontWeight.Bold
-          )
-        }
-        Text(
-          text = "🎙️ ${match.commentator} • 🏟️ ${match.stadium.ifBlank { "الملعب الرئيسي" }}",
-          color = Color(0xFFB0B0C0),
-          fontSize = 10.5.sp,
-          fontFamily = ThmanyahFontFamily
-        )
-      }
-    }
-  }
+  TodTournamentMatchCard(
+    match = match,
+    onClick = { onOpenDetails(match) },
+    onPlayClick = { onPlayMatch(match) },
+    modifier = modifier,
+    isCompactWidth = false
+  )
 }
 
 /**
