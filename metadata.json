@@ -1,6 +1,0 @@
-{
-  "name": "TOD Sports",
-  "description": "TOD Sports Live Streaming and Matches Hub with AlwaysData cloud backend integration, AES-256 decryption, and device telemetry.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

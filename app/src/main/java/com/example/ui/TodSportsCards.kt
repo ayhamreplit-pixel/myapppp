@@ -53,9 +53,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import com.example.R
@@ -66,6 +70,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.example.model.SportsCompetition
@@ -216,9 +221,9 @@ fun TodCountdownPillBar(
   modifier: Modifier = Modifier
 ) {
   Row(
-    modifier = modifier,
+    modifier = modifier.fillMaxWidth(),
     verticalAlignment = Alignment.CenterVertically,
-    horizontalArrangement = Arrangement.spacedBy(6.dp)
+    horizontalArrangement = Arrangement.Start
   ) {
     // 1. Hours Pill (Right in Arabic RTL)
     TodTimerPill(label = "ساعات", value = hours)
@@ -330,13 +335,32 @@ fun TodMatchCountdownHero(
       match.bannerUrl?.contains("87c142b3") == true ||
       match.bannerUrl?.contains("tod_germany_serbia_poster") == true
 
+    val posterAlphaModifier = Modifier
+      .fillMaxSize()
+      .graphicsLayer {
+        compositingStrategy = CompositingStrategy.Offscreen
+      }
+      .drawWithContent {
+        drawContent()
+        drawRect(
+          brush = Brush.verticalGradient(
+            0.00f to Color.Black,
+            0.50f to Color.Black,
+            0.72f to Color.Black.copy(alpha = 0.75f),
+            0.88f to Color.Black.copy(alpha = 0.30f),
+            1.00f to Color.Transparent
+          ),
+          blendMode = BlendMode.DstIn
+        )
+      }
+
     if (isGermanyPoster) {
       Image(
         painter = painterResource(id = R.drawable.tod_germany_serbia_poster),
         contentDescription = match.title,
         contentScale = ContentScale.Crop,
         alignment = Alignment.TopCenter,
-        modifier = Modifier.fillMaxSize()
+        modifier = posterAlphaModifier
       )
     } else {
       val heroBackdrop = if (!match.bannerUrl.isNullOrBlank()) match.bannerUrl else "android.resource://com.example/drawable/tod_hero_match_banner"
@@ -345,7 +369,7 @@ fun TodMatchCountdownHero(
         contentDescription = match.title,
         contentScale = ContentScale.Crop,
         alignment = Alignment.TopCenter,
-        modifier = Modifier.fillMaxSize()
+        modifier = posterAlphaModifier
       )
     }
 
@@ -353,40 +377,39 @@ fun TodMatchCountdownHero(
     val playButtonGradient = activeTheme.gradient
     val playTextColor = if (activeTheme == com.example.ui.theme.AppThemePreset.GOLD || activeTheme == com.example.ui.theme.AppThemePreset.CYAN) Color.Black else Color.White
 
-    // 2. Top Subtle Glow Gradient (Increased soft top shading for seamless header/status bar integration)
+    // 2. Top Subtle Glow Gradient (Seamless dark top shading for status bar integration)
     Box(
       modifier = Modifier
         .fillMaxWidth()
-        .height(180.dp)
+        .height(160.dp)
         .align(Alignment.TopCenter)
         .background(
           Brush.verticalGradient(
             listOf(
-              Color(0xE0070E20),
-              Color(0x95070E20),
-              Color(0x40070E20),
+              Color(0xDD0A1024),
+              Color(0x880A1024),
+              Color(0x350A1024),
               Color.Transparent
             )
           )
         )
     )
 
-    // 3. Ultra-Smooth Bottom Gradient (Seamlessly blends directly into page background with zero side cutoff)
+    // 3. Ultra-Smooth Bottom Shadow Gradient (Protects text legibility over poster, fades back to transparent at bottom edge with ZERO line)
     Box(
       modifier = Modifier
         .fillMaxWidth()
-        .height(350.dp)
+        .height(360.dp)
         .align(Alignment.BottomCenter)
         .background(
           Brush.verticalGradient(
             listOf(
               Color.Transparent,
-              Color(0x15070E20),
-              Color(0x45070E20),
-              Color(0x80070E20),
-              Color(0xC0070E20),
-              Color(0xF5070E20),
-              Color(0xFF070E20)
+              Color(0x20000000),
+              Color(0x70000000),
+              Color(0xB0000000),
+              Color(0x80000000),
+              Color.Transparent
             )
           )
         )
@@ -400,44 +423,50 @@ fun TodMatchCountdownHero(
         .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
       horizontalAlignment = Alignment.End
     ) {
-      // 4.1 Logos / Flags Row (Home team on RIGHT, Away team on LEFT in Arabic RTL)
-      Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        modifier = Modifier.padding(bottom = 8.dp)
+      // 4.1 Logos / Flags Row (Guaranteed Right-Aligned above Title Text)
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(bottom = 8.dp),
+        contentAlignment = Alignment.CenterEnd
       ) {
-        // Home Team Flag / Crest (Right in Arabic RTL)
-        Box(
-          modifier = Modifier
-            .width(54.dp)
-            .height(38.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color(0x30000000))
-            .border(1.5.dp, Color.White, RoundedCornerShape(8.dp)),
-          contentAlignment = Alignment.Center
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-          TodTeamCrest(team = match.homeTeam, size = 36.dp)
-        }
+          // Home Team Flag / Crest (Far Right in Arabic)
+          Box(
+            modifier = Modifier
+              .width(54.dp)
+              .height(38.dp)
+              .clip(RoundedCornerShape(8.dp))
+              .background(Color(0x30000000))
+              .border(1.5.dp, Color.White, RoundedCornerShape(8.dp)),
+            contentAlignment = Alignment.Center
+          ) {
+            TodTeamCrest(team = match.homeTeam, size = 36.dp)
+          }
 
-        // Center Dash "-"
-        Text(
-          text = "-",
-          color = Color.White,
-          fontSize = 18.sp,
-          fontWeight = FontWeight.Black
-        )
+          // Center Dash "-"
+          Text(
+            text = "-",
+            color = Color.White,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Black
+          )
 
-        // Away Team Flag / Crest (Left in Arabic RTL)
-        Box(
-          modifier = Modifier
-            .width(54.dp)
-            .height(38.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color(0x30000000))
-            .border(1.5.dp, Color.White, RoundedCornerShape(8.dp)),
-          contentAlignment = Alignment.Center
-        ) {
-          TodTeamCrest(team = match.awayTeam, size = 36.dp)
+          // Away Team Flag / Crest (Left of Home)
+          Box(
+            modifier = Modifier
+              .width(54.dp)
+              .height(38.dp)
+              .clip(RoundedCornerShape(8.dp))
+              .background(Color(0x30000000))
+              .border(1.5.dp, Color.White, RoundedCornerShape(8.dp)),
+            contentAlignment = Alignment.Center
+          ) {
+            TodTeamCrest(team = match.awayTeam, size = 36.dp)
+          }
         }
       }
 
@@ -455,11 +484,16 @@ fun TodMatchCountdownHero(
       Spacer(modifier = Modifier.height(8.dp))
 
       // 4.3 Realtime Live Ticking Countdown Timer Pills: [ 04 ساعات ] : [ 45 دقائق ] : [ 18 ثواني ]
-      TodCountdownPillBar(
-        hours = hours,
-        minutes = minutes,
-        seconds = seconds
-      )
+      Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.CenterEnd
+      ) {
+        TodCountdownPillBar(
+          hours = hours,
+          minutes = minutes,
+          seconds = seconds
+        )
+      }
 
       Spacer(modifier = Modifier.height(8.dp))
 
@@ -1066,13 +1100,19 @@ fun TodPureChannelLogo(
     contentAlignment = Alignment.Center
   ) {
     if (!channel.iconUrl.isNullOrBlank()) {
-      AsyncImage(
+      SubcomposeAsyncImage(
         model = channel.iconUrl,
         contentDescription = channel.name,
         modifier = Modifier
           .fillMaxSize()
           .padding(2.dp),
-        contentScale = ContentScale.Fit
+        contentScale = ContentScale.Fit,
+        error = {
+          TodDrawnOfficialChannelLogo(channelName = channel.name)
+        },
+        loading = {
+          TodDrawnOfficialChannelLogo(channelName = channel.name)
+        }
       )
     } else {
       TodDrawnOfficialChannelLogo(channelName = channel.name)
@@ -2025,21 +2065,22 @@ fun CorporateChannelGridCard(
           contentAlignment = Alignment.Center
         ) {
           if (!channel.iconUrl.isNullOrBlank()) {
-            AsyncImage(
+            SubcomposeAsyncImage(
               model = channel.iconUrl,
               contentDescription = null,
               modifier = Modifier
                 .fillMaxSize()
                 .padding(4.dp),
-              contentScale = ContentScale.Fit
+              contentScale = ContentScale.Fit,
+              error = {
+                TodDrawnOfficialChannelLogo(channelName = channel.name, modifier = Modifier.size(32.dp))
+              },
+              loading = {
+                TodDrawnOfficialChannelLogo(channelName = channel.name, modifier = Modifier.size(32.dp))
+              }
             )
           } else {
-            Icon(
-              imageVector = Icons.Default.PlayArrow,
-              contentDescription = null,
-              tint = Color(0xFF0A84FF),
-              modifier = Modifier.size(20.dp)
-            )
+            TodDrawnOfficialChannelLogo(channelName = channel.name, modifier = Modifier.size(32.dp))
           }
         }
 
@@ -2164,14 +2205,20 @@ fun CorporateChannelListRow(
           contentAlignment = Alignment.Center
         ) {
           if (!channel.iconUrl.isNullOrBlank()) {
-            AsyncImage(
+            SubcomposeAsyncImage(
               model = channel.iconUrl,
               contentDescription = null,
               modifier = Modifier.fillMaxSize().padding(3.dp),
-              contentScale = ContentScale.Fit
+              contentScale = ContentScale.Fit,
+              error = {
+                TodDrawnOfficialChannelLogo(channelName = channel.name, modifier = Modifier.size(28.dp))
+              },
+              loading = {
+                TodDrawnOfficialChannelLogo(channelName = channel.name, modifier = Modifier.size(28.dp))
+              }
             )
           } else {
-            Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color(0xFF0A84FF), modifier = Modifier.size(18.dp))
+            TodDrawnOfficialChannelLogo(channelName = channel.name, modifier = Modifier.size(28.dp))
           }
         }
 
