@@ -11,6 +11,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import com.example.ui.TodPlayerScreen
 import com.example.ui.theme.DarkBg
 import com.example.ui.theme.MyApplicationTheme
@@ -26,7 +29,9 @@ class MainActivity : ComponentActivity() {
           modifier = Modifier.fillMaxSize(),
           color = DarkBg
         ) {
-          TodPlayerScreen()
+          CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+            TodPlayerScreen()
+          }
         }
       }
     }

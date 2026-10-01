@@ -37,15 +37,19 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material.icons.filled.Tv
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import com.example.ui.theme.DarkTextTertiary
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -214,15 +218,15 @@ fun TodCountdownPillBar(
   Row(
     modifier = modifier,
     verticalAlignment = Alignment.CenterVertically,
-    horizontalArrangement = Arrangement.spacedBy(5.dp)
+    horizontalArrangement = Arrangement.spacedBy(6.dp)
   ) {
-    // 1. Seconds Pill (Left in RTL / Front)
-    TodTimerPill(label = "ثوانى", value = seconds)
+    // 1. Hours Pill (Right in Arabic RTL)
+    TodTimerPill(label = "ساعات", value = hours)
 
     Text(
       text = ":",
       color = Color(0xFFFFB800),
-      fontSize = 14.sp,
+      fontSize = 15.sp,
       fontWeight = FontWeight.Black
     )
 
@@ -232,12 +236,12 @@ fun TodCountdownPillBar(
     Text(
       text = ":",
       color = Color(0xFFFFB800),
-      fontSize = 14.sp,
+      fontSize = 15.sp,
       fontWeight = FontWeight.Black
     )
 
-    // 3. Hours Pill (Right in RTL / Back)
-    TodTimerPill(label = "ساعات", value = hours)
+    // 3. Seconds Pill (Left in Arabic RTL)
+    TodTimerPill(label = "ثواني", value = seconds)
   }
 }
 
@@ -278,8 +282,8 @@ fun TodTimerPill(
 
 /**
  * 1. Hero Match Connected Banner (100% Identical to TOD Screenshot)
- * Seamlessly connects with header, displaying key players background,
- * Home/Away crests, score, minute pill, Arabic RTL details, 3 bottom glass action buttons, and carousel dots.
+ * Seamless full-width poster without side-clips, live ticking countdown,
+ * Home/Away crests (Home on Right), and smooth integrated bottom gradient.
  */
 @Composable
 fun TodMatchCountdownHero(
@@ -291,13 +295,36 @@ fun TodMatchCountdownHero(
   onSelectIndex: (Int) -> Unit = {},
   modifier: Modifier = Modifier
 ) {
+  // Live Ticking Realtime Countdown Timer
+  var remainingSeconds by remember(match.id, match.kickoffTime) {
+    mutableStateOf(4 * 3600L + 45 * 60L + 18L)
+  }
+
+  LaunchedEffect(match.id) {
+    while (true) {
+      delay(1000L)
+      if (remainingSeconds > 0) {
+        remainingSeconds--
+      }
+    }
+  }
+
+  val hours = remember(remainingSeconds) {
+    String.format(java.util.Locale.ENGLISH, "%02d", remainingSeconds / 3600)
+  }
+  val minutes = remember(remainingSeconds) {
+    String.format(java.util.Locale.ENGLISH, "%02d", (remainingSeconds % 3600) / 60)
+  }
+  val seconds = remember(remainingSeconds) {
+    String.format(java.util.Locale.ENGLISH, "%02d", remainingSeconds % 60)
+  }
+
   Box(
     modifier = modifier
       .fillMaxWidth()
-      .height(600.dp)
-      .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
+      .height(580.dp)
   ) {
-    // 1. Full-bleed Poster Image (Hero Composite)
+    // 1. Full-bleed Poster Image (Hero Composite - Full width without rounded corner clips)
     val isGermanyPoster = match.id == "germany_serbia_nations" ||
       match.title.contains("ألمانيا") ||
       match.bannerUrl?.contains("87c142b3") == true ||
@@ -322,78 +349,50 @@ fun TodMatchCountdownHero(
       )
     }
 
-    // 2. Top Subtle Glow Gradient (Keeps top header readable without masking poster)
-    val currentTheme = com.example.ui.theme.LocalAppTheme.current
+    val activeTheme = com.example.ui.theme.ThemeStateHolder.currentTheme
+    val playButtonGradient = activeTheme.gradient
+    val playTextColor = if (activeTheme == com.example.ui.theme.AppThemePreset.GOLD || activeTheme == com.example.ui.theme.AppThemePreset.CYAN) Color.Black else Color.White
+
+    // 2. Top Subtle Glow Gradient (Increased soft top shading for seamless header/status bar integration)
     Box(
       modifier = Modifier
         .fillMaxWidth()
-        .height(140.dp)
+        .height(180.dp)
         .align(Alignment.TopCenter)
         .background(
           Brush.verticalGradient(
             listOf(
-              Color(0x70000000),
-              Color(0x30000000),
+              Color(0xE0070E20),
+              Color(0x95070E20),
+              Color(0x40070E20),
               Color.Transparent
             )
           )
         )
     )
 
-    // 3. Top Header: "رياضة  ->" on Top Right (Matching all 5 screenshots)
-    Row(
-      modifier = Modifier
-        .fillMaxWidth()
-        .statusBarsPadding()
-        .padding(horizontal = 18.dp, vertical = 12.dp)
-        .align(Alignment.TopCenter),
-      horizontalArrangement = Arrangement.End,
-      verticalAlignment = Alignment.CenterVertically
-    ) {
-      Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier
-          .clip(RoundedCornerShape(12.dp))
-          .background(Color(0x40000000))
-          .padding(horizontal = 12.dp, vertical = 6.dp)
-      ) {
-        Text(
-          text = "رياضة",
-          color = Color.White,
-          fontSize = 17.sp,
-          fontFamily = ThmanyahFontFamily,
-          fontWeight = FontWeight.Bold
-        )
-        Icon(
-          imageVector = Icons.AutoMirrored.Filled.ArrowBack, // Pointing right in RTL
-          contentDescription = "رياضة",
-          tint = Color.White,
-          modifier = Modifier.size(18.dp)
-        )
-      }
-    }
-
-    // 4. Subtle Bottom Gradient (Transparent at top, only shading text area at bottom)
+    // 3. Ultra-Smooth Bottom Gradient (Seamlessly blends directly into page background with zero side cutoff)
     Box(
       modifier = Modifier
         .fillMaxWidth()
-        .height(260.dp)
+        .height(350.dp)
         .align(Alignment.BottomCenter)
         .background(
           Brush.verticalGradient(
-            colors = listOf(
+            listOf(
               Color.Transparent,
-              Color(0x20081024),
-              Color(0x80081024),
-              Color(0xE0081024),
-              Color(0xFF0A1024)
+              Color(0x15070E20),
+              Color(0x45070E20),
+              Color(0x80070E20),
+              Color(0xC0070E20),
+              Color(0xF5070E20),
+              Color(0xFF070E20)
             )
           )
         )
     )
 
-    // 5. Bottom Overlay Content (Logos, Title, Countdown, Metadata, My TOD / Play Button, Dots)
+    // 4. Bottom Overlay Content (Logos, Title, Live Countdown, Metadata, My TOD / Play Button, Dots)
     Column(
       modifier = Modifier
         .fillMaxWidth()
@@ -401,34 +400,13 @@ fun TodMatchCountdownHero(
         .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
       horizontalAlignment = Alignment.End
     ) {
-      // 5.1 Logos / Flags Row (Right side in Arabic RTL)
+      // 4.1 Logos / Flags Row (Home team on RIGHT, Away team on LEFT in Arabic RTL)
       Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         modifier = Modifier.padding(bottom = 8.dp)
       ) {
-        // Away Team Flag / Crest (Left in RTL)
-        Box(
-          modifier = Modifier
-            .width(54.dp)
-            .height(38.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color(0x30000000))
-            .border(1.5.dp, Color.White, RoundedCornerShape(8.dp)),
-          contentAlignment = Alignment.Center
-        ) {
-          TodTeamCrest(team = match.awayTeam, size = 36.dp)
-        }
-
-        // Center Dash "-"
-        Text(
-          text = "-",
-          color = Color.White,
-          fontSize = 18.sp,
-          fontWeight = FontWeight.Black
-        )
-
-        // Home Team Flag / Crest (Right in RTL)
+        // Home Team Flag / Crest (Right in Arabic RTL)
         Box(
           modifier = Modifier
             .width(54.dp)
@@ -440,9 +418,30 @@ fun TodMatchCountdownHero(
         ) {
           TodTeamCrest(team = match.homeTeam, size = 36.dp)
         }
+
+        // Center Dash "-"
+        Text(
+          text = "-",
+          color = Color.White,
+          fontSize = 18.sp,
+          fontWeight = FontWeight.Black
+        )
+
+        // Away Team Flag / Crest (Left in Arabic RTL)
+        Box(
+          modifier = Modifier
+            .width(54.dp)
+            .height(38.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color(0x30000000))
+            .border(1.5.dp, Color.White, RoundedCornerShape(8.dp)),
+          contentAlignment = Alignment.Center
+        ) {
+          TodTeamCrest(team = match.awayTeam, size = 36.dp)
+        }
       }
 
-      // 5.2 Match Title (Bold White, RTL Right-aligned)
+      // 4.2 Match Title (Bold White, RTL Right-aligned)
       Text(
         text = match.title,
         color = Color.White,
@@ -455,16 +454,16 @@ fun TodMatchCountdownHero(
 
       Spacer(modifier = Modifier.height(8.dp))
 
-      // 5.3 Countdown Timer Pills: [ 04 ساعات ] : [ 45 دقائق ] : [ 18 ثوانى ]
+      // 4.3 Realtime Live Ticking Countdown Timer Pills: [ 04 ساعات ] : [ 45 دقائق ] : [ 18 ثواني ]
       TodCountdownPillBar(
-        hours = "04",
-        minutes = "45",
-        seconds = "18"
+        hours = hours,
+        minutes = minutes,
+        seconds = seconds
       )
 
       Spacer(modifier = Modifier.height(8.dp))
 
-      // 5.4 Match Subtitle Metadata
+      // 4.4 Match Subtitle Metadata (RTL Right-aligned)
       Text(
         text = "${match.kickoffDate} • ${match.kickoffTime} • ${match.stadium.ifBlank { "الملعب الرئيسي" }} • ${match.tournament}",
         color = Color(0xFFD0D8E8),
@@ -506,13 +505,13 @@ fun TodMatchCountdownHero(
             }
           }
 
-          // Large Yellow "تشغيل ▶" Button
+          // Large Theme-Adaptive "تشغيل ▶" Button (Matches selected settings theme)
           Box(
             modifier = Modifier
               .weight(1f)
               .height(48.dp)
               .clip(RoundedCornerShape(12.dp))
-              .background(Color(0xFFFFB800))
+              .background(playButtonGradient)
               .clickable { onPlayMatch(match) },
             contentAlignment = Alignment.Center
           ) {
@@ -520,11 +519,11 @@ fun TodMatchCountdownHero(
               verticalAlignment = Alignment.CenterVertically,
               horizontalArrangement = Arrangement.Center
             ) {
-              Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.Black, modifier = Modifier.size(24.dp))
+              Icon(Icons.Default.PlayArrow, contentDescription = null, tint = playTextColor, modifier = Modifier.size(24.dp))
               Spacer(modifier = Modifier.width(6.dp))
               Text(
                 text = "تشغيل",
-                color = Color.Black,
+                color = playTextColor,
                 fontSize = 17.sp,
                 fontFamily = ThmanyahFontFamily,
                 fontWeight = FontWeight.Black
@@ -533,14 +532,13 @@ fun TodMatchCountdownHero(
           }
         }
       } else {
-        // Wide "My TOD [+]" Button (Screenshot 1, 2, 5)
+        // Wide "My TOD [+]" Button (Theme-Adaptive Accent)
         Box(
           modifier = Modifier
             .fillMaxWidth()
             .height(48.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0x952C3444))
-            .border(0.75.dp, Color(0x40FFFFFF), RoundedCornerShape(12.dp))
+            .background(playButtonGradient)
             .clickable { onOpenDetails(match) },
           contentAlignment = Alignment.Center
         ) {
@@ -550,7 +548,7 @@ fun TodMatchCountdownHero(
           ) {
             Text(
               text = "My TOD",
-              color = Color.White,
+              color = playTextColor,
               fontSize = 16.sp,
               fontFamily = ThmanyahFontFamily,
               fontWeight = FontWeight.Bold
@@ -559,10 +557,10 @@ fun TodMatchCountdownHero(
             Box(
               modifier = Modifier
                 .size(20.dp)
-                .border(1.5.dp, Color.White, RoundedCornerShape(4.dp)),
+                .border(1.5.dp, playTextColor, RoundedCornerShape(4.dp)),
               contentAlignment = Alignment.Center
             ) {
-              Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+              Icon(Icons.Default.Add, contentDescription = null, tint = playTextColor, modifier = Modifier.size(14.dp))
             }
           }
         }
@@ -1931,6 +1929,260 @@ fun TodSportsShowsRail(
             }
           }
         }
+      }
+    }
+  }
+}
+
+/**
+ * Intelligent Channel Name Formatter:
+ * Cleans technical tags and language prefixes while keeping the full channel name intact.
+ */
+fun cleanChannelName(raw: String): String {
+  var text = raw.trim()
+  if (text.isEmpty()) return "قناة"
+
+  val prefixRegex = Regex("^(?:[A-Z]{2,4}\\s*[-:|/]\\s*)", RegexOption.IGNORE_CASE)
+  text = text.replace(prefixRegex, "").trim()
+
+  text = text.replace(Regex("\\[(?:HEVC|H\\.?265|H\\.?264|VIP|4K|FHD|HD|SD|RAW|LOW|50FPS|60FPS)\\]", RegexOption.IGNORE_CASE), "")
+    .replace(Regex("\\((?:HEVC|H\\.?265|H\\.?264|VIP|4K|FHD|HD|SD|RAW|LOW|50FPS|60FPS)\\)", RegexOption.IGNORE_CASE), "")
+    .replace(Regex("\\s+"), " ")
+    .trim()
+
+  return if (text.isBlank()) raw.trim() else text
+}
+
+/**
+ * TOD Match Schedule Fixture Card for the "المباريات" Section
+ */
+@Composable
+fun TodMatchScheduleCard(
+  match: SportsMatch,
+  onPlayMatch: (SportsMatch) -> Unit,
+  onOpenDetails: (SportsMatch) -> Unit,
+  modifier: Modifier = Modifier
+) {
+  TodTournamentMatchCard(
+    match = match,
+    onClick = { onOpenDetails(match) },
+    onPlayClick = { onPlayMatch(match) },
+    modifier = modifier,
+    isCompactWidth = false
+  )
+}
+
+/**
+ * iOS-Fidelity Corporate Channel Card for Grid View
+ */
+@Composable
+fun CorporateChannelGridCard(
+  channel: XtreamChannel,
+  allChannels: List<XtreamChannel>,
+  categoryName: String,
+  onPlayChannel: (XtreamChannel, List<XtreamChannel>, String) -> Unit
+) {
+  val interactionSource = remember { MutableInteractionSource() }
+  val isPressed by interactionSource.collectIsPressedAsState()
+  val scale by animateFloatAsState(
+    targetValue = if (isPressed) 0.95f else 1.0f,
+    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+    label = "gridCardScale"
+  )
+
+  val qualityLabel = when {
+    channel.name.contains("4K", ignoreCase = true) -> "4K UHD"
+    channel.name.contains("FHD", ignoreCase = true) || channel.name.contains("1080", ignoreCase = true) -> "1080p FHD"
+    channel.name.contains("HD", ignoreCase = true) || channel.name.contains("720", ignoreCase = true) -> "720p HD"
+    else -> "HD"
+  }
+
+  Box(
+    modifier = Modifier
+      .scale(scale)
+      .fillMaxWidth()
+      .height(148.dp)
+      .liquidGlassEffect(shape = RoundedCornerShape(22.dp), glowTint = Color(0xFF0A84FF), isElevated = true)
+      .clickable(
+        interactionSource = interactionSource,
+        indication = null
+      ) { onPlayChannel(channel, allChannels, categoryName) }
+      .padding(13.dp)
+  ) {
+    Column(
+      modifier = Modifier.fillMaxSize(),
+      verticalArrangement = Arrangement.SpaceBetween
+    ) {
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Box(
+          modifier = Modifier
+            .size(42.dp)
+            .liquidGlassEffect(shape = RoundedCornerShape(12.dp), glowTint = Color(0xFF0A84FF)),
+          contentAlignment = Alignment.Center
+        ) {
+          if (!channel.iconUrl.isNullOrBlank()) {
+            AsyncImage(
+              model = channel.iconUrl,
+              contentDescription = null,
+              modifier = Modifier
+                .fillMaxSize()
+                .padding(4.dp),
+              contentScale = ContentScale.Fit
+            )
+          } else {
+            Icon(
+              imageVector = Icons.Default.PlayArrow,
+              contentDescription = null,
+              tint = Color(0xFF0A84FF),
+              modifier = Modifier.size(20.dp)
+            )
+          }
+        }
+
+        PulsingLiveBadge()
+      }
+
+      Text(
+        text = cleanChannelName(channel.name),
+        color = Color.White,
+        fontSize = 13.sp,
+        fontFamily = ThmanyahFontFamily,
+        fontWeight = FontWeight.Bold,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+        lineHeight = 17.sp,
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(vertical = 4.dp)
+      )
+
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        VideoQualityBadge(qualityText = qualityLabel)
+        Text(
+          text = categoryName.take(16),
+          color = DarkTextTertiary,
+          fontSize = 10.5.sp,
+          fontFamily = ThmanyahFontFamily,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis
+        )
+      }
+    }
+  }
+}
+
+/**
+ * iOS Inset Grouped Table Row for long channel names
+ */
+@Composable
+fun CorporateChannelListRow(
+  channel: XtreamChannel,
+  channelIndex: Int,
+  allChannels: List<XtreamChannel>,
+  categoryName: String,
+  onPlayChannel: (XtreamChannel, List<XtreamChannel>, String) -> Unit
+) {
+  val interactionSource = remember { MutableInteractionSource() }
+  val isPressed by interactionSource.collectIsPressedAsState()
+  val scale by animateFloatAsState(
+    targetValue = if (isPressed) 0.98f else 1.0f,
+    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+    label = "listRowScale"
+  )
+
+  val qualityLabel = when {
+    channel.name.contains("4K", ignoreCase = true) -> "4K UHD"
+    channel.name.contains("FHD", ignoreCase = true) || channel.name.contains("1080", ignoreCase = true) -> "1080p FHD"
+    channel.name.contains("HD", ignoreCase = true) || channel.name.contains("720", ignoreCase = true) -> "720p HD"
+    else -> "HD"
+  }
+
+  Box(
+    modifier = Modifier
+      .scale(scale)
+      .fillMaxWidth()
+      .liquidGlassEffect(shape = RoundedCornerShape(16.dp), glowTint = Color(0xFF0A84FF))
+      .clickable(
+        interactionSource = interactionSource,
+        indication = null
+      ) { onPlayChannel(channel, allChannels, categoryName) }
+      .padding(horizontal = 14.dp, vertical = 10.dp)
+  ) {
+    Row(
+      modifier = Modifier.fillMaxWidth(),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+      Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+      ) {
+        PulsingLiveBadge()
+        VideoQualityBadge(qualityText = qualityLabel)
+        Icon(
+          imageVector = Icons.Default.KeyboardArrowLeft,
+          contentDescription = null,
+          tint = Color(0x66FFFFFF),
+          modifier = Modifier.size(16.dp)
+        )
+      }
+
+      Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+      ) {
+        Column(horizontalAlignment = Alignment.End) {
+          Text(
+            text = cleanChannelName(channel.name),
+            color = Color.White,
+            fontSize = 13.5.sp,
+            fontFamily = ThmanyahFontFamily,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+          )
+          Text(
+            text = categoryName,
+            color = DarkTextTertiary,
+            fontSize = 11.sp,
+            fontFamily = ThmanyahFontFamily
+          )
+        }
+
+        Box(
+          modifier = Modifier
+            .size(38.dp)
+            .liquidGlassEffect(shape = RoundedCornerShape(10.dp), glowTint = Color(0xFF0A84FF)),
+          contentAlignment = Alignment.Center
+        ) {
+          if (!channel.iconUrl.isNullOrBlank()) {
+            AsyncImage(
+              model = channel.iconUrl,
+              contentDescription = null,
+              modifier = Modifier.fillMaxSize().padding(3.dp),
+              contentScale = ContentScale.Fit
+            )
+          } else {
+            Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color(0xFF0A84FF), modifier = Modifier.size(18.dp))
+          }
+        }
+
+        Text(
+          text = "$channelIndex",
+          color = Color(0x55FFFFFF),
+          fontSize = 12.sp,
+          fontWeight = FontWeight.Bold,
+          modifier = Modifier.width(22.dp),
+          textAlign = TextAlign.Center
+        )
       }
     }
   }

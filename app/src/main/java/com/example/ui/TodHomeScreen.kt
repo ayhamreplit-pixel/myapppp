@@ -52,6 +52,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,9 +64,11 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -124,9 +127,9 @@ fun TodHomeScreen(
   val sportsShows by sportsBackendRepo.shows.collectAsState()
   val builtInChannels by sportsBackendRepo.sportsChannels.collectAsState()
 
-  // Effective Channels list (connected server channels or high-fidelity TOD beIN channels)
+  // Effective Channels list (combines server backend channels and playlist channels)
   val effectiveChannels = remember(allChannels, builtInChannels) {
-    if (allChannels.isNotEmpty()) allChannels else builtInChannels
+    (builtInChannels + allChannels).distinctBy { it.streamId.ifBlank { it.name } }
   }
 
   // Filter live and upcoming matches
@@ -148,178 +151,123 @@ fun TodHomeScreen(
     modifier = modifier.fillMaxSize(),
     ambientAlpha = 0.70f
   ) {
-    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-      val screenWidth = maxWidth
-      val isTabletOrLandscape = screenWidth >= 700.dp
-      val gridColumns = if (screenWidth >= 900.dp) 4 else if (isTabletOrLandscape) 3 else 2
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+      BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val screenWidth = maxWidth
+        val isTabletOrLandscape = screenWidth >= 700.dp
+        val gridColumns = if (screenWidth >= 900.dp) 4 else if (isTabletOrLandscape) 3 else 2
 
-      // =========================================================================
-      // MAIN CONTENT (Starts at y=0 behind floating top header)
-      // =========================================================================
-      Box(
-        modifier = Modifier
-          .fillMaxSize()
-          .widthIn(max = 1200.dp)
-          .align(Alignment.TopCenter)
-      ) {
-        when (activeTopSection) {
-          TodTopSection.HOME -> {
-            // =====================================================================
-            // TAB 1: TOD HOME FEED (Multi-Poster Hero Carousel + Live Rails + Fixtures + beIN Channels)
-            // =====================================================================
-            val heroMatches = remember(sportsMatches) {
-              val withPoster = sportsMatches.filter { !it.bannerUrl.isNullOrBlank() }
-              if (withPoster.isNotEmpty()) withPoster else sportsMatches.take(5)
-            }
-
-            val allList = effectiveChannels.ifEmpty { sportsBackendRepo.sportsChannels.value }
-
-            val sportsGroup = allList.filter { ch ->
-              (ch.name.contains("bein", ignoreCase = true) && !ch.name.contains("series", ignoreCase = true) && !ch.name.contains("movie", ignoreCase = true)) ||
-              ch.name.contains("sport", ignoreCase = true) ||
-              ch.name.contains("premier", ignoreCase = true) ||
-              ch.name.contains("lfc", ignoreCase = true) ||
-              ch.name.contains("kass", ignoreCase = true) ||
-              ch.categoryId?.contains("رياض", ignoreCase = true) == true
-            }.ifEmpty { sportsBackendRepo.sportsChannels.value.filter { it.categoryId == "قنوات الرياضة" } }
-
-            val jazeeraGroup = allList.filter { ch ->
-              ch.name.contains("جزيرة", ignoreCase = true) ||
-              ch.name.contains("jazeera", ignoreCase = true) ||
-              ch.categoryId?.contains("جزيرة", ignoreCase = true) == true
-            }.ifEmpty { sportsBackendRepo.sportsChannels.value.filter { it.categoryId == "قنوات الجزيرة" } }
-
-            val seriesGroup = allList.filter { ch ->
-              ch.name.contains("series", ignoreCase = true) ||
-              ch.name.contains("مسلسل", ignoreCase = true) ||
-              ch.categoryId?.contains("مسلسل", ignoreCase = true) == true
-            }.ifEmpty { sportsBackendRepo.sportsChannels.value.filter { it.categoryId == "قنوات المسلسلات" } }
-
-            val moviesGroup = allList.filter { ch ->
-              ch.name.contains("movie", ignoreCase = true) ||
-              ch.name.contains("فلم", ignoreCase = true) ||
-              ch.name.contains("أفلام", ignoreCase = true) ||
-              ch.name.contains("افلام", ignoreCase = true) ||
-              ch.categoryId?.contains("أفلام", ignoreCase = true) == true
-            }.ifEmpty { sportsBackendRepo.sportsChannels.value.filter { it.categoryId == "قنوات الأفلام" } }
-
-            LazyColumn(
-              modifier = Modifier.fillMaxSize(),
-              contentPadding = PaddingValues(bottom = 100.dp)
-            ) {
-              // 1. Dynamic Multi-Poster Hero Banner Carousel
-              if (heroMatches.isNotEmpty()) {
-                item(key = "hero_carousel") {
-                  TodHeroBannerCarousel(
-                    matches = heroMatches,
-                    onPlayMatch = onPlayMatchDirectly,
-                    onOpenDetails = onOpenMatchDetail
-                  )
-                  Spacer(modifier = Modifier.height(10.dp))
-                }
+        // =========================================================================
+        // MAIN CONTENT (Starts at y=0 behind floating top header)
+        // =========================================================================
+        Box(
+          modifier = Modifier
+            .fillMaxSize()
+            .widthIn(max = 1200.dp)
+            .align(Alignment.TopCenter)
+        ) {
+          when (activeTopSection) {
+            TodTopSection.HOME -> {
+              // =====================================================================
+              // TAB 1: TOD HOME FEED (Multi-Poster Hero Carousel + Live Rails + Fixtures + beIN Channels)
+              // =====================================================================
+              val heroMatches = remember(sportsMatches) {
+                val withPoster = sportsMatches.filter { !it.bannerUrl.isNullOrBlank() }
+                if (withPoster.isNotEmpty()) withPoster else sportsMatches.take(5)
               }
 
-              // 2. بطاقات مباريات كرة القدم (Screenshots 165527, 165536, 165601)
-              // تختلف الألوان حسب البطولة مع التدرجات المناسبة من الإعدادات
-              if (sportsMatches.isNotEmpty()) {
-                item(key = "live_and_today_matches") {
-                  TodLiveSportsRail(
-                    matches = sportsMatches,
-                    onPlayMatch = onPlayMatchDirectly,
-                    onOpenDetails = onOpenMatchDetail
-                  )
-                  Spacer(modifier = Modifier.height(14.dp))
+              val allList = effectiveChannels.ifEmpty { sportsBackendRepo.sportsChannels.value }
+
+              // Dynamic Category Groups (so ANY channels added to server appear directly on HOME)
+              val dynamicCategoryGroups = remember(allList) {
+                val map = linkedMapOf<String, MutableList<XtreamChannel>>()
+                allList.forEach { ch ->
+                  val cat = ch.categoryId?.takeIf { it.isNotBlank() } ?: "قنوات البث المباشر"
+                  map.getOrPut(cat) { mutableListOf() }.add(ch)
                 }
+                map
               }
 
-              // 2. قنوات الرياضة (Screenshots 161610 & 161607 - Pure Channel Logos without Cards)
-              if (sportsGroup.isNotEmpty()) {
-                item(key = "channels_sports") {
-                  TodChannelsGroupRail(
-                    title = "قنوات الرياضة",
-                    channels = sportsGroup,
-                    onPlayChannel = { channel ->
-                      onPlayChannel(channel, allList, "قنوات الرياضة")
-                    }
-                  )
-                }
-              }
-
-              // 3. قنوات الجزيرة (Screenshots 161610 & 161607 - Pure Channel Logos without Cards)
-              if (jazeeraGroup.isNotEmpty()) {
-                item(key = "channels_jazeera") {
-                  TodChannelsGroupRail(
-                    title = "قنوات الجزيرة",
-                    channels = jazeeraGroup,
-                    onPlayChannel = { channel ->
-                      onPlayChannel(channel, allList, "قنوات الجزيرة")
-                    }
-                  )
-                }
-              }
-
-              // 4. قنوات المسلسلات (Screenshots 161610 & 161607 - Pure Channel Logos without Cards)
-              if (seriesGroup.isNotEmpty()) {
-                item(key = "channels_series") {
-                  TodChannelsGroupRail(
-                    title = "قنوات المسلسلات",
-                    channels = seriesGroup,
-                    onPlayChannel = { channel ->
-                      onPlayChannel(channel, allList, "قنوات المسلسلات")
-                    }
-                  )
-                }
-              }
-
-              // 5. قنوات الأفلام (Screenshots 161610 & 161607 - Pure Channel Logos without Cards)
-              if (moviesGroup.isNotEmpty()) {
-                item(key = "channels_movies") {
-                  TodChannelsGroupRail(
-                    title = "قنوات الأفلام",
-                    channels = moviesGroup,
-                    onPlayChannel = { channel ->
-                      onPlayChannel(channel, allList, "قنوات الأفلام")
-                    }
-                  )
-                }
-              }
-
-            // 5. Competitions Rail ("المنافسات") (Screenshots 10, 16, 18)
-            item(key = "competitions_rail") {
-              TodCompetitionsRail(
-                competitions = competitions,
-                onSelectCompetition = { comp ->
-                  val matchInComp = sportsMatches.firstOrNull { it.tournament.contains(comp.name.take(6), ignoreCase = true) }
-                  if (matchInComp != null) {
-                    onOpenMatchDetail(matchInComp)
-                  } else {
-                    activeTopSection = TodTopSection.MATCHES
-                    selectedTournamentFilter = comp.name
+              LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 100.dp)
+              ) {
+                // 1. Dynamic Multi-Poster Hero Banner Carousel
+                if (heroMatches.isNotEmpty()) {
+                  item(key = "hero_carousel") {
+                    TodHeroBannerCarousel(
+                      matches = heroMatches,
+                      onPlayMatch = onPlayMatchDirectly,
+                      onOpenDetails = onOpenMatchDetail
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
                   }
                 }
-              )
-              Spacer(modifier = Modifier.height(18.dp))
-            }
 
-            // 6. Highlights & Shows Rail ("إعادات وملخصات كرة القدم") (Screenshots 15, 17, 18)
-            item(key = "sports_shows_rail") {
-              TodSportsShowsRail(
-                shows = sportsShows,
-                onPlayShow = { show ->
-                  val dummyChannel = XtreamChannel(
-                    streamId = show.id,
-                    name = show.title,
-                    iconUrl = show.bannerUrl,
-                    categoryId = "برامج رياضية",
-                    playUrl = show.streamUrl
-                  )
-                  onPlayChannel(dummyChannel, emptyList(), show.title)
+                // 2. بطاقات مباريات كرة القدم (Screenshots 165527, 165536, 165601)
+                // تختلف الألوان حسب البطولة مع التدرجات المناسبة من الإعدادات
+                if (sportsMatches.isNotEmpty()) {
+                  item(key = "live_and_today_matches") {
+                    TodLiveSportsRail(
+                      matches = sportsMatches,
+                      onPlayMatch = onPlayMatchDirectly,
+                      onOpenDetails = onOpenMatchDetail
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                  }
                 }
-              )
-              Spacer(modifier = Modifier.height(18.dp))
+
+                // 3. جميع قنوات البث المباشر المضافة من السيرفر مقسمة تلقائياً حسب الفئات
+                dynamicCategoryGroups.forEach { (catTitle, channelsInCat) ->
+                  if (channelsInCat.isNotEmpty()) {
+                    item(key = "channels_cat_$catTitle") {
+                      TodChannelsGroupRail(
+                        title = catTitle,
+                        channels = channelsInCat,
+                        onPlayChannel = { channel ->
+                          onPlayChannel(channel, allList, catTitle)
+                        }
+                      )
+                    }
+                  }
+                }
+
+                // 4. Competitions Rail ("المنافسات") (Screenshots 10, 16, 18)
+                item(key = "competitions_rail") {
+                  TodCompetitionsRail(
+                    competitions = competitions,
+                    onSelectCompetition = { comp ->
+                      val matchInComp = sportsMatches.firstOrNull { it.tournament.contains(comp.name.take(6), ignoreCase = true) }
+                      if (matchInComp != null) {
+                        onOpenMatchDetail(matchInComp)
+                      } else {
+                        activeTopSection = TodTopSection.MATCHES
+                        selectedTournamentFilter = comp.name
+                      }
+                    }
+                  )
+                  Spacer(modifier = Modifier.height(18.dp))
+                }
+
+                // 5. Highlights & Shows Rail ("إعادات وملخصات كرة القدم") (Screenshots 15, 17, 18)
+                item(key = "sports_shows_rail") {
+                  TodSportsShowsRail(
+                    shows = sportsShows,
+                    onPlayShow = { show ->
+                      val dummyChannel = XtreamChannel(
+                        streamId = show.id,
+                        name = show.title,
+                        iconUrl = show.bannerUrl,
+                        categoryId = "برامج رياضية",
+                        playUrl = show.streamUrl
+                      )
+                      onPlayChannel(dummyChannel, emptyList(), show.title)
+                    }
+                  )
+                  Spacer(modifier = Modifier.height(24.dp))
+                }
+              }
             }
-          }
-        }
 
         TodTopSection.MATCHES -> {
           // =====================================================================
@@ -799,258 +747,6 @@ fun TodHomeScreen(
   }
 }
 }
-
-/**
- * TOD Match Schedule Fixture Card for the "المباريات" Section
- * 100% Matches Screenshots 165527, 165536, 165601 with tournament-specific colors & settings glow.
- */
-@Composable
-fun TodMatchScheduleCard(
-  match: SportsMatch,
-  onPlayMatch: (SportsMatch) -> Unit,
-  onOpenDetails: (SportsMatch) -> Unit,
-  modifier: Modifier = Modifier
-) {
-  TodTournamentMatchCard(
-    match = match,
-    onClick = { onOpenDetails(match) },
-    onPlayClick = { onPlayMatch(match) },
-    modifier = modifier,
-    isCompactWidth = false
-  )
 }
 
-/**
- * iOS-Fidelity Corporate Channel Card for Grid View with Rock-Solid Fixed Alignment
- */
-@Composable
-fun CorporateChannelGridCard(
-  channel: XtreamChannel,
-  allChannels: List<XtreamChannel>,
-  categoryName: String,
-  onPlayChannel: (XtreamChannel, List<XtreamChannel>, String) -> Unit
-) {
-  val interactionSource = remember { MutableInteractionSource() }
-  val isPressed by interactionSource.collectIsPressedAsState()
-  val scale by animateFloatAsState(
-    targetValue = if (isPressed) 0.95f else 1.0f,
-    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-    label = "gridCardScale"
-  )
 
-  val qualityLabel = when {
-    channel.name.contains("4K", ignoreCase = true) -> "4K UHD"
-    channel.name.contains("FHD", ignoreCase = true) || channel.name.contains("1080", ignoreCase = true) -> "1080p FHD"
-    channel.name.contains("HD", ignoreCase = true) || channel.name.contains("720", ignoreCase = true) -> "720p HD"
-    else -> "HD"
-  }
-
-  Box(
-    modifier = Modifier
-      .scale(scale)
-      .fillMaxWidth()
-      .height(148.dp)
-      .liquidGlassEffect(shape = RoundedCornerShape(22.dp), glowTint = Color(0xFF0A84FF), isElevated = true)
-      .clickable(
-        interactionSource = interactionSource,
-        indication = null
-      ) { onPlayChannel(channel, allChannels, categoryName) }
-      .padding(13.dp)
-  ) {
-    Column(
-      modifier = Modifier.fillMaxSize(),
-      verticalArrangement = Arrangement.SpaceBetween
-    ) {
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Box(
-          modifier = Modifier
-            .size(42.dp)
-            .liquidGlassEffect(shape = RoundedCornerShape(12.dp), glowTint = Color(0xFF0A84FF)),
-          contentAlignment = Alignment.Center
-        ) {
-          if (!channel.iconUrl.isNullOrBlank()) {
-            AsyncImage(
-              model = channel.iconUrl,
-              contentDescription = null,
-              modifier = Modifier
-                .fillMaxSize()
-                .padding(4.dp),
-              contentScale = ContentScale.Fit
-            )
-          } else {
-            Icon(
-              imageVector = Icons.Default.PlayArrow,
-              contentDescription = null,
-              tint = Color(0xFF0A84FF),
-              modifier = Modifier.size(20.dp)
-            )
-          }
-        }
-
-        PulsingLiveBadge()
-      }
-
-      Text(
-        text = cleanChannelName(channel.name),
-        color = Color.White,
-        fontSize = 13.sp,
-        fontFamily = ThmanyahFontFamily,
-        fontWeight = FontWeight.Bold,
-        maxLines = 2,
-        overflow = TextOverflow.Ellipsis,
-        lineHeight = 17.sp,
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(vertical = 4.dp)
-      )
-
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        VideoQualityBadge(qualityText = qualityLabel)
-        Text(
-          text = categoryName.take(16),
-          color = DarkTextTertiary,
-          fontSize = 10.5.sp,
-          fontFamily = ThmanyahFontFamily,
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis
-        )
-      }
-    }
-  }
-}
-
-/**
- * iOS Inset Grouped Table Row for long channel names
- */
-@Composable
-fun CorporateChannelListRow(
-  channel: XtreamChannel,
-  channelIndex: Int,
-  allChannels: List<XtreamChannel>,
-  categoryName: String,
-  onPlayChannel: (XtreamChannel, List<XtreamChannel>, String) -> Unit
-) {
-  val interactionSource = remember { MutableInteractionSource() }
-  val isPressed by interactionSource.collectIsPressedAsState()
-  val scale by animateFloatAsState(
-    targetValue = if (isPressed) 0.98f else 1.0f,
-    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-    label = "listRowScale"
-  )
-
-  val qualityLabel = when {
-    channel.name.contains("4K", ignoreCase = true) -> "4K UHD"
-    channel.name.contains("FHD", ignoreCase = true) || channel.name.contains("1080", ignoreCase = true) -> "1080p FHD"
-    channel.name.contains("HD", ignoreCase = true) || channel.name.contains("720", ignoreCase = true) -> "720p HD"
-    else -> "HD"
-  }
-
-  Box(
-    modifier = Modifier
-      .scale(scale)
-      .fillMaxWidth()
-      .liquidGlassEffect(shape = RoundedCornerShape(16.dp), glowTint = Color(0xFF0A84FF))
-      .clickable(
-        interactionSource = interactionSource,
-        indication = null
-      ) { onPlayChannel(channel, allChannels, categoryName) }
-      .padding(horizontal = 14.dp, vertical = 10.dp)
-  ) {
-    Row(
-      modifier = Modifier.fillMaxWidth(),
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-      Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-      ) {
-        PulsingLiveBadge()
-        VideoQualityBadge(qualityText = qualityLabel)
-        Icon(
-          imageVector = Icons.Default.KeyboardArrowLeft,
-          contentDescription = null,
-          tint = Color(0x66FFFFFF),
-          modifier = Modifier.size(16.dp)
-        )
-      }
-
-      Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-      ) {
-        Column(horizontalAlignment = Alignment.End) {
-          Text(
-            text = cleanChannelName(channel.name),
-            color = Color.White,
-            fontSize = 13.5.sp,
-            fontFamily = ThmanyahFontFamily,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-          )
-          Text(
-            text = categoryName,
-            color = DarkTextTertiary,
-            fontSize = 11.sp,
-            fontFamily = ThmanyahFontFamily
-          )
-        }
-
-        Box(
-          modifier = Modifier
-            .size(38.dp)
-            .liquidGlassEffect(shape = RoundedCornerShape(10.dp), glowTint = Color(0xFF0A84FF)),
-          contentAlignment = Alignment.Center
-        ) {
-          if (!channel.iconUrl.isNullOrBlank()) {
-            AsyncImage(
-              model = channel.iconUrl,
-              contentDescription = null,
-              modifier = Modifier.fillMaxSize().padding(3.dp),
-              contentScale = ContentScale.Fit
-            )
-          } else {
-            Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color(0xFF0A84FF), modifier = Modifier.size(18.dp))
-          }
-        }
-
-        Text(
-          text = "$channelIndex",
-          color = Color(0x55FFFFFF),
-          fontSize = 12.sp,
-          fontWeight = FontWeight.Bold,
-          modifier = Modifier.width(22.dp),
-          textAlign = TextAlign.Center
-        )
-      }
-    }
-  }
-}
-
-/**
- * Intelligent Channel Name Formatter:
- * Cleans technical tags and language prefixes while keeping the full channel name intact.
- */
-fun cleanChannelName(raw: String): String {
-  var text = raw.trim()
-  if (text.isEmpty()) return "قناة"
-
-  val prefixRegex = Regex("^(?:[A-Z]{2,4}\\s*[-:|/]\\s*)", RegexOption.IGNORE_CASE)
-  text = text.replace(prefixRegex, "").trim()
-
-  text = text.replace(Regex("\\[(?:HEVC|H\\.?265|H\\.?264|VIP|4K|FHD|HD|SD|RAW|LOW|50FPS|60FPS)\\]", RegexOption.IGNORE_CASE), "")
-    .replace(Regex("\\((?:HEVC|H\\.?265|H\\.?264|VIP|4K|FHD|HD|SD|RAW|LOW|50FPS|60FPS)\\)", RegexOption.IGNORE_CASE), "")
-    .replace(Regex("\\s+"), " ")
-    .trim()
-
-  return if (text.isBlank()) raw.trim() else text
-}

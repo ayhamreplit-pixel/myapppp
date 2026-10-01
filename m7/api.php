@@ -179,6 +179,38 @@ switch ($action) {
         break;
 
     // -------------------------------------------------------------
+    // 7.2 AES-256 ENCRYPTION & DECRYPTION (M7 Security Engine)
+    // -------------------------------------------------------------
+    case 'encrypt_stream':
+        $rawUrl = $input['url'] ?? ($_GET['url'] ?? '');
+        $secKey = $input['key'] ?? 'TOD_SPORTS_STREAM_SECURE_KEY_2026_PRO';
+        if ($rawUrl) {
+            $iv = substr(md5($secKey . '_iv_salt', true), 0, 16);
+            $keyHash = hash('sha256', $secKey, true);
+            $encrypted = openssl_encrypt($rawUrl, 'AES-256-CBC', $keyHash, OPENSSL_RAW_DATA, $iv);
+            $cipher = 'm7enc:' . base64_encode($encrypted);
+            echo json_encode(['status' => 'success', 'original' => $rawUrl, 'encrypted' => $cipher]);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'url is required']);
+        }
+        break;
+
+    case 'decrypt_stream':
+        $cipher = $input['cipher'] ?? ($_GET['cipher'] ?? '');
+        $secKey = $input['key'] ?? 'TOD_SPORTS_STREAM_SECURE_KEY_2026_PRO';
+        $clean = trim(str_replace(['m7enc:', 'm7:', 'enc:', 'aes:', 'sec:'], '', $cipher));
+        if ($clean) {
+            $iv = substr(md5($secKey . '_iv_salt', true), 0, 16);
+            $keyHash = hash('sha256', $secKey, true);
+            $raw = base64_decode($clean);
+            $decrypted = openssl_decrypt($raw, 'AES-256-CBC', $keyHash, OPENSSL_RAW_DATA, $iv);
+            echo json_encode(['status' => 'success', 'decrypted' => $decrypted ?: $cipher]);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'cipher is required']);
+        }
+        break;
+
+    // -------------------------------------------------------------
     // 7.5 QUICK REALTIME UPDATE MATCH (تحديث فوري وسريع للنتيجة والدقيقة)
     // -------------------------------------------------------------
     case 'quick_update_match':
