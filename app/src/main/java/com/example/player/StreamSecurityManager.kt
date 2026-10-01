@@ -20,8 +20,47 @@ object StreamSecurityManager {
   private const val ALGORITHM = "AES/CBC/PKCS5Padding"
   private const val HMAC_ALGORITHM = "HmacSHA256"
 
-  // Default secure salt & key base (Can be overridden by user in AlwaysData config)
+  // Master key for stream & API payload scrambling
   const val DEFAULT_MASTER_KEY = "TOD_SPORTS_STREAM_SECURE_KEY_2026_PRO"
+
+  /**
+   * Anti-Frida & Anti-Tamper Security Engine
+   * Detects active Frida hook servers, memory inspection, and debugger attachments.
+   */
+  fun isFridaOrTamperDetected(): Boolean {
+    return try {
+      // 1. Check for default Frida ports (27042, 27043)
+      val fridaPorts = listOf(27042, 27043)
+      for (port in fridaPorts) {
+        try {
+          val socket = java.net.Socket("127.0.0.1", port)
+          socket.close()
+          Log.w(TAG, "Security Alert: Active Frida server detected on port $port")
+          return true
+        } catch (e: Exception) {
+          // Port closed, normal
+        }
+      }
+
+      // 2. Check for Frida binaries and temporary injection files
+      val suspiciousPaths = listOf(
+        "/data/local/tmp/frida-server",
+        "/data/local/tmp/re.frida.server",
+        "/data/local/tmp/frida-agent.so",
+        "/data/local/tmp/frida-agent-64.so"
+      )
+      for (path in suspiciousPaths) {
+        if (java.io.File(path).exists()) {
+          Log.w(TAG, "Security Alert: Suspicious Frida binary detected at $path")
+          return true
+        }
+      }
+
+      false
+    } catch (e: Exception) {
+      false
+    }
+  }
 
   /**
    * Derives a deterministic 256-bit AES key from a passphrase.

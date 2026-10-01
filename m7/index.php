@@ -1,9 +1,9 @@
 <?php
 /**
  * =========================================================================
- * TOD Sports External Web Control Panel - M7 Edition
+ * TOD Sports External Web Control Panel - M7 Ultra Dashboard
  * URL: https://ayham.alwaysdata.net/m7/
- * Real-time match scoring, live channels, device sessions & stream control
+ * Real-time Match Scoring, Poster Generator, Presets & Stream Management
  * =========================================================================
  */
 
@@ -12,7 +12,12 @@ $channelsFile = __DIR__ . '/channels.json';
 $competitionsFile = __DIR__ . '/competitions.json';
 $sessionsFile = __DIR__ . '/sessions.json';
 
-// Handle Direct AJAX POST requests
+// Initialize files if missing
+if (!file_exists($matchesFile)) file_put_contents($matchesFile, json_encode(['matches' => []], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+if (!file_exists($channelsFile)) file_put_contents($channelsFile, json_encode(['channels' => []], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+if (!file_exists($sessionsFile)) file_put_contents($sessionsFile, json_encode([], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+// Handle AJAX POST requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
     header('Content-Type: application/json; charset=utf-8');
     $action = $_POST['action'] ?? '';
@@ -71,14 +76,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
     }
 }
 
-// Handle Traditional POST Actions
+// Handle Form POST Actions
 $message = '';
 $msgType = 'info';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
-    if ($action === 'add_match' || $action === 'edit_match') {
+    if ($action === 'add_poster' || $action === 'add_match' || $action === 'edit_match') {
         $homeTeam = trim($_POST['homeTeam'] ?? '');
         $awayTeam = trim($_POST['awayTeam'] ?? '');
         
@@ -106,10 +111,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'streamUrl' => $_POST['streamUrl'] ?? '',
                 'isLive' => isset($_POST['isLive']) && $_POST['isLive'] === '1',
                 'isEnded' => isset($_POST['isEnded']) && $_POST['isEnded'] === '1',
-                'liveMinute' => $_POST['liveMinute'] ?? null,
-                'countdown' => $_POST['countdown'] ?? null,
-                'scoreHome' => $_POST['scoreHome'] !== '' ? (int)$_POST['scoreHome'] : null,
-                'scoreAway' => $_POST['scoreAway'] !== '' ? (int)$_POST['scoreAway'] : null,
+                'liveMinute' => $_POST['liveMinute'] ?? '30\'',
+                'scoreHome' => $_POST['scoreHome'] !== '' ? (int)$_POST['scoreHome'] : 0,
+                'scoreAway' => $_POST['scoreAway'] !== '' ? (int)$_POST['scoreAway'] : 0,
                 'bannerUrl' => $_POST['bannerUrl'] ?? ''
             ];
 
@@ -126,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             file_put_contents($matchesFile, json_encode($matchesData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-            $message = 'تم حفظ ونشر المباراة بنجاح إلى التطبيق مباشرة!';
+            $message = 'تم نشر البوستر وتلقائياً إضافة بطاقة المباراة إلى التطبيق مباشرة!';
             $msgType = 'success';
         }
     } elseif ($action === 'delete_match') {
@@ -137,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 return $m['id'] !== $id;
             }));
             file_put_contents($matchesFile, json_encode($matchesData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-            $message = 'تم حذف المباراة بنجاح من الخادم والتطبيق!';
+            $message = 'تم حذف المباراة والبوستر بنجاح من التطبيق!';
             $msgType = 'warning';
         }
     } elseif ($action === 'add_channel') {
@@ -167,7 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             file_put_contents($channelsFile, json_encode($channelsData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-            $message = 'تم إضافة وتحديث القناة الرياضية بنجاح!';
+            $message = 'تم حفظ ونشر القناة إلى التطبيق بنجاح!';
             $msgType = 'success';
         }
     } elseif ($action === 'delete_channel') {
@@ -181,21 +185,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = 'تم حذف القناة بنجاح!';
             $msgType = 'warning';
         }
-    } elseif ($action === 'kick_session') {
-        $targetDev = $_POST['deviceId'] ?? '';
-        if ($targetDev) {
-            $sessions = json_decode(file_get_contents($sessionsFile), true) ?: [];
-            $sessions = array_values(array_filter($sessions, function($s) use ($targetDev) {
-                return ($s['deviceId'] ?? '') !== $targetDev;
-            }));
-            file_put_contents($sessionsFile, json_encode($sessions, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-            $message = 'تم إنهاء جلسة الجهاز وفصله عن البث!';
-            $msgType = 'success';
-        }
     }
 }
 
-// Load current data
+// Load data
 $matches = (json_decode(file_get_contents($matchesFile), true) ?: ['matches' => []])['matches'] ?? [];
 $channels = (json_decode(file_get_contents($channelsFile), true) ?: ['channels' => []])['channels'] ?? [];
 $rawSessions = json_decode(file_get_contents($sessionsFile), true) ?: [];
@@ -209,15 +202,15 @@ $activeSessions = array_values(array_filter($rawSessions, function($s) use ($now
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TOD Sports Live Server Dashboard - M7</title>
+    <title>TOD M7 - لوحة التحكم الفورية الذكية</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-dark: #07090e;
-            --glass-bg: rgba(18, 22, 36, 0.75);
-            --card-border: rgba(100, 210, 255, 0.22);
+            --glass-bg: rgba(18, 22, 36, 0.85);
+            --card-border: rgba(100, 210, 255, 0.2);
             --tod-gold: #FFB800;
             --tod-blue: #007AFF;
             --tod-cyan: #64D2FF;
@@ -228,17 +221,17 @@ $activeSessions = array_values(array_filter($rawSessions, function($s) use ($now
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Tajawal', sans-serif; }
         body {
-            background: radial-gradient(circle at 50% 0%, #171c32 0%, #07090e 70%);
+            background: radial-gradient(circle at 50% 0%, #171c32 0%, #07090e 75%);
             color: var(--text-main);
             min-height: 100vh;
             padding-bottom: 80px;
         }
 
-        /* Header Glass */
+        /* Top Bar */
         header {
-            background: rgba(13, 16, 28, 0.85);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            padding: 18px 24px;
+            background: rgba(13, 16, 28, 0.9);
+            border-bottom: 1px solid rgba(255,255,255,0.12);
+            padding: 16px 24px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -247,7 +240,7 @@ $activeSessions = array_values(array_filter($rawSessions, function($s) use ($now
             z-index: 100;
             backdrop-filter: blur(16px);
         }
-        .brand { display: flex; align-items: center; gap: 14px; }
+        .brand { display: flex; align-items: center; gap: 12px; }
         .logo-badge {
             background: linear-gradient(135deg, #FFB800, #FF3B30);
             color: #000;
@@ -260,21 +253,8 @@ $activeSessions = array_values(array_filter($rawSessions, function($s) use ($now
         }
         .brand-title h1 { font-size: 18px; font-weight: 900; color: #fff; }
         .brand-title p { font-size: 12px; color: var(--tod-cyan); }
-        .server-pill {
-            background: rgba(48, 209, 88, 0.15);
-            border: 1px solid rgba(48, 209, 88, 0.4);
-            color: var(--tod-green);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .dot { width: 8px; height: 8px; background: var(--tod-green); border-radius: 50%; box-shadow: 0 0 8px var(--tod-green); }
 
-        .container { max-width: 1240px; margin: 24px auto; padding: 0 16px; }
+        .container { max-width: 1280px; margin: 24px auto; padding: 0 16px; }
 
         /* Alert */
         .alert {
@@ -283,227 +263,233 @@ $activeSessions = array_values(array_filter($rawSessions, function($s) use ($now
             margin-bottom: 20px;
             font-weight: 700;
             font-size: 14px;
-            backdrop-filter: blur(8px);
         }
-        .alert.success { background: rgba(48, 209, 88, 0.18); border: 1px solid var(--tod-green); color: #fff; }
-        .alert.warning { background: rgba(255, 59, 48, 0.18); border: 1px solid var(--tod-red); color: #fff; }
-        .alert.info { background: rgba(100, 210, 255, 0.18); border: 1px solid var(--tod-cyan); color: #fff; }
-
-        /* Stats Grid */
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 28px; }
-        .stat-card {
-            background: var(--glass-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 20px;
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            backdrop-filter: blur(16px);
-            box-shadow: 0 8px 30px rgba(0,0,0,0.35);
-        }
-        .stat-card .val { font-size: 30px; font-weight: 900; color: #fff; }
-        .stat-card .lbl { font-size: 12px; color: var(--text-sub); margin-top: 4px; }
-        .stat-icon { font-size: 32px; }
+        .alert.success { background: rgba(48, 209, 88, 0.2); border: 1px solid var(--tod-green); color: #fff; }
+        .alert.warning { background: rgba(255, 59, 48, 0.2); border: 1px solid var(--tod-red); color: #fff; }
 
         /* Tabs Navigation */
-        .tabs { display: flex; gap: 10px; margin-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px; }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 24px;
+            background: rgba(13, 16, 28, 0.6);
+            padding: 6px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.08);
+            overflow-x: auto;
+        }
         .tab-btn {
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.1);
+            background: transparent;
+            border: none;
             color: var(--text-sub);
-            padding: 11px 22px;
-            border-radius: 14px;
-            cursor: pointer;
-            font-size: 14px;
+            padding: 12px 20px;
+            font-size: 15px;
             font-weight: 700;
-            transition: all 0.2s;
-            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
         }
-        .tab-btn.active, .tab-btn:hover {
-            background: linear-gradient(135deg, rgba(255, 184, 0, 0.25), rgba(0, 122, 255, 0.25));
-            border-color: var(--tod-gold);
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--tod-blue), #0055FF);
             color: #fff;
-            box-shadow: 0 4px 20px rgba(255, 184, 0, 0.2);
+            box-shadow: 0 4px 14px rgba(0, 122, 255, 0.4);
         }
-
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* Glass Cards */
+        /* Form Controls & Layout */
         .card {
             background: var(--glass-bg);
             border: 1px solid var(--card-border);
-            border-radius: 22px;
+            border-radius: 20px;
             padding: 24px;
-            margin-bottom: 28px;
-            backdrop-filter: blur(16px);
-            box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+            margin-bottom: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
         }
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-            padding-bottom: 14px;
-        }
-        .card-header h2 { font-size: 18px; color: #fff; font-weight: 800; }
-
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
-        .form-group { margin-bottom: 14px; }
-        .form-group label { display: block; font-size: 12.5px; color: var(--text-sub); margin-bottom: 6px; font-weight: 700; }
-        .form-group input, .form-group select, .form-group textarea {
-            width: 100%;
-            background: rgba(8, 10, 18, 0.8);
-            border: 1px solid rgba(255,255,255,0.14);
-            border-radius: 12px;
-            padding: 11px 14px;
-            color: #fff;
-            font-size: 13.5px;
-            outline: none;
-            transition: all 0.2s;
-        }
-        .form-group input:focus, .form-group select:focus { border-color: var(--tod-cyan); box-shadow: 0 0 10px rgba(100, 210, 255, 0.3); }
-        
-        .btn {
-            background: linear-gradient(135deg, #FFB800, #FFA000);
-            color: #000;
+        .card-title {
+            font-size: 18px;
             font-weight: 900;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 12px;
-            cursor: pointer;
-            font-size: 14px;
-            box-shadow: 0 4px 15px rgba(255, 184, 0, 0.35);
-            display: inline-flex;
+            color: var(--tod-gold);
+            margin-bottom: 18px;
+            display: flex;
             align-items: center;
             gap: 8px;
-            transition: transform 0.15s, box-shadow 0.15s;
         }
-        .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255, 184, 0, 0.5); }
-        .btn.danger { background: linear-gradient(135deg, #FF3B30, #D70015); color: #fff; box-shadow: 0 4px 15px rgba(255, 59, 48, 0.35); }
-        .btn.secondary { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.15); box-shadow: none; }
-        .btn.small { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
 
-        /* Tables & Lists */
-        .table-responsive { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; text-align: right; }
-        th, td { padding: 14px 12px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px; }
-        th { color: var(--tod-cyan); font-weight: 700; background: rgba(0,0,0,0.3); }
-        tr:hover { background: rgba(255,255,255,0.03); }
-
-        .score-control {
-            display: inline-flex;
-            align-items: center;
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
             gap: 6px;
-            background: rgba(0,0,0,0.4);
-            border: 1px solid rgba(255,255,255,0.15);
-            padding: 4px 8px;
-            border-radius: 10px;
         }
-        .score-btn {
-            background: rgba(255, 184, 0, 0.25);
-            color: #FFB800;
-            border: 1px solid rgba(255, 184, 0, 0.4);
-            border-radius: 6px;
-            width: 26px;
-            height: 26px;
+        .form-group label {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--tod-cyan);
+        }
+        .form-control, select {
+            background: rgba(10, 14, 26, 0.8);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-control:focus, select:focus {
+            border-color: var(--tod-cyan);
+            box-shadow: 0 0 10px rgba(100, 210, 255, 0.25);
+        }
+
+        /* Preset Chips Grid */
+        .preset-section {
+            background: rgba(0, 122, 255, 0.08);
+            border: 1px dashed rgba(100, 210, 255, 0.3);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 16px;
+        }
+        .preset-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--tod-gold);
+            margin-bottom: 10px;
+        }
+        .chips-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            max-height: 140px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .chip {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 20px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #fff;
+            cursor: pointer;
             display: flex;
             align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-weight: 900;
-            font-size: 15px;
+            gap: 6px;
+            transition: all 0.15s ease;
         }
-        .score-btn:hover { background: #FFB800; color: #000; }
-        .score-num { font-size: 16px; font-weight: 900; color: #fff; min-width: 18px; text-align: center; }
+        .chip:hover {
+            background: var(--tod-blue);
+            border-color: var(--tod-cyan);
+            transform: translateY(-2px);
+        }
+        .chip img { width: 18px; height: 18px; object-fit: contain; }
 
+        /* Action Buttons */
+        .btn {
+            background: linear-gradient(135deg, var(--tod-gold), #FF9500);
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            font-size: 15px;
+            font-weight: 900;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(255, 184, 0, 0.3);
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255, 184, 0, 0.5); }
+        .btn-danger {
+            background: linear-gradient(135deg, var(--tod-red), #C70000);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(255, 59, 48, 0.3);
+        }
+
+        /* Match Table & Live Cards */
+        .matches-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 18px;
+        }
+        .match-card {
+            background: rgba(13, 17, 30, 0.95);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 16px;
+            position: relative;
+        }
+        .match-card.is-live {
+            border-color: var(--tod-red);
+            box-shadow: 0 0 15px rgba(255, 59, 48, 0.25);
+        }
         .badge-live {
             background: var(--tod-red);
             color: #fff;
-            padding: 4px 10px;
-            border-radius: 8px;
             font-size: 11px;
             font-weight: 900;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .badge-upcoming {
-            background: rgba(255, 184, 0, 0.15);
-            color: var(--tod-gold);
-            border: 1px solid rgba(255, 184, 0, 0.3);
-            padding: 4px 10px;
+            padding: 3px 8px;
             border-radius: 8px;
-            font-size: 11px;
-            font-weight: 700;
-            cursor: pointer;
+            position: absolute;
+            top: 14px;
+            left: 14px;
         }
-
-        .team-badge {
-            display: inline-flex;
+        .team-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 12px 0;
+        }
+        .team-item {
+            display: flex;
             align-items: center;
             gap: 8px;
+            font-weight: 700;
+            font-size: 15px;
+            width: 42%;
         }
-        .team-logo-img { width: 26px; height: 26px; object-fit: contain; border-radius: 50%; background: #fff; padding: 2px; }
-
-        .session-card {
-            background: rgba(11, 14, 26, 0.85);
-            border: 1px solid rgba(100, 210, 255, 0.2);
-            border-radius: 16px;
-            padding: 16px;
-            margin-bottom: 12px;
+        .team-item img { width: 28px; height: 28px; object-fit: contain; }
+        .score-box {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            backdrop-filter: blur(12px);
+            gap: 6px;
+            font-weight: 900;
+            font-size: 22px;
+            color: var(--tod-gold);
         }
-        .session-info { display: flex; align-items: center; gap: 14px; }
-        .device-icon { font-size: 28px; }
-        .session-details h4 { font-size: 14px; color: #fff; font-weight: 800; }
-        .session-details p { font-size: 11.5px; color: var(--text-sub); margin-top: 3px; }
-        .watching-badge {
-            background: rgba(0, 122, 255, 0.18);
-            border: 1px solid rgba(0, 122, 255, 0.45);
-            color: var(--tod-cyan);
-            padding: 6px 12px;
-            border-radius: 10px;
-            font-size: 12px;
-            font-weight: 700;
-        }
-
-        /* Toast notification */
-        #toast {
-            position: fixed;
-            bottom: 24px;
-            left: 24px;
-            background: linear-gradient(135deg, #007AFF, #64D2FF);
+        .score-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
             color: #fff;
-            padding: 12px 24px;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 14px;
-            box-shadow: 0 8px 30px rgba(0, 122, 255, 0.4);
-            display: none;
-            z-index: 1000;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            font-weight: 900;
+            cursor: pointer;
         }
+        .score-btn:hover { background: var(--tod-blue); }
     </style>
 </head>
 <body>
 
     <header>
         <div class="brand">
-            <div class="logo-badge">TOD</div>
+            <div class="logo-badge">TOD M7</div>
             <div class="brand-title">
-                <h1>لوحة التحكم المباشرة - مجلد M7</h1>
-                <p>https://ayham.alwaysdata.net/m7</p>
+                <h1>لوحة التحكم الفورية للبوستر والمباريات</h1>
+                <p>تزامن فوري ومباشر مع تطبيق الأندرويد</p>
             </div>
         </div>
-        <div class="server-pill">
-            <span class="dot"></span>
-            الخادم متصل (Real-time Live Sync)
+        <div style="font-size: 13px; color: var(--tod-green); font-weight: 700;">
+            🟢 الخادم متصل وتفاعلي
         </div>
     </header>
 
@@ -513,466 +499,293 @@ $activeSessions = array_values(array_filter($rawSessions, function($s) use ($now
             <div class="alert <?= $msgType ?>"><?= htmlspecialchars($message) ?></div>
         <?php endif; ?>
 
-        <!-- Stats Overview -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div>
-                    <div class="val" id="activeViewersCount"><?= count($activeSessions) ?></div>
-                    <div class="lbl">الأجهزة المتصلة الآن (من يشاهد)</div>
-                </div>
-                <div class="stat-icon">📱</div>
-            </div>
-            <div class="stat-card">
-                <div>
-                    <div class="val"><?= count($matches) ?></div>
-                    <div class="lbl">إجمالي المباريات المجدولة</div>
-                </div>
-                <div class="stat-icon">⚽</div>
-            </div>
-            <div class="stat-card">
-                <div>
-                    <div class="val"><?= count($channels) ?></div>
-                    <div class="lbl">القنوات الرياضية والبث</div>
-                </div>
-                <div class="stat-icon">📺</div>
-            </div>
-            <div class="stat-card">
-                <div>
-                    <div class="val">AES-256</div>
-                    <div class="lbl">تشفير وحماية البث الفوري</div>
-                </div>
-                <div class="stat-icon">🔒</div>
-            </div>
-        </div>
-
-        <!-- Navigation Tabs -->
+        <!-- Tabs Navigation -->
         <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('tab-matches')">⚽ إدارة المباريات والنتائج المباشرة (<?= count($matches) ?>)</button>
-            <button class="tab-btn" onclick="switchTab('tab-viewers')">👁️ من يشاهد الآن (<?= count($activeSessions) ?>)</button>
-            <button class="tab-btn" onclick="switchTab('tab-channels')">📺 إدارة القنوات (<?= count($channels) ?>)</button>
-            <button class="tab-btn" onclick="switchTab('tab-api')">🔗 معلومات الـ API والربط</button>
+            <button class="tab-btn active" onclick="switchTab('poster-tab')">🎨 إضافة بوستر ومباراة تلقائياً</button>
+            <button class="tab-btn" onclick="switchTab('matches-tab')">⚽ المباريات الحالية والنتائج (<?= count($matches) ?>)</button>
+            <button class="tab-btn" onclick="switchTab('channels-tab')">📺 القنوات المباشرة (<?= count($channels) ?>)</button>
+            <button class="tab-btn" onclick="switchTab('sessions-tab')">📱 الأجهزة المتصلة (<?= count($activeSessions) ?>)</button>
         </div>
 
-        <!-- TAB 1: MATCHES MANAGEMENT (Real-time Instant Scoring) -->
-        <div id="tab-matches" class="tab-content active">
-            <!-- Matches List with Realtime Quick Scoring -->
+        <!-- 1. POSTER & MATCH CREATOR TAB -->
+        <div id="poster-tab" class="tab-content active">
             <div class="card">
-                <div class="card-header">
-                    <h2>قائمة المباريات (تحديث النتائج والبث فورياً في الوقت الفعلي)</h2>
-                    <span style="font-size: 12px; color: var(--tod-gold);">⚡ النتيجة والمباشر تتحدث فوراً في تطبيق المستخدم!</span>
-                </div>
-                <div class="table-responsive">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>المباراة والشعارات</th>
-                                <th>البطولة والتوقيت</th>
-                                <th>الحالة المباشرة</th>
-                                <th>النتيجة المباشرة (تحكم فوري)</th>
-                                <th>القناة والبث</th>
-                                <th>إجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($matches as $m): ?>
-                                <tr id="row-<?= htmlspecialchars($m['id']) ?>">
-                                    <td>
-                                        <div class="team-badge">
-                                            <?php if (!empty($m['homeLogo'])): ?>
-                                                <img src="<?= htmlspecialchars($m['homeLogo']) ?>" class="team-logo-img">
-                                            <?php else: ?>
-                                                <span><?= htmlspecialchars($m['homeFlag'] ?? '⚽') ?></span>
-                                            <?php endif; ?>
-                                            <strong><?= htmlspecialchars($m['homeTeam']) ?></strong>
-                                            <span style="color: var(--tod-gold); font-size: 11px;">VS</span>
-                                            <strong><?= htmlspecialchars($m['awayTeam']) ?></strong>
-                                            <?php if (!empty($m['awayLogo'])): ?>
-                                                <img src="<?= htmlspecialchars($m['awayLogo']) ?>" class="team-logo-img">
-                                            <?php else: ?>
-                                                <span><?= htmlspecialchars($m['awayFlag'] ?? '⚽') ?></span>
-                                            <?php endif; ?>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div><strong><?= htmlspecialchars($m['tournament']) ?></strong></div>
-                                        <div style="color: var(--text-sub); font-size: 11.5px;"><?= htmlspecialchars($m['kickoffTime']) ?> | <?= htmlspecialchars($m['kickoffDate']) ?></div>
-                                    </td>
-                                    <td>
-                                        <button class="<?= !empty($m['isLive']) ? 'badge-live' : 'badge-upcoming' ?>" onclick="toggleMatchLive('<?= htmlspecialchars($m['id']) ?>', this)">
-                                            <?= !empty($m['isLive']) ? '🔴 مباشر الآن' : '⏳ قادمة' ?>
-                                        </button>
-                                        <div style="margin-top: 4px;">
-                                            <input type="text" value="<?= htmlspecialchars($m['liveMinute'] ?? '') ?>" placeholder="الدقيقة" style="width: 75px; padding: 2px 6px; font-size: 11px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color:#fff;" onchange="updateMatchMinute('<?= htmlspecialchars($m['id']) ?>', this.value)">
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <!-- Interactive Realtime Score Buttons -->
-                                        <div class="score-control">
-                                            <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
-                                                <div style="font-size: 10px; color: var(--tod-cyan);"><?= htmlspecialchars($m['homeTeam']) ?></div>
-                                                <div style="display: flex; align-items: center; gap: 4px;">
-                                                    <button class="score-btn" onclick="adjustScore('<?= htmlspecialchars($m['id']) ?>', 1, 0)">+</button>
-                                                    <span class="score-num" id="score-home-<?= htmlspecialchars($m['id']) ?>"><?= $m['scoreHome'] !== null ? $m['scoreHome'] : '0' ?></span>
-                                                    <button class="score-btn" onclick="adjustScore('<?= htmlspecialchars($m['id']) ?>', -1, 0)">-</button>
-                                                </div>
-                                            </div>
+                <div class="card-title">🎨 إضافة بوستر مباراة ينزل تلقائياً بالهيرو وبطاقات المباريات</div>
 
-                                            <span style="font-weight: 900; color: var(--tod-gold); margin: 0 4px;">:</span>
-
-                                            <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
-                                                <div style="font-size: 10px; color: var(--tod-gold);"><?= htmlspecialchars($m['awayTeam']) ?></div>
-                                                <div style="display: flex; align-items: center; gap: 4px;">
-                                                    <button class="score-btn" onclick="adjustScore('<?= htmlspecialchars($m['id']) ?>', 0, 1)">+</button>
-                                                    <span class="score-num" id="score-away-<?= htmlspecialchars($m['id']) ?>"><?= $m['scoreAway'] !== null ? $m['scoreAway'] : '0' ?></span>
-                                                    <button class="score-btn" onclick="adjustScore('<?= htmlspecialchars($m['id']) ?>', 0, -1)">-</button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div><strong><?= htmlspecialchars($m['channelName']) ?></strong></div>
-                                        <div style="color: var(--text-sub); font-size: 11px;">🎙️ <?= htmlspecialchars($m['commentator']) ?></div>
-                                    </td>
-                                    <td>
-                                        <form method="POST" style="display:inline;" onsubmit="return confirm('حذف المباراة نهائياً من الخادم والتطبيق؟');">
-                                            <input type="hidden" name="action" value="delete_match">
-                                            <input type="hidden" name="match_id" value="<?= htmlspecialchars($m['id']) ?>">
-                                            <button type="submit" class="btn danger small">حذف 🗑️</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                <!-- PRESET TEAM CHOOSER -->
+                <div class="preset-section">
+                    <div class="preset-title">⚡ اختار الفرق الجاهزة بنقرة واحدة (المنتخبات والأندية العربية والعالمية):</div>
+                    <div class="chips-row">
+                        <!-- Iraq -->
+                        <div class="chip" onclick="selectTeam('home', 'العراق', 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Flag_of_Iraq.svg/512px-Flag_of_Iraq.svg.png', '🇮🇶')">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/Flag_of_Iraq.svg/512px-Flag_of_Iraq.svg.png"> العراق
+                        </div>
+                        <!-- KSA -->
+                        <div class="chip" onclick="selectTeam('away', 'السعودية', 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Flag_of_Saudi_Arabia.svg/512px-Flag_of_Saudi_Arabia.svg.png', '🇸🇦')">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Flag_of_Saudi_Arabia.svg/512px-Flag_of_Saudi_Arabia.svg.png"> السعودية
+                        </div>
+                        <!-- Egypt -->
+                        <div class="chip" onclick="selectTeam('away', 'مصر', 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/Flag_of_Egypt.svg/512px-Flag_of_Egypt.svg.png', '🇪🇬')">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/Flag_of_Egypt.svg/512px-Flag_of_Egypt.svg.png"> مصر
+                        </div>
+                        <!-- Real Madrid -->
+                        <div class="chip" onclick="selectTeam('home', 'ريال مدريد', 'https://upload.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/512px-Real_Madrid_CF.svg.png', '🇪🇸')">
+                            <img src="https://upload.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/512px-Real_Madrid_CF.svg.png"> ريال مدريد
+                        </div>
+                        <!-- Barcelona -->
+                        <div class="chip" onclick="selectTeam('away', 'برشلونة', 'https://upload.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona.svg/512px-FC_Barcelona.svg.png', '🇪🇸')">
+                            <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona.svg/512px-FC_Barcelona.svg.png"> برشلونة
+                        </div>
+                        <!-- Man City -->
+                        <div class="chip" onclick="selectTeam('home', 'مانشستر سيتي', 'https://upload.wikimedia.org/wikipedia/en/thumb/e/eb/Manchester_City_FC_badge.svg/512px-Manchester_City_FC_badge.svg.png', '🏴󠁧󠁢󠁥󠁮󠁧󠁿')">
+                            <img src="https://upload.wikimedia.org/wikipedia/en/thumb/e/eb/Manchester_City_FC_badge.svg/512px-Manchester_City_FC_badge.svg.png"> مانشستر سيتي
+                        </div>
+                        <!-- Liverpool -->
+                        <div class="chip" onclick="selectTeam('away', 'ليفربول', 'https://upload.wikimedia.org/wikipedia/en/thumb/0/0c/Liverpool_FC.svg/512px-Liverpool_FC.svg.png', '🏴󠁧󠁢󠁥󠁮󠁧󠁿')">
+                            <img src="https://upload.wikimedia.org/wikipedia/en/thumb/0/0c/Liverpool_FC.svg/512px-Liverpool_FC.svg.png"> ليفربول
+                        </div>
+                        <!-- Al Hilal -->
+                        <div class="chip" onclick="selectTeam('home', 'الهلال', 'https://upload.wikimedia.org/wikipedia/en/thumb/a/a2/Al_Hilal_SFC_logo.svg/512px-Al_Hilal_SFC_logo.svg.png', '🇸🇦')">
+                            <img src="https://upload.wikimedia.org/wikipedia/en/thumb/a/a2/Al_Hilal_SFC_logo.svg/512px-Al_Hilal_SFC_logo.svg.png"> الهلال
+                        </div>
+                        <!-- Al Nassr -->
+                        <div class="chip" onclick="selectTeam('away', 'النصر', 'https://upload.wikimedia.org/wikipedia/en/thumb/c/c5/Al_Nassr_FC_logo.svg/512px-Al_Nassr_FC_logo.svg.png', '🇸🇦')">
+                            <img src="https://upload.wikimedia.org/wikipedia/en/thumb/c/c5/Al_Nassr_FC_logo.svg/512px-Al_Nassr_FC_logo.svg.png"> النصر
+                        </div>
+                        <!-- Al Shorta Iraq -->
+                        <div class="chip" onclick="selectTeam('home', 'الشرطة العراقي', 'https://upload.wikimedia.org/wikipedia/en/thumb/1/1a/Al-Shorta_SC_logo.svg/512px-Al-Shorta_SC_logo.svg.png', '🇮🇶')">
+                            <img src="https://upload.wikimedia.org/wikipedia/en/thumb/1/1a/Al-Shorta_SC_logo.svg/512px-Al-Shorta_SC_logo.svg.png"> الشرطة
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Add Match Form -->
-            <div class="card">
-                <div class="card-header">
-                    <h2>إضافة مباراة جديدة إلى جدول TOD</h2>
+                <!-- PRESET TOURNAMENT CHOOSER -->
+                <div class="preset-section">
+                    <div class="preset-title">🏆 اختار البطولة الجاهزة بنقرة واحدة:</div>
+                    <div class="chips-row">
+                        <div class="chip" onclick="selectTournament('دوري أبطال أوروبا', 'https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/UEFA_Champions_League_logo_2.svg/512px-UEFA_Champions_League_logo_2.svg.png')">
+                            🇪🇺 دوري أبطال أوروبا
+                        </div>
+                        <div class="chip" onclick="selectTournament('الدوري الإنجليزي الممتاز', 'https://upload.wikimedia.org/wikipedia/en/thumb/f/f2/Premier_League_Logo.svg/512px-Premier_League_Logo.svg.png')">
+                            🏴󠁧󠁢󠁥󠁮󠁧󠁿 الدوري الإنجليزي
+                        </div>
+                        <div class="chip" onclick="selectTournament('الدوري الإسباني - لا ليغا', 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/LaLiga_logo_2023.svg/512px-LaLiga_logo_2023.svg.png')">
+                            🇪🇸 الدوري الإسباني
+                        </div>
+                        <div class="chip" onclick="selectTournament('دوري أبطال آسيا للنخبة', 'https://upload.wikimedia.org/wikipedia/en/thumb/0/07/Confederation_of_African_Football_logo.svg/512px-Confederation_of_African_Football_logo.svg.png')">
+                            🌏 دوري أبطال آسيا
+                        </div>
+                        <div class="chip" onclick="selectTournament('الدوري السعودي للمحترفين', 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Saudi_Pro_League_logo.svg/512px-Saudi_Pro_League_logo.svg.png')">
+                            🇸🇦 الدوري السعودي
+                        </div>
+                    </div>
                 </div>
+
                 <form method="POST">
-                    <input type="hidden" name="action" value="add_match">
-                    
+                    <input type="hidden" name="action" value="add_poster">
                     <div class="form-grid">
                         <div class="form-group">
-                            <label>الفريق الأول (المستضيف)</label>
-                            <input type="text" name="homeTeam" required placeholder="مثال: ريال مدريد">
+                            <label>الفريق الأول (صاحب الأرض):</label>
+                            <input type="text" id="homeTeam" name="homeTeam" class="form-control" placeholder="مثل: العراق" required>
                         </div>
                         <div class="form-group">
-                            <label>شعار الفريق الأول (Logo URL)</label>
-                            <input type="url" name="homeLogo" placeholder="https://upload.wikimedia.org/.../Real_Madrid.png">
+                            <label>رابط شعار الفريق الأول (PNG):</label>
+                            <input type="url" id="homeLogo" name="homeLogo" class="form-control" placeholder="https://...">
                         </div>
                         <div class="form-group">
-                            <label>الفريق الثاني (الضيف)</label>
-                            <input type="text" name="awayTeam" required placeholder="مثال: برشلونة">
+                            <label>الفريق الثاني (الضيف):</label>
+                            <input type="text" id="awayTeam" name="awayTeam" class="form-control" placeholder="مثل: السعودية" required>
                         </div>
                         <div class="form-group">
-                            <label>شعار الفريق الثاني (Logo URL)</label>
-                            <input type="url" name="awayLogo" placeholder="https://upload.wikimedia.org/.../Barcelona.png">
+                            <label>رابط شعار الفريق الثاني (PNG):</label>
+                            <input type="url" id="awayLogo" name="awayLogo" class="form-control" placeholder="https://...">
+                        </div>
+
+                        <div class="form-group">
+                            <label>اسم البطولة:</label>
+                            <input type="text" id="tournament" name="tournament" class="form-control" value="تصفيات كأس العالم 2026">
                         </div>
                         <div class="form-group">
-                            <label>البطولة</label>
-                            <input type="text" name="tournament" value="دوري أبطال أوروبا" placeholder="اسم البطولة">
+                            <label>رابط شعار البطولة:</label>
+                            <input type="url" id="tournamentLogo" name="tournamentLogo" class="form-control" placeholder="https://...">
+                        </div>
+
+                        <div class="form-group">
+                            <label>وقت المباراة (ساعة):</label>
+                            <input type="text" name="kickoffTime" class="form-control" value="22:00">
                         </div>
                         <div class="form-group">
-                            <label>شعار البطولة (Logo URL)</label>
-                            <input type="url" name="tournamentLogo" placeholder="https://example.com/champions_league.png">
+                            <label>تاريخ المباراة:</label>
+                            <input type="text" name="kickoffDate" class="form-control" value="اليوم">
                         </div>
                         <div class="form-group">
-                            <label>توقيت المباراة</label>
-                            <input type="text" name="kickoffTime" value="22:00" placeholder="22:00">
+                            <label>القناة الناقلة:</label>
+                            <input type="text" name="channelName" class="form-control" value="beIN SPORTS 1 HD">
                         </div>
                         <div class="form-group">
-                            <label>تاريخ المباراة</label>
-                            <input type="text" name="kickoffDate" value="اليوم" placeholder="اليوم أو 1 أكتوبر">
+                            <label>رابط البث المباشر (M3U8):</label>
+                            <input type="url" name="streamUrl" class="form-control" value="https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8">
                         </div>
-                        <div class="form-group">
-                            <label>الملعب</label>
-                            <input type="text" name="stadium" value="سانتياغو برنابيو">
-                        </div>
-                        <div class="form-group">
-                            <label>المعلق الرياضي</label>
-                            <input type="text" name="commentator" value="عصام الشوالي">
-                        </div>
-                        <div class="form-group">
-                            <label>القناة الناقلة</label>
-                            <input type="text" name="channelName" value="beIN SPORTS 1 HD">
-                        </div>
-                        <div class="form-group">
-                            <label>رابط البث المباشر (HLS / m3u8)</label>
-                            <input type="text" name="streamUrl" placeholder="https://.../stream.m3u8">
-                        </div>
-                        <div class="form-group">
-                            <label>حالة البث</label>
-                            <select name="isLive">
-                                <option value="0">قادمة (Upcoming)</option>
-                                <option value="1">مباشر الآن (LIVE)</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>دقيقة المباراة (للمباشر)</label>
-                            <input type="text" name="liveMinute" placeholder="مثال: الشوط الأول أو 65'">
-                        </div>
-                        <div class="form-group">
-                            <label>أهداف المستضيف</label>
-                            <input type="number" name="scoreHome" placeholder="0">
-                        </div>
-                        <div class="form-group">
-                            <label>أهداف الضيف</label>
-                            <input type="number" name="scoreAway" placeholder="0">
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label>رابط صورة البوستر الهيرو (Banner URL):</label>
+                            <input type="url" name="bannerUrl" class="form-control" placeholder="https://... (اختياري - سيظهر بالهيرو العلوي للتطبيق تلقائياً)">
                         </div>
                     </div>
 
-                    <div style="margin-top: 14px;">
-                        <button type="submit" class="btn">حفظ ونشر المباراة فوراً ⚽</button>
+                    <div style="margin-top: 20px; display: flex; gap: 14px; align-items: center;">
+                        <label><input type="checkbox" name="isLive" value="1" checked> 🔴 جعل المباراة مباشرة الآن</label>
+                        <button type="submit" class="btn">🚀 نشر البوستر والمباراة تلقائياً للتطبيق</button>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- TAB 2: WHO IS WATCHING NOW (Real-time Auto Refresh) -->
-        <div id="tab-viewers" class="tab-content">
-            <div class="card">
-                <div class="card-header">
-                    <h2>الجلسات النشطة والأجهزة المتصلة بالتطبيق (تحديث مباشر وتلقائي)</h2>
-                    <span style="font-size: 12px; color: var(--tod-green);">🟢 تحديث تلقائي مستمر كل 4 ثوانٍ</span>
-                </div>
+        <!-- 2. MATCHES LIST TAB -->
+        <div id="matches-tab" class="tab-content">
+            <div class="matches-grid">
+                <?php foreach ($matches as $m): ?>
+                    <div class="match-card <?= !empty($m['isLive']) ? 'is-live' : '' ?>" id="card-<?= $m['id'] ?>">
+                        <?php if (!empty($m['isLive'])): ?>
+                            <span class="badge-live">🔴 مباشر الآن</span>
+                        <?php endif; ?>
+                        
+                        <div style="font-size: 12px; color: var(--tod-cyan); font-weight: 700;">
+                            🏆 <?= htmlspecialchars($m['tournament'] ?? '') ?>
+                        </div>
 
-                <div id="sessionsContainer">
-                    <?php if (empty($activeSessions)): ?>
-                        <p style="color: var(--text-sub); text-align: center; padding: 24px;">لا يوجد أجهزة متصلة في هذه اللحظة (ستظهر الأجهزة فور فتح التطبيق).</p>
-                    <?php else: ?>
-                        <?php foreach ($activeSessions as $sess): ?>
-                            <div class="session-card">
-                                <div class="session-info">
-                                    <div class="device-icon">📲</div>
-                                    <div class="session-details">
-                                        <h4><?= htmlspecialchars($sess['deviceName'] ?? 'هاتف أندرويد') ?> <span style="color: var(--tod-gold); font-size: 12px;">(<?= htmlspecialchars($sess['profileName'] ?? 'VIP') ?>)</span></h4>
-                                        <p>معرف الجهاز: <?= htmlspecialchars(substr($sess['deviceId'] ?? '', 0, 18)) ?>... | IP: <?= htmlspecialchars($sess['ip'] ?? '') ?> | اتصال: <?= htmlspecialchars($sess['connectedAt'] ?? '') ?></p>
-                                    </div>
-                                </div>
-                                <div style="display: flex; align-items: center; gap: 10px;">
-                                    <div class="watching-badge">
-                                        👀 يشاهد: <?= htmlspecialchars($sess['activeStream'] ?: 'تصفح التطبيق') ?>
-                                    </div>
-                                    <form method="POST" style="margin: 0;" onsubmit="return confirm('إنهاء جلسة هذا الجهاز فوراً؟');">
-                                        <input type="hidden" name="action" value="kick_session">
-                                        <input type="hidden" name="deviceId" value="<?= htmlspecialchars($sess['deviceId'] ?? '') ?>">
-                                        <button type="submit" class="btn danger small">فصل</button>
-                                    </form>
-                                </div>
+                        <div class="team-row">
+                            <div class="team-item">
+                                <?php if (!empty($m['homeLogo'])): ?>
+                                    <img src="<?= htmlspecialchars($m['homeLogo']) ?>">
+                                <?php endif; ?>
+                                <span><?= htmlspecialchars($m['homeTeam'] ?? '') ?></span>
                             </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </div>
+
+                            <div class="score-box">
+                                <button class="score-btn" onclick="quickScore('<?= $m['id'] ?>', -1, 0)">-</button>
+                                <span id="score-home-<?= $m['id'] ?>"><?= $m['scoreHome'] ?? 0 ?></span>
+                                <span>-</span>
+                                <span id="score-away-<?= $m['id'] ?>"><?= $m['scoreAway'] ?? 0 ?></span>
+                                <button class="score-btn" onclick="quickScore('<?= $m['id'] ?>', 1, 0)">+</button>
+                            </div>
+
+                            <div class="team-item" style="justify-content: flex-end;">
+                                <span><?= htmlspecialchars($m['awayTeam'] ?? '') ?></span>
+                                <?php if (!empty($m['awayLogo'])): ?>
+                                    <img src="<?= htmlspecialchars($m['awayLogo']) ?>">
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; pt: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
+                            <button class="btn" style="padding: 6px 12px; font-size: 12px;" onclick="toggleLive('<?= $m['id'] ?>')">
+                                🔄 تبديل حالة المباشر
+                            </button>
+                            <form method="POST" style="display: inline;" onsubmit="return confirm('هل تريد حذف هذه المباراة والبوستر؟');">
+                                <input type="hidden" name="action" value="delete_match">
+                                <input type="hidden" name="match_id" value="<?= $m['id'] ?>">
+                                <button type="submit" class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;">🗑️ حذف</button>
+                            </form>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
             </div>
         </div>
 
-        <!-- TAB 3: CHANNELS MANAGEMENT -->
-        <div id="tab-channels" class="tab-content">
+        <!-- 3. CHANNELS TAB -->
+        <div id="channels-tab" class="tab-content">
             <div class="card">
-                <div class="card-header">
-                    <h2>إضافة قناة رياضية جديدة</h2>
-                </div>
+                <div class="card-title">📺 إضافة/إدارة القنوات المباشرة</div>
                 <form method="POST">
                     <input type="hidden" name="action" value="add_channel">
                     <div class="form-grid">
                         <div class="form-group">
-                            <label>اسم القناة</label>
-                            <input type="text" name="name" required placeholder="مثال: beIN SPORTS 1 HD">
+                            <label>اسم القناة:</label>
+                            <input type="text" name="name" class="form-control" placeholder="beIN SPORTS 1 HD" required>
                         </div>
                         <div class="form-group">
-                            <label>معرف البث (Stream ID)</label>
-                            <input type="text" name="streamId" placeholder="ch_bein_1">
+                            <label>رابط الشعار (PNG):</label>
+                            <input type="url" name="iconUrl" class="form-control" placeholder="https://...">
                         </div>
                         <div class="form-group">
-                            <label>شعار القناة (Logo URL)</label>
-                            <input type="url" name="iconUrl" placeholder="https://upload.wikimedia.org/.../BeIN_Sports_1.png">
-                        </div>
-                        <div class="form-group">
-                            <label>التصنيف</label>
-                            <input type="text" name="categoryId" value="قنوات beIN SPORTS">
-                        </div>
-                        <div class="form-group" style="grid-column: 1 / -1;">
-                            <label>رابط البث المباشر (HLS / m3u8)</label>
-                            <input type="text" name="playUrl" required placeholder="https://.../stream.m3u8">
+                            <label>رابط البث (M3U8):</label>
+                            <input type="url" name="playUrl" class="form-control" placeholder="https://..." required>
                         </div>
                     </div>
-                    <button type="submit" class="btn">إضافة القناة 📺</button>
+                    <button type="submit" class="btn" style="margin-top: 16px;">➕ إضافة القناة فورياً</button>
                 </form>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <h2>القنوات المتاحة في التطبيق</h2>
-                </div>
-                <div class="table-responsive">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>الشعار</th>
-                                <th>اسم القناة</th>
-                                <th>التصنيف</th>
-                                <th>رابط البث</th>
-                                <th>إجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($channels as $c): ?>
-                                <tr>
-                                    <td>
-                                        <?php if (!empty($c['iconUrl'])): ?>
-                                            <img src="<?= htmlspecialchars($c['iconUrl']) ?>" style="width: 32px; height: 32px; object-fit: contain; border-radius: 8px;">
-                                        <?php else: ?>
-                                            📺
-                                        <?php endif; ?>
-                                    </td>
-                                    <td><strong><?= htmlspecialchars($c['name']) ?></strong></td>
-                                    <td><?= htmlspecialchars($c['categoryId']) ?></td>
-                                    <td style="max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--tod-cyan);"><?= htmlspecialchars($c['playUrl']) ?></td>
-                                    <td>
-                                        <form method="POST" style="display:inline;" onsubmit="return confirm('حذف القناة؟');">
-                                            <input type="hidden" name="action" value="delete_channel">
-                                            <input type="hidden" name="streamId" value="<?= htmlspecialchars($c['streamId']) ?>">
-                                            <button type="submit" class="btn danger small">حذف 🗑️</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
             </div>
         </div>
 
-        <!-- TAB 4: API & SERVER LINKING INFO -->
-        <div id="tab-api" class="tab-content">
+        <!-- 4. SESSIONS TAB -->
+        <div id="sessions-tab" class="tab-content">
             <div class="card">
-                <div class="card-header">
-                    <h2>روابط الـ API ومجلد M7</h2>
-                </div>
-                <div class="form-group">
-                    <label>رابط واجهة الـ API للمباريات:</label>
-                    <input type="text" readonly value="https://ayham.alwaysdata.net/m7/api.php?action=matches">
-                </div>
-                <div class="form-group">
-                    <label>رابط واجهة الـ API للقنوات:</label>
-                    <input type="text" readonly value="https://ayham.alwaysdata.net/m7/api.php?action=channels">
-                </div>
-                <div class="form-group">
-                    <label>رابط تتبع الأجهزة وجلسات الدخول (من يشاهد الآن):</label>
-                    <input type="text" readonly value="https://ayham.alwaysdata.net/m7/api.php?action=session_ping">
-                </div>
-                <div class="form-group">
-                    <label>مفتاح الأمان وتشفير الروابط AES-256:</label>
-                    <input type="text" readonly value="TOD_VIP_SUPER_SECURE_KEY_2026_M7">
-                </div>
+                <div class="card-title">📱 الأجهزة النشطة حالياً بالتطبيق (من يشاهد الآن)</div>
+                <p style="color: var(--text-sub); font-size: 14px;">عدد المشتركين الأونلاين بالتطبيق الآن: <strong style="color: var(--tod-green);"><?= count($activeSessions) ?> جهاز</strong></p>
             </div>
         </div>
 
     </div>
 
-    <!-- Toast Notification Popup -->
-    <div id="toast">تم التحديث بنجاح!</div>
-
     <script>
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            toast.textContent = msg;
-            toast.style.display = 'block';
-            setTimeout(() => { toast.style.display = 'none'; }, 2500);
-        }
-
         function switchTab(tabId) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
             document.getElementById(tabId).classList.add('active');
-            event.currentTarget.classList.add('active');
         }
 
-        // Real-time Quick Score adjustment via AJAX
-        function adjustScore(matchId, deltaHome, deltaAway) {
-            const homeEl = document.getElementById('score-home-' + matchId);
-            const awayEl = document.getElementById('score-away-' + matchId);
+        function selectTeam(type, name, logo, flag) {
+            if (type === 'home') {
+                document.getElementById('homeTeam').value = name;
+                document.getElementById('homeLogo').value = logo;
+            } else {
+                document.getElementById('awayTeam').value = name;
+                document.getElementById('awayLogo').value = logo;
+            }
+        }
 
-            let curH = parseInt(homeEl.textContent) || 0;
-            let curA = parseInt(awayEl.textContent) || 0;
-            homeEl.textContent = Math.max(0, curH + deltaHome);
-            awayEl.textContent = Math.max(0, curA + deltaAway);
+        function selectTournament(name, logo) {
+            document.getElementById('tournament').value = name;
+            document.getElementById('tournamentLogo').value = logo;
+        }
 
-            const formData = new FormData();
+        function quickScore(id, deltaHome, deltaAway) {
+            let formData = new FormData();
             formData.append('action', 'quick_score');
-            formData.append('id', matchId);
+            formData.append('id', id);
             formData.append('deltaHome', deltaHome);
             formData.append('deltaAway', deltaAway);
 
             fetch('index.php', {
                 method: 'POST',
-                body: formData,
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: formData
             })
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'success') {
-                    showToast('⚡ تم تحديث النتيجة فورياً في التطبيق!');
-                }
-            })
-            .catch(err => console.error(err));
-        }
-
-        // Real-time Match Live toggle
-        function toggleMatchLive(matchId, btn) {
-            const formData = new FormData();
-            formData.append('action', 'toggle_live');
-            formData.append('id', matchId);
-
-            fetch('index.php', {
-                method: 'POST',
-                body: formData,
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.isLive) {
-                    btn.className = 'badge-live';
-                    btn.textContent = '🔴 مباشر الآن';
-                    showToast('⚡ تم تفعيل البث المباشر للمباراة!');
-                } else {
-                    btn.className = 'badge-upcoming';
-                    btn.textContent = '⏳ قادمة';
-                    showToast('تم تحويل المباراة إلى قادمة');
+                    location.reload();
                 }
             });
         }
 
-        // Real-time Minute update
-        function updateMatchMinute(matchId, minVal) {
-            const formData = new FormData();
-            formData.append('action', 'quick_minute');
-            formData.append('id', matchId);
-            formData.append('liveMinute', minVal);
+        function toggleLive(id) {
+            let formData = new FormData();
+            formData.append('action', 'toggle_live');
+            formData.append('id', id);
 
             fetch('index.php', {
                 method: 'POST',
-                body: formData,
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: formData
             })
-            .then(() => showToast('⚡ تم تحديث دقيقة المباراة!'));
+            .then(res => res.json())
+            .then(data => {
+                location.reload();
+            });
         }
-
-        // Periodic Real-time Viewers Auto Refresh
-        setInterval(() => {
-            fetch('api.php?action=get_sessions')
-                .then(res => res.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        document.getElementById('activeViewersCount').textContent = data.totalActive;
-                    }
-                })
-                .catch(() => {});
-        }, 4000);
     </script>
 </body>
 </html>

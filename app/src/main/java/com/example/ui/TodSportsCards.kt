@@ -1,8 +1,14 @@
 package com.example.ui
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -291,6 +297,55 @@ fun TodTimerPill(
  * Home/Away crests (Home on Right), and smooth integrated bottom gradient.
  */
 @Composable
+fun PulsingLiveRedBadgeLarge() {
+  val infiniteTransition = rememberInfiniteTransition(label = "pulseLive")
+  val alphaPulse by infiniteTransition.animateFloat(
+    initialValue = 0.5f,
+    targetValue = 1.0f,
+    animationSpec = infiniteRepeatable(
+      animation = tween(800, easing = LinearEasing),
+      repeatMode = RepeatMode.Reverse
+    ),
+    label = "alphaPulse"
+  )
+
+  Box(
+    modifier = Modifier
+      .clip(RoundedCornerShape(10.dp))
+      .background(
+        Brush.horizontalGradient(
+          listOf(Color(0xFFFF375F), Color(0xFFFF453A))
+        )
+      )
+      .border(1.dp, Color(0x60FFFFFF), RoundedCornerShape(10.dp))
+      .padding(horizontal = 14.dp, vertical = 6.dp),
+    contentAlignment = Alignment.Center
+  ) {
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+      Box(
+        modifier = Modifier
+          .size(10.dp)
+          .clip(CircleShape)
+          .background(Color.White.copy(alpha = alphaPulse))
+      )
+      Text(
+        text = "مباشر الآن",
+        color = Color.White,
+        fontSize = 14.5.sp,
+        fontFamily = ThmanyahFontFamily,
+        fontWeight = FontWeight.Black
+      )
+    }
+  }
+}
+
+/**
+ * High-Fidelity TOD Hero Poster with Realtime Smart Kickoff Calculator & Dynamic Pulsing Live Badge
+ */
+@Composable
 fun TodMatchCountdownHero(
   match: SportsMatch,
   onPlayMatch: (SportsMatch) -> Unit,
@@ -300,18 +355,39 @@ fun TodMatchCountdownHero(
   onSelectIndex: (Int) -> Unit = {},
   modifier: Modifier = Modifier
 ) {
-  // Live Ticking Realtime Countdown Timer
-  var remainingSeconds by remember(match.id, match.kickoffTime) {
-    mutableStateOf(4 * 3600L + 45 * 60L + 18L)
+  // Smart Kickoff Calculation
+  val nowMillis = System.currentTimeMillis()
+  val targetKickoffMillis = remember(match) {
+    try {
+      val parts = match.kickoffTime.split(":")
+      if (parts.size >= 2) {
+        val hour = parts[0].trim().toIntOrNull() ?: 21
+        val minute = parts[1].trim().toIntOrNull() ?: 45
+        val cal = java.util.Calendar.getInstance()
+        cal.set(java.util.Calendar.HOUR_OF_DAY, hour)
+        cal.set(java.util.Calendar.MINUTE, minute)
+        cal.set(java.util.Calendar.SECOND, 0)
+        cal.set(java.util.Calendar.MILLISECOND, 0)
+        cal.timeInMillis
+      } else {
+        nowMillis + 17118000L
+      }
+    } catch (e: Exception) {
+      nowMillis + 17118000L
+    }
   }
+
+  var currentMillis by remember { mutableStateOf(System.currentTimeMillis()) }
 
   LaunchedEffect(match.id) {
     while (true) {
-      delay(1000L)
-      if (remainingSeconds > 0) {
-        remainingSeconds--
-      }
+      delay(1000)
+      currentMillis = System.currentTimeMillis()
     }
+  }
+
+  val remainingSeconds = remember(currentMillis, targetKickoffMillis) {
+    ((targetKickoffMillis - currentMillis) / 1000).coerceAtLeast(0)
   }
 
   val hours = remember(remainingSeconds) {
@@ -323,6 +399,8 @@ fun TodMatchCountdownHero(
   val seconds = remember(remainingSeconds) {
     String.format(java.util.Locale.ENGLISH, "%02d", remainingSeconds % 60)
   }
+
+  val isNowLive = match.isLive || (targetKickoffMillis <= nowMillis && remainingSeconds <= 0)
 
   Box(
     modifier = modifier
@@ -415,104 +493,112 @@ fun TodMatchCountdownHero(
         )
     )
 
-    // 4. Bottom Overlay Content (Logos, Title, Live Countdown, Metadata, My TOD / Play Button, Dots)
+    // 4. Bottom Overlay Content (Logos, Title, Metadata, Red Live Badge, Action Buttons)
     Column(
       modifier = Modifier
         .fillMaxWidth()
-        .align(Alignment.BottomCenter)
+        .align(Alignment.BottomStart)
         .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
-      horizontalAlignment = Alignment.End
+      horizontalAlignment = Alignment.Start
     ) {
-      // 4.1 Logos / Flags Row (Guaranteed Right-Aligned above Title Text)
+      // 4.1 Team Flags / Crests in Softened Semi-Transparent Rectangles with LARGER Logos
       Box(
         modifier = Modifier
           .fillMaxWidth()
-          .padding(bottom = 8.dp),
-        contentAlignment = Alignment.CenterEnd
+          .padding(bottom = 10.dp),
+        contentAlignment = Alignment.CenterStart
       ) {
         Row(
           verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(10.dp)
+          horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-          // Home Team Flag / Crest (Far Right in Arabic)
+          // Home Team Flag / Crest in Softened Rectangle with Larger Logo
           Box(
             modifier = Modifier
-              .width(54.dp)
-              .height(38.dp)
+              .size(width = 56.dp, height = 40.dp)
               .clip(RoundedCornerShape(8.dp))
-              .background(Color(0x30000000))
-              .border(1.5.dp, Color.White, RoundedCornerShape(8.dp)),
+              .background(Color(0x35FFFFFF))
+              .border(1.dp, Color(0x70FFFFFF), RoundedCornerShape(8.dp))
+              .padding(3.dp),
             contentAlignment = Alignment.Center
           ) {
-            TodTeamCrest(team = match.homeTeam, size = 36.dp)
+            TodTeamCrest(team = match.homeTeam, size = 38.dp)
           }
 
-          // Center Dash "-"
+          // Center "ضد"
           Text(
-            text = "-",
-            color = Color.White,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Black
+            text = "ضد",
+            color = Color(0xFFFFB800),
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Black,
+            fontFamily = ThmanyahFontFamily
           )
 
-          // Away Team Flag / Crest (Left of Home)
+          // Away Team Flag / Crest in Softened Rectangle with Larger Logo
           Box(
             modifier = Modifier
-              .width(54.dp)
-              .height(38.dp)
+              .size(width = 56.dp, height = 40.dp)
               .clip(RoundedCornerShape(8.dp))
-              .background(Color(0x30000000))
-              .border(1.5.dp, Color.White, RoundedCornerShape(8.dp)),
+              .background(Color(0x35FFFFFF))
+              .border(1.dp, Color(0x70FFFFFF), RoundedCornerShape(8.dp))
+              .padding(3.dp),
             contentAlignment = Alignment.Center
           ) {
-            TodTeamCrest(team = match.awayTeam, size = 36.dp)
+            TodTeamCrest(team = match.awayTeam, size = 38.dp)
           }
         }
       }
 
-      // 4.2 Match Title (Bold White, RTL Right-aligned)
+      // 4.2 Match Title (Larger & Prominent, RTL Right-aligned)
       Text(
-        text = match.title,
+        text = match.title.ifBlank { "${match.homeTeam.name} ضد ${match.awayTeam.name}" },
         color = Color.White,
-        fontSize = 20.sp,
+        fontSize = 24.sp,
         fontWeight = FontWeight.Black,
         fontFamily = ThmanyahFontFamily,
         textAlign = TextAlign.Right,
         modifier = Modifier.fillMaxWidth()
       )
 
-      Spacer(modifier = Modifier.height(8.dp))
+      Spacer(modifier = Modifier.height(6.dp))
 
-      // 4.3 Realtime Live Ticking Countdown Timer Pills: [ 04 ساعات ] : [ 45 دقائق ] : [ 18 ثواني ]
-      Box(
-        modifier = Modifier.fillMaxWidth(),
-        contentAlignment = Alignment.CenterEnd
-      ) {
-        TodCountdownPillBar(
-          hours = hours,
-          minutes = minutes,
-          seconds = seconds
-        )
-      }
-
-      Spacer(modifier = Modifier.height(8.dp))
-
-      // 4.4 Match Subtitle Metadata (RTL Right-aligned)
+      // 4.3 Match Subtitle Metadata (Larger & Clearer: Date • Time • Stadium • Tournament)
       Text(
         text = "${match.kickoffDate} • ${match.kickoffTime} • ${match.stadium.ifBlank { "الملعب الرئيسي" }} • ${match.tournament}",
-        color = Color(0xFFD0D8E8),
-        fontSize = 12.sp,
+        color = Color(0xFFE2E8F0),
+        fontSize = 15.sp,
         fontFamily = ThmanyahFontFamily,
-        fontWeight = FontWeight.Medium,
+        fontWeight = FontWeight.Bold,
         textAlign = TextAlign.Right,
         maxLines = 2,
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier.fillMaxWidth()
       )
 
-      Spacer(modifier = Modifier.height(14.dp))
+      Spacer(modifier = Modifier.height(8.dp))
 
-      // 5.5 Action Button (Screenshot 1, 2, 5: Wide "My TOD [+]" or Screenshot 3, 4: "[+] | تشغيل ▶")
+      // 4.4 Compact Red "مباشر" Badge (Neat & Small)
+      if (match.isLive || isNowLive) {
+        Box(
+          modifier = Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(Color(0xFFE50914))
+            .padding(horizontal = 9.dp, vertical = 3.dp),
+          contentAlignment = Alignment.Center
+        ) {
+          Text(
+            text = "مباشر",
+            color = Color.White,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = ThmanyahFontFamily
+          )
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+      }
+
+      // 4.5 Action Buttons (Screenshot 1, 2, 5: Wide "My TOD [+]" or Screenshot 3, 4: "[+] | تشغيل ▶")
       if (match.isLive) {
         Row(
           modifier = Modifier.fillMaxWidth(),
