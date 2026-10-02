@@ -37,7 +37,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.AddBox
+import androidx.compose.ui.util.lerp
+import kotlin.math.absoluteValue
+import androidx.compose.ui.platform.LocalContext
+import coil.ImageLoader
+import coil.decode.GifDecoder
+import coil.decode.ImageDecoderDecoder
 import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay
@@ -512,48 +519,48 @@ fun TodMatchCountdownHero(
           verticalAlignment = Alignment.CenterVertically,
           horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-          // Home Team Flag / Crest in Softened Rectangle with Larger Logo
+          // Home Team Flag / Crest in Softened Light Rectangle with Larger Logo
           Box(
             modifier = Modifier
-              .size(width = 56.dp, height = 40.dp)
+              .size(width = 60.dp, height = 42.dp)
               .clip(RoundedCornerShape(8.dp))
-              .background(Color(0x35FFFFFF))
-              .border(1.dp, Color(0x70FFFFFF), RoundedCornerShape(8.dp))
+              .background(Color(0x22FFFFFF))
+              .border(0.75.dp, Color(0x40FFFFFF), RoundedCornerShape(8.dp))
               .padding(3.dp),
             contentAlignment = Alignment.Center
           ) {
-            TodTeamCrest(team = match.homeTeam, size = 38.dp)
+            TodTeamCrest(team = match.homeTeam, size = 42.dp)
           }
 
-          // Center "ضد"
-          Text(
-            text = "ضد",
-            color = Color(0xFFFFB800),
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Black,
-            fontFamily = ThmanyahFontFamily
-          )
-
-          // Away Team Flag / Crest in Softened Rectangle with Larger Logo
+          // Custom Drawn White Dash Bar "-"
           Box(
             modifier = Modifier
-              .size(width = 56.dp, height = 40.dp)
+              .width(16.dp)
+              .height(3.dp)
+              .clip(RoundedCornerShape(1.5.dp))
+              .background(Color.White)
+          )
+
+          // Away Team Flag / Crest in Softened Light Rectangle with Larger Logo
+          Box(
+            modifier = Modifier
+              .size(width = 60.dp, height = 42.dp)
               .clip(RoundedCornerShape(8.dp))
-              .background(Color(0x35FFFFFF))
-              .border(1.dp, Color(0x70FFFFFF), RoundedCornerShape(8.dp))
+              .background(Color(0x22FFFFFF))
+              .border(0.75.dp, Color(0x40FFFFFF), RoundedCornerShape(8.dp))
               .padding(3.dp),
             contentAlignment = Alignment.Center
           ) {
-            TodTeamCrest(team = match.awayTeam, size = 38.dp)
+            TodTeamCrest(team = match.awayTeam, size = 42.dp)
           }
         }
       }
 
-      // 4.2 Match Title (Larger & Prominent, RTL Right-aligned)
+      // 4.2 Match Title (Larger, Clear & Prominent, RTL Right-aligned)
       Text(
         text = match.title.ifBlank { "${match.homeTeam.name} ضد ${match.awayTeam.name}" },
         color = Color.White,
-        fontSize = 24.sp,
+        fontSize = 28.sp,
         fontWeight = FontWeight.Black,
         fontFamily = ThmanyahFontFamily,
         textAlign = TextAlign.Right,
@@ -565,8 +572,8 @@ fun TodMatchCountdownHero(
       // 4.3 Match Subtitle Metadata (Larger & Clearer: Date • Time • Stadium • Tournament)
       Text(
         text = "${match.kickoffDate} • ${match.kickoffTime} • ${match.stadium.ifBlank { "الملعب الرئيسي" }} • ${match.tournament}",
-        color = Color(0xFFE2E8F0),
-        fontSize = 15.sp,
+        color = Color(0xFFF1F5F9),
+        fontSize = 16.5.sp,
         fontFamily = ThmanyahFontFamily,
         fontWeight = FontWeight.Bold,
         textAlign = TextAlign.Right,
@@ -575,27 +582,27 @@ fun TodMatchCountdownHero(
         modifier = Modifier.fillMaxWidth()
       )
 
-      Spacer(modifier = Modifier.height(8.dp))
+      Spacer(modifier = Modifier.height(6.dp))
 
-      // 4.4 Compact Red "مباشر" Badge (Neat & Small)
+      // 4.4 Compact & Small Red "مباشر" Badge
       if (match.isLive || isNowLive) {
         Box(
           modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
+            .clip(RoundedCornerShape(5.dp))
             .background(Color(0xFFE50914))
-            .padding(horizontal = 9.dp, vertical = 3.dp),
+            .padding(horizontal = 7.dp, vertical = 2.dp),
           contentAlignment = Alignment.Center
         ) {
           Text(
             text = "مباشر",
             color = Color.White,
-            fontSize = 11.sp,
+            fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = ThmanyahFontFamily
           )
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(8.dp))
       }
 
       // 4.5 Action Buttons (Screenshot 1, 2, 5: Wide "My TOD [+]" or Screenshot 3, 4: "[+] | تشغيل ▶")
@@ -605,23 +612,45 @@ fun TodMatchCountdownHero(
           horizontalArrangement = Arrangement.spacedBy(10.dp),
           verticalAlignment = Alignment.CenterVertically
         ) {
-          // Plus Box Button
+          val isSaved = SavedMatchesHolder.isMatchSaved(match.id)
+
+          // Plus / Saved Checkmark Box Button
           Box(
             modifier = Modifier
               .size(48.dp)
               .clip(RoundedCornerShape(12.dp))
-              .background(Color(0x902C3444))
-              .border(0.75.dp, Color(0x40FFFFFF), RoundedCornerShape(12.dp))
-              .clickable { onOpenDetails(match) },
+              .background(if (isSaved) Color(0x3530D158) else Color(0x902C3444))
+              .border(
+                width = 0.75.dp,
+                color = if (isSaved) Color(0xFF30D158) else Color(0x40FFFFFF),
+                shape = RoundedCornerShape(12.dp)
+              )
+              .clickable {
+                SavedMatchesHolder.toggleSaveMatch(match.id)
+              },
             contentAlignment = Alignment.Center
           ) {
-            Box(
-              modifier = Modifier
-                .size(22.dp)
-                .border(1.5.dp, Color.White, RoundedCornerShape(5.dp)),
-              contentAlignment = Alignment.Center
-            ) {
-              Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+            if (isSaved) {
+              Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = "محفوظ",
+                tint = Color(0xFF30D158),
+                modifier = Modifier.size(24.dp)
+              )
+            } else {
+              Box(
+                modifier = Modifier
+                  .size(22.dp)
+                  .border(1.5.dp, Color.White, RoundedCornerShape(5.dp)),
+                contentAlignment = Alignment.Center
+              ) {
+                Icon(
+                  imageVector = Icons.Default.Add,
+                  contentDescription = "حفظ",
+                  tint = Color.White,
+                  modifier = Modifier.size(16.dp)
+                )
+              }
             }
           }
 
@@ -786,10 +815,62 @@ fun TodHeroBannerCarousel(
           coroutineScope.launch {
             pagerState.animateScrollToPage(targetIdx)
           }
-        }
+        },
+        modifier = Modifier.fillMaxWidth()
       )
     }
   }
+}
+
+/**
+ * Global Saved Matches In-Memory State Manager
+ */
+object SavedMatchesHolder {
+  private val _savedMatchIds = androidx.compose.runtime.mutableStateListOf<String>()
+
+  fun isMatchSaved(matchId: String): Boolean {
+    return _savedMatchIds.contains(matchId)
+  }
+
+  fun toggleSaveMatch(matchId: String): Boolean {
+    return if (_savedMatchIds.contains(matchId)) {
+      _savedMatchIds.remove(matchId)
+      false
+    } else {
+      _savedMatchIds.add(matchId)
+      true
+    }
+  }
+}
+
+/**
+ * GIF Skeleton Loading Placeholder Composable using loading_skeleton.gif
+ */
+@Composable
+fun TodSkeletonPlaceholder(
+  modifier: Modifier = Modifier,
+  contentScale: ContentScale = ContentScale.Crop
+) {
+  val context = LocalContext.current
+  val imageLoader = remember(context) {
+    ImageLoader.Builder(context)
+      .components {
+        if (android.os.Build.VERSION.SDK_INT >= 28) {
+          add(ImageDecoderDecoder.Factory())
+        } else {
+          add(GifDecoder.Factory())
+        }
+      }
+      .build()
+  }
+
+  AsyncImage(
+    model = R.drawable.loading_skeleton,
+    contentDescription = "جاري التحميل...",
+    imageLoader = imageLoader,
+    modifier = modifier.fillMaxSize(),
+    contentScale = contentScale
+  )
 }
 
 /**

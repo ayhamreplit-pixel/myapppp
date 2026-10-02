@@ -8,7 +8,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.example.R
 
-// خط ثمانية الرسمي المعتمد (IBM Plex Sans Arabic) - الخط الرسمي الموحد لجميع صفحات ونصوص التطبيق
+// خط ثمانية الرسمي المعتمد (IBM Plex Sans Arabic) - الخط الثابت والمستقر لجميع النصوص والشاشات
 val ThmanyahFontFamily = FontFamily(
   Font(R.font.ibm_plex_sans_arabic, FontWeight.Light),
   Font(R.font.ibm_plex_sans_arabic, FontWeight.Normal),
@@ -21,7 +21,7 @@ val ThmanyahFontFamily = FontFamily(
 
 val IbmPlexSansArabic = ThmanyahFontFamily
 
-// الخط الموحد المطبق على التطبيق بالكامل
+// الخط الرسمي المعتمد للتطبيق
 val AppFontFamily = ThmanyahFontFamily
 
 fun getTypography(fontFamily: FontFamily = AppFontFamily) = Typography(
