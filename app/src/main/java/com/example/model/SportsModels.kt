@@ -68,6 +68,17 @@ data class H2hMatch(
 )
 
 /**
+ * Streaming server link for a match (configured from m7 PHP panel)
+ */
+data class MatchStreamServer(
+  val id: String = "",
+  val name: String,
+  val streamUrl: String,
+  val quality: String = "HD",
+  val isWorking: Boolean = true
+)
+
+/**
  * Core Sports Match Data Model (Pixel-matched to TOD Screenshots)
  */
 data class SportsMatch(
@@ -84,6 +95,7 @@ data class SportsMatch(
   val channelName: String = "beIN SPORTS 1 HD",
   val channelId: String = "bein_1",
   val streamUrl: String = "",
+  val servers: List<MatchStreamServer> = emptyList(),
   val isLive: Boolean = false,
   val isEnded: Boolean = false,
   val liveMinute: String? = null, // e.g. "34'" or "الشوط الثاني"
@@ -132,6 +144,29 @@ data class TodUserProfile(
   val avatarGradientHex: Long = 0xFFFFB800,
   val isKids: Boolean = false,
   val isVip: Boolean = true
+)
+
+/**
+ * Sports News Item (from Yallakora API: https://sportfeeds.gemini.media/yallakoraapi/NewsList)
+ */
+data class SportsNewsItem(
+  val id: String,
+  val title: String,
+  val date: String,
+  val imageUrl: String,
+  val category: String = "أخبار كرة القدم",
+  val source: String = "يلا كورة",
+  val summary: String = "",
+  val url: String = ""
+)
+
+/**
+ * Top Announcement / Breaking Ticker
+ */
+data class AnnouncementConfig(
+  val isEnabled: Boolean = true,
+  val title: String = "إعلان هام",
+  val message: String = "مرحباً بكم في HERO Cast • تغطية حية لجميع المباريات والبطولات العالمية وسيرفرات البث المباشر"
 )
 
 /**

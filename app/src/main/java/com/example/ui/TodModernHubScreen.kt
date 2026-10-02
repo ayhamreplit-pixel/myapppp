@@ -900,9 +900,7 @@ fun TodModernHubScreen(
                     onOpenProfile = {
                       activeNavTab = TodNavTab.MORE
                     },
-                    onOpenSearch = {
-                      activeNavTab = TodNavTab.SEARCH
-                    },
+                    onOpenSearch = {},
                     sportsBackendRepo = sportsBackendRepo,
                     initialTopSection = TodTopSection.HOME
                   )
@@ -943,9 +941,7 @@ fun TodModernHubScreen(
                     onOpenProfile = {
                       activeNavTab = TodNavTab.MORE
                     },
-                    onOpenSearch = {
-                      activeNavTab = TodNavTab.SEARCH
-                    },
+                    onOpenSearch = {},
                     sportsBackendRepo = sportsBackendRepo,
                     initialTopSection = TodTopSection.MATCHES
                   )
@@ -986,24 +982,12 @@ fun TodModernHubScreen(
                     onOpenProfile = {
                       activeNavTab = TodNavTab.MORE
                     },
-                    onOpenSearch = {
-                      activeNavTab = TodNavTab.SEARCH
-                    },
+                    onOpenSearch = {},
                     sportsBackendRepo = sportsBackendRepo,
                     initialTopSection = TodTopSection.LIVE_TV
                   )
                 }
-                TodNavTab.SEARCH -> {
-                  TodSearchScreen(
-                    xtreamCategories = xtreamCategories,
-                    allChannels = allChannels,
-                    onPlayChannel = { ch, list, cat ->
-                      val (stream, streams) = buildOptimizedPlaybackList(ch, list, cat)
-                      onPlayStream(stream, streams)
-                    }
-                  )
-                }
-                TodNavTab.MORE -> {
+                TodNavTab.SEARCH, TodNavTab.MORE -> {
                   TodMoreScreen(
                     activeConfig = playlistConfig,
                     savedPlaylists = savedPlaylists,

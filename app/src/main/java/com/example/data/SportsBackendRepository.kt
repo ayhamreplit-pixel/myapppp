@@ -11,8 +11,11 @@ import com.example.model.TodUserProfile
 import java.util.UUID
 import com.example.model.MatchLineup
 import com.example.model.MatchStats
+import com.example.model.MatchStreamServer
 import com.example.model.SportsCompetition
 import com.example.model.SportsMatch
+import com.example.model.SportsNewsItem
+import com.example.model.AnnouncementConfig
 import com.example.model.SportsShow
 import com.example.model.SportsTeam
 import com.example.model.StandingRow
@@ -53,6 +56,21 @@ class SportsBackendRepository(private val context: Context) {
   private val _matches = MutableStateFlow<List<SportsMatch>>(emptyList())
   val matches: StateFlow<List<SportsMatch>> = _matches.asStateFlow()
 
+  private val _news = MutableStateFlow<List<SportsNewsItem>>(emptyList())
+  val news: StateFlow<List<SportsNewsItem>> = _news.asStateFlow()
+
+  private val _sliderBanners = MutableStateFlow<List<String>>(emptyList())
+  val sliderBanners: StateFlow<List<String>> = _sliderBanners.asStateFlow()
+
+  private val _announcement = MutableStateFlow(
+    AnnouncementConfig(
+      isEnabled = true,
+      title = "إعلان هام",
+      message = "مرحباً بكم في HERO Cast • بث مباشر متواصل لجميع مباريات اليوم والدوريات الكبرى • شاهد بدون تقطيع"
+    )
+  )
+  val announcement: StateFlow<AnnouncementConfig> = _announcement.asStateFlow()
+
   private val _competitions = MutableStateFlow<List<SportsCompetition>>(emptyList())
   val competitions: StateFlow<List<SportsCompetition>> = _competitions.asStateFlow()
 
@@ -62,18 +80,37 @@ class SportsBackendRepository(private val context: Context) {
   private val _sportsChannels = MutableStateFlow<List<XtreamChannel>>(emptyList())
   val sportsChannels: StateFlow<List<XtreamChannel>> = _sportsChannels.asStateFlow()
 
+  private val _isSyncing = MutableStateFlow(false)
+  val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
+
+  private val _currentDateParam = MutableStateFlow("today")
+  val currentDateParam: StateFlow<String> = _currentDateParam.asStateFlow()
+
+  private val _lastSyncTime = MutableStateFlow(System.currentTimeMillis())
+  val lastSyncTime: StateFlow<Long> = _lastSyncTime.asStateFlow()
+
   init {
     loadCachedOrBuiltInMatches()
     kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+      // Immediate fetch on launch
+      try {
+        fetchYallakoraNews()
+        fetchSliderBanners()
+        syncFromAlwaysData("today")
+      } catch (e: Exception) {
+        Log.e("SportsBackendRepo", "Startup sync error", e)
+      }
+
       while (true) {
+        kotlinx.coroutines.delay(20000)
         try {
-          syncFromAlwaysData()
+          syncFromAlwaysData(_currentDateParam.value)
+          fetchYallakoraNews()
           val activeProf = getActiveProfile()
           sendSessionHeartbeat(activeProf.name, "")
         } catch (e: Exception) {
           Log.e("SportsBackendRepo", "Realtime background sync error", e)
         }
-        kotlinx.coroutines.delay(3000)
       }
     }
   }
@@ -136,23 +173,34 @@ class SportsBackendRepository(private val context: Context) {
   }
 
   /**
+   * Public function to switch and fetch matches for a specific date (today, yesterday, tomorrow, or YYYY-MM-DD)
+   */
+  suspend fun syncForDate(dateParam: String, forceRefresh: Boolean = false): Result<Int> {
+    _currentDateParam.value = dateParam
+    return syncFromAlwaysData(dateParam, forceRefresh)
+  }
+
+  /**
    * Syncs matches & channels from AlwaysData server (PHP / JSON endpoints in m7 folder)
    */
-  suspend fun syncFromAlwaysData(): Result<Int> = withContext(Dispatchers.IO) {
+  suspend fun syncFromAlwaysData(dateParam: String? = null, forceRefresh: Boolean = false): Result<Int> = withContext(Dispatchers.IO) {
+    _isSyncing.value = true
+    val effectiveDateParam = dateParam ?: _currentDateParam.value
     val config = getAlwaysDataConfig()
     val baseUrl = config.serverUrl.trim().removeSuffix("/")
     val cleanBase = baseUrl.removeSuffix("/m7")
 
+    val dateQuery = "&date=$effectiveDateParam${if (forceRefresh) "&refresh=1" else ""}"
     val candidateEndpoints = listOf(
-      "$baseUrl/api.php?action=matches",
+      "$baseUrl/api.php?action=matches$dateQuery",
       "$baseUrl/matches.json",
-      "$baseUrl/api.php",
-      "$cleanBase/m7/api.php?action=matches",
+      "$baseUrl/api.php?date=$effectiveDateParam",
+      "$cleanBase/m7/api.php?action=matches$dateQuery",
       "$cleanBase/m7/matches.json",
-      "$cleanBase/m7/api.php",
-      "$cleanBase/api.php?action=matches",
+      "$cleanBase/m7/api.php?date=$effectiveDateParam",
+      "$cleanBase/api.php?action=matches$dateQuery",
       "$cleanBase/matches.json",
-      "$cleanBase/api.php"
+      "$cleanBase/api.php?date=$effectiveDateParam"
     )
 
     var syncedMatchesCount = 0
@@ -170,18 +218,27 @@ class SportsBackendRepository(private val context: Context) {
         SmartStreamResolver.okHttpClient.newCall(request).execute().use { response ->
           if (response.isSuccessful) {
             val bodyStr = response.body?.string() ?: ""
-            if (bodyStr.isNotBlank() && (bodyStr.contains("\"matches\"") || bodyStr.startsWith("["))) {
+            if (bodyStr.isNotBlank() && (bodyStr.contains("\"data\"") || bodyStr.contains("\"matches\"") || bodyStr.startsWith("["))) {
               val parsedMatches = parseMatchesJson(bodyStr, config.secretKey)
               if (parsedMatches.isNotEmpty()) {
                 val combined = mutableListOf<SportsMatch>()
-                val featuredGermany = _matches.value.firstOrNull { it.id == "germany_serbia_nations" }
-                if (featuredGermany != null) {
-                  combined.add(featuredGermany)
+                if (effectiveDateParam == "today" || effectiveDateParam == "") {
+                  val featuredGermany = _matches.value.firstOrNull { it.id == "germany_serbia_nations" }
+                  if (featuredGermany != null && parsedMatches.none { it.id == "germany_serbia_nations" }) {
+                    combined.add(featuredGermany)
+                  }
                 }
                 combined.addAll(parsedMatches.filter { it.id != "germany_serbia_nations" })
-                _matches.value = combined
+                // Sort: Live matches first, then matches with streaming servers, then by tournament
+                val sorted = combined.sortedWith(
+                  compareByDescending<SportsMatch> { it.isLive }
+                    .thenByDescending { it.servers.isNotEmpty() || it.streamUrl.isNotBlank() }
+                    .thenBy { it.isEnded }
+                )
+                _matches.value = sorted
                 saveMatchesToCache(bodyStr)
-                syncedMatchesCount = combined.size
+                syncedMatchesCount = sorted.size
+                _lastSyncTime.value = System.currentTimeMillis()
                 Log.d("SportsBackendRepo", "Loaded ${parsedMatches.size} matches from $endpoint")
                 break
               }
@@ -192,6 +249,75 @@ class SportsBackendRepository(private val context: Context) {
         Log.d("SportsBackendRepo", "Endpoint $endpoint skipped: ${e.message}")
       }
     }
+
+    // Direct YSScores live API fallback if server endpoint not configured or offline
+    if (syncedMatchesCount == 0) {
+      try {
+        val targetDateStr = when (effectiveDateParam) {
+          "yesterday" -> {
+            val cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Riyadh"))
+            cal.add(java.util.Calendar.DAY_OF_YEAR, -1)
+            java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).apply {
+              timeZone = java.util.TimeZone.getTimeZone("Asia/Riyadh")
+            }.format(cal.time)
+          }
+          "tomorrow" -> {
+            val cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Riyadh"))
+            cal.add(java.util.Calendar.DAY_OF_YEAR, 1)
+            java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).apply {
+              timeZone = java.util.TimeZone.getTimeZone("Asia/Riyadh")
+            }.format(cal.time)
+          }
+          "today", "" -> {
+            java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).apply {
+              timeZone = java.util.TimeZone.getTimeZone("Asia/Riyadh")
+            }.format(java.util.Date())
+          }
+          else -> effectiveDateParam
+        }
+        val directYsscoresUrl = "https://api-ar.ysscores.com/api/matches/matches_date_get/$targetDateStr/%5B%5D/%5B%5D/%5B%5D/D/180"
+
+        val directRequest = Request.Builder()
+          .url(directYsscoresUrl)
+          .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+          .header("Accept", "application/json, text/plain, */*")
+          .header("Referer", "https://ysscores.com/")
+          .header("Origin", "https://ysscores.com")
+          .build()
+
+        SmartStreamResolver.okHttpClient.newCall(directRequest).execute().use { resp ->
+          if (resp.isSuccessful) {
+            val body = resp.body?.string() ?: ""
+            if (body.isNotBlank() && body.contains("\"data\"")) {
+              val parsed = parseMatchesJson(body, config.secretKey)
+              if (parsed.isNotEmpty()) {
+                val combined = mutableListOf<SportsMatch>()
+                if (effectiveDateParam == "today" || effectiveDateParam == "") {
+                  val featuredGermany = _matches.value.firstOrNull { it.id == "germany_serbia_nations" }
+                  if (featuredGermany != null && parsed.none { it.id == "germany_serbia_nations" }) {
+                    combined.add(featuredGermany)
+                  }
+                }
+                combined.addAll(parsed.filter { it.id != "germany_serbia_nations" })
+                val sorted = combined.sortedWith(
+                  compareByDescending<SportsMatch> { it.isLive }
+                    .thenByDescending { it.servers.isNotEmpty() || it.streamUrl.isNotBlank() }
+                    .thenBy { it.isEnded }
+                )
+                _matches.value = sorted
+                saveMatchesToCache(body)
+                syncedMatchesCount = sorted.size
+                _lastSyncTime.value = System.currentTimeMillis()
+                Log.d("SportsBackendRepo", "Loaded ${parsed.size} live matches directly from YSScores API")
+              }
+            }
+          }
+        }
+      } catch (e: Exception) {
+        Log.d("SportsBackendRepo", "Direct YSScores API fallback error: ${e.message}")
+      }
+    }
+    _isSyncing.value = false
 
     // Also sync channels from server
     val candidateChannelEndpoints = listOf(
@@ -234,6 +360,195 @@ class SportsBackendRepository(private val context: Context) {
       loadCachedOrBuiltInMatches()
       Result.success(_matches.value.size)
     }
+  }
+
+  /**
+   * Fetches latest sports news from Yallakora API and server endpoint
+   */
+  suspend fun fetchYallakoraNews(): List<SportsNewsItem> = withContext(Dispatchers.IO) {
+    val config = getAlwaysDataConfig()
+    val baseUrl = config.serverUrl.trim().removeSuffix("/")
+    val candidateUrls = listOf(
+      "$baseUrl/api.php?action=news",
+      "https://sportfeeds.gemini.media/yallakoraapi/NewsList?pageIndex=1&pageSize=24&otherSportsNews=false"
+    )
+
+    for (url in candidateUrls) {
+      try {
+        val request = Request.Builder()
+          .url(url)
+          .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+          .build()
+        SmartStreamResolver.okHttpClient.newCall(request).execute().use { response ->
+          if (response.isSuccessful) {
+            val body = response.body?.string() ?: ""
+            val list = mutableListOf<SportsNewsItem>()
+            val array = when {
+              body.trim().startsWith("[") -> JSONArray(body)
+              body.trim().startsWith("{") -> {
+                val root = JSONObject(body)
+                root.optJSONArray("news") ?: root.optJSONArray("data")
+              }
+              else -> null
+            }
+            if (array != null && array.length() > 0) {
+              for (i in 0 until array.length()) {
+                val item = array.getJSONObject(i)
+                val title = item.optString("Title", item.optString("title", "خبر رياضي عاجل"))
+                val date = item.optString("Date", item.optString("date", "اليوم")).replace("T", " ")
+                val summary = item.optString("Brief", item.optString("summary", item.optString("description", "")))
+                val category = item.optString("CategoryName", item.optString("category", "أخبار كرة القدم"))
+                val source = item.optString("Source", item.optString("source", "يلا كورة"))
+                val articleUrl = item.optString("Url", item.optString("url", ""))
+
+                val picObj = item.optJSONObject("Picture")
+                var imgUrl = picObj?.optString("MeduimPath", "")?.ifBlank { null }
+                  ?: picObj?.optString("MediumPath", "")?.ifBlank { null }
+                  ?: picObj?.optString("OriginalPath", "")?.ifBlank { null }
+                  ?: picObj?.optString("SmallPath", "")?.ifBlank { null }
+                  ?: item.optString("imageUrl", item.optString("image", item.optString("picture", "")))
+
+                if (imgUrl.isNotBlank()) {
+                  if (imgUrl.startsWith("//")) {
+                    imgUrl = "https:$imgUrl"
+                  } else if (imgUrl.startsWith("/")) {
+                    imgUrl = "https://media.gemini.media$imgUrl"
+                  } else if (!imgUrl.startsWith("http")) {
+                    imgUrl = "https://media.gemini.media/$imgUrl"
+                  }
+                } else {
+                  // Fallback vibrant sports photos
+                  imgUrl = when (i % 5) {
+                    0 -> "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&auto=format&fit=crop"
+                    1 -> "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&auto=format&fit=crop"
+                    2 -> "https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=800&auto=format&fit=crop"
+                    3 -> "https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=800&auto=format&fit=crop"
+                    else -> "https://images.unsplash.com/photo-1551958219-acbc608c6377?w=800&auto=format&fit=crop"
+                  }
+                }
+
+                list.add(
+                  SportsNewsItem(
+                    id = "news_${item.optString("NewsID", i.toString())}",
+                    title = title,
+                    date = date,
+                    imageUrl = imgUrl,
+                    category = category,
+                    source = source,
+                    summary = summary,
+                    url = articleUrl
+                  )
+                )
+              }
+              if (list.isNotEmpty()) {
+                _news.value = list
+                return@withContext list
+              }
+            }
+          }
+        }
+      } catch (e: Exception) {
+        Log.d("SportsBackendRepo", "News fetch error: ${e.message}")
+      }
+    }
+
+    // Default high quality news if offline
+    if (_news.value.isEmpty()) {
+      val fallbackNews = listOf(
+        SportsNewsItem(
+          id = "news_fb_1",
+          title = "قمة دوري أبطال أوروبا: ريال مدريد يستعد لمواجهة مانشستر سيتي في ملحمة كروية كبرى",
+          date = "اليوم • منذ ساعة",
+          imageUrl = "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&auto=format&fit=crop",
+          category = "دوري أبطال أوروبا",
+          source = "TOD الأخبارية",
+          summary = "استعدادات مكثفة وتصريحات نارية قبل القمة الأوروبية المرتقبة على ملعب سانتياغو برنابيو وسط ترقب جماهيري عالمي."
+        ),
+        SportsNewsItem(
+          id = "news_fb_2",
+          title = "صراع صدارة الدوري الإنجليزي: أرسنال وليفربول في سباق ناري نحو اللقب الأغلى",
+          date = "اليوم • منذ ساعتين",
+          imageUrl = "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&auto=format&fit=crop",
+          category = "الدوري الإنجليزي",
+          source = "يلا كورة",
+          summary = "جولة حاسمة في البريميرليغ وسط تقارب النقاط وصراع تكتيكي مشتعل في الأمتار الأخيرة من الموسم."
+        ),
+        SportsNewsItem(
+          id = "news_fb_3",
+          title = "برشلونة يواصل تألقه في الليغا ويحقق فوزاً عريضاً يعزز موقعه في جدول الترتيب",
+          date = "اليوم • منذ 3 ساعات",
+          imageUrl = "https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=800&auto=format&fit=crop",
+          category = "الدوري الإسباني",
+          source = "beIN SPORTS",
+          summary = "أداء استثنائي وتناغم هجومي مبهر يقود البلوغرانا لحصد النقاط الثلاث ومواصلة الضغط في الصدارة."
+        ),
+        SportsNewsItem(
+          id = "news_fb_4",
+          title = "دوري أبطال آسيا للنخبة: الهلال والنصر في مواجهات قوية نحو التأهل إلى الأدوار النهائية",
+          date = "اليوم • منذ 4 ساعات",
+          imageUrl = "https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=800&auto=format&fit=crop",
+          category = "الكرة العربية",
+          source = "TOD الأخبارية",
+          summary = "الأندية السعودية تواصل هيمنتها الآسيوية وسط حضور جماهيري غفير ومستويات فنية متميزة."
+        )
+      )
+      _news.value = fallbackNews
+      return@withContext fallbackNews
+    }
+    _news.value
+  }
+
+  /**
+   * Fetches promotional slider banners from API / CDN / Server
+   */
+  suspend fun fetchSliderBanners(): List<String> = withContext(Dispatchers.IO) {
+    val config = getAlwaysDataConfig()
+    val baseUrl = config.serverUrl.trim().removeSuffix("/")
+    val candidateUrls = listOf(
+      "$baseUrl/api.php?action=slider",
+      "https://iptv-subscription-api.tvkora56.workers.dev/v1/config",
+      "https://raw.githubusercontent.com/mahmoudhwhwhwh/live-stream-premium/main/app_Slider.json"
+    )
+
+    for (url in candidateUrls) {
+      try {
+        val request = Request.Builder().url(url).build()
+        SmartStreamResolver.okHttpClient.newCall(request).execute().use { resp ->
+          if (resp.isSuccessful) {
+            val body = resp.body?.string() ?: ""
+            val list = mutableListOf<String>()
+            if (body.trim().startsWith("{")) {
+              val root = JSONObject(body)
+              val sliderArr = root.optJSONArray("slider") ?: root.optJSONArray("banners")
+              if (sliderArr != null) {
+                for (i in 0 until sliderArr.length()) {
+                  val item = sliderArr.opt(i)
+                  if (item is JSONObject) {
+                    val u = item.optString("image_url", item.optString("image", item.optString("url", "")))
+                    if (u.isNotBlank()) list.add(u.trim())
+                  } else if (item is String && item.isNotBlank()) {
+                    list.add(item.trim())
+                  }
+                }
+              }
+            } else if (body.trim().startsWith("[")) {
+              val arr = JSONArray(body)
+              for (i in 0 until arr.length()) {
+                val s = arr.optString(i, "")
+                if (s.isNotBlank()) list.add(s.trim())
+              }
+            }
+            if (list.isNotEmpty()) {
+              _sliderBanners.value = list
+              return@withContext list
+            }
+          }
+        }
+      } catch (e: Exception) {
+        Log.d("SportsBackendRepo", "Slider fetch error: ${e.message}")
+      }
+    }
+    emptyList()
   }
 
   /**
@@ -327,9 +642,165 @@ class SportsBackendRepository(private val context: Context) {
   private fun parseMatchesJson(json: String, secretKey: String): List<SportsMatch> {
     val list = mutableListOf<SportsMatch>()
     try {
-      val root = JSONObject(json)
-      val array = root.optJSONArray("matches") ?: JSONArray(json)
-      for (i in 0 until array.length()) {
+      val trimmed = json.trim()
+      if (trimmed.startsWith("{")) {
+        val root = JSONObject(trimmed)
+        // 1. Check if response is YSScores structure (data: [...])
+        val dataArray = root.optJSONArray("data")
+        if (dataArray != null && dataArray.length() > 0) {
+          return parseYsscoresMatches(dataArray, secretKey)
+        }
+        val array = root.optJSONArray("matches")
+        if (array != null) {
+          return parseStandardMatchesArray(array, secretKey)
+        }
+      } else if (trimmed.startsWith("[")) {
+        val array = JSONArray(trimmed)
+        if (array.length() > 0) {
+          val firstItem = array.optJSONObject(0)
+          if (firstItem != null && (firstItem.has("match_id") || firstItem.has("championship") || firstItem.has("home_team"))) {
+            return parseYsscoresMatches(array, secretKey)
+          }
+          return parseStandardMatchesArray(array, secretKey)
+        }
+      }
+    } catch (e: Exception) {
+      Log.e("SportsBackendRepo", "JSON parse error safely handled", e)
+    }
+    return list
+  }
+
+  private fun parseYsscoresMatches(array: JSONArray, secretKey: String): List<SportsMatch> {
+    val list = mutableListOf<SportsMatch>()
+    for (i in 0 until array.length()) {
+      try {
+        val item = array.getJSONObject(i)
+        val matchId = item.optString("match_id", "ys_$i")
+
+        val champObj = item.optJSONObject("championship")
+        val champTitle = champObj?.optString("title", "مباراة اليوم") ?: "مباراة اليوم"
+        val rawChampImg = champObj?.optString("image", "") ?: ""
+        val champLogo = when {
+          rawChampImg.startsWith("http") -> rawChampImg
+          rawChampImg.isNotBlank() -> "https://img.ysscores.com/championships/$rawChampImg"
+          else -> ""
+        }
+
+        val homeObj = item.optJSONObject("home_team")
+        val homeTitle = homeObj?.optString("title", "الفريق المضيف") ?: "الفريق المضيف"
+        val rawHomeImg = homeObj?.optString("image", "") ?: ""
+        val homeLogo = when {
+          rawHomeImg.startsWith("http") -> rawHomeImg
+          rawHomeImg.isNotBlank() -> "https://img.ysscores.com/teams/$rawHomeImg"
+          else -> ""
+        }
+
+        val awayObj = item.optJSONObject("away_team")
+        val awayTitle = awayObj?.optString("title", "الفريق الضيف") ?: "الفريق الضيف"
+        val rawAwayImg = awayObj?.optString("image", "") ?: ""
+        val awayLogo = when {
+          rawAwayImg.startsWith("http") -> rawAwayImg
+          rawAwayImg.isNotBlank() -> "https://img.ysscores.com/teams/$rawAwayImg"
+          else -> ""
+        }
+
+        val liveVal = item.optInt("live", 0)
+        val statusVal = item.optInt("status", 1) // 1 = not started, 2 = 1st half, 3 = 2nd half, 4 = ended
+        val isLive = liveVal == 1 || statusVal == 2 || statusVal == 3
+        val isEnded = statusVal == 4
+
+        val homeScores = item.optNullableInt("home_scores")
+        val awayScores = item.optNullableInt("away_scores")
+        val scoreTime = item.optNullableString("score_time")
+
+        val liveMinute = when {
+          isLive && !scoreTime.isNullOrBlank() -> if (scoreTime.startsWith("'")) scoreTime else "'$scoreTime"
+          isLive && statusVal == 2 -> "'الشوط 1"
+          isLive && statusVal == 3 -> "'الشوط 2"
+          isLive -> "'مباشر"
+          else -> null
+        }
+
+        val matchDate = item.optString("match_date", "اليوم")
+        val matchTimeRaw = item.optString("match_time", "20:00:00")
+        val matchTime = if (matchTimeRaw.length >= 5) matchTimeRaw.substring(0, 5) else matchTimeRaw
+
+        // Channel & Commentator if available
+        var channelName = item.optString("channel_name", "beIN SPORTS 1 HD")
+        var commentator = item.optString("commentator", "تعليق عربي")
+        val channelArr = item.optJSONArray("channel_commm")
+        if (channelArr != null && channelArr.length() > 0) {
+          val chObj = channelArr.optJSONObject(0)
+          if (chObj != null) {
+            if (!item.has("channel_name")) channelName = chObj.optString("channel_name", channelName)
+            if (!item.has("commentator")) commentator = chObj.optString("commentator", commentator)
+          }
+        }
+
+        // Servers attached from m7 control panel (if provided)
+        val serversList = mutableListOf<MatchStreamServer>()
+        val rawServers = item.optJSONArray("servers")
+        if (rawServers != null) {
+          for (s in 0 until rawServers.length()) {
+            val srv = rawServers.getJSONObject(s)
+            val srvUrlRaw = srv.optString("url", srv.optString("streamUrl", ""))
+            val srvDecrypted = if (srvUrlRaw.startsWith("enc:") || srvUrlRaw.startsWith("aes:") || srvUrlRaw.startsWith("sec:") || srvUrlRaw.startsWith("m7:")) {
+              StreamSecurityManager.decryptStreamUrl(srvUrlRaw, secretKey)
+            } else srvUrlRaw
+            if (srvDecrypted.isNotBlank()) {
+              serversList.add(
+                MatchStreamServer(
+                  id = srv.optString("id", "srv_$s"),
+                  name = srv.optString("name", "سيرفر ${s + 1}"),
+                  streamUrl = srvDecrypted,
+                  quality = srv.optString("quality", "HD")
+                )
+              )
+            }
+          }
+        }
+
+        val directStreamRaw = item.optString("streamUrl", item.optString("stream_url", ""))
+        val directStream = if (directStreamRaw.isNotBlank()) {
+          if (directStreamRaw.startsWith("enc:") || directStreamRaw.startsWith("aes:") || directStreamRaw.startsWith("sec:") || directStreamRaw.startsWith("m7:")) {
+            StreamSecurityManager.decryptStreamUrl(directStreamRaw, secretKey)
+          } else directStreamRaw
+        } else serversList.firstOrNull()?.streamUrl ?: ""
+
+        val match = SportsMatch(
+          id = "ys_$matchId",
+          title = "$homeTitle ضد $awayTitle",
+          tournament = champTitle,
+          tournamentLogo = champLogo,
+          homeTeam = SportsTeam(name = homeTitle, logoUrl = homeLogo),
+          awayTeam = SportsTeam(name = awayTitle, logoUrl = awayLogo),
+          kickoffTime = matchTime,
+          kickoffDate = matchDate,
+          stadium = item.optString("stadium", ""),
+          commentator = commentator,
+          channelName = channelName,
+          channelId = "bein_1",
+          streamUrl = directStream,
+          servers = serversList,
+          isLive = isLive,
+          isEnded = isEnded,
+          liveMinute = liveMinute,
+          scoreHome = if (isLive || isEnded || homeScores != null) homeScores else null,
+          scoreAway = if (isLive || isEnded || awayScores != null) awayScores else null,
+          bannerUrl = item.optString("bannerUrl", "")
+        )
+        list.add(match)
+      } catch (e: Exception) {
+        Log.e("SportsBackendRepo", "Single YSScores match parse error", e)
+      }
+    }
+    return list
+  }
+
+  private fun parseStandardMatchesArray(array: JSONArray, secretKey: String): List<SportsMatch> {
+    val list = mutableListOf<SportsMatch>()
+    for (i in 0 until array.length()) {
+      try {
         val item = array.getJSONObject(i)
         val rawStream = item.optString("streamUrl", item.optString("stream_url", item.optString("url", "")))
         val decryptedStream = if (rawStream.startsWith("enc:") || rawStream.startsWith("aes:") || rawStream.startsWith("sec:") || rawStream.startsWith("m7:") || rawStream.startsWith("m7enc:")) {
@@ -349,6 +820,29 @@ class SportsBackendRepository(private val context: Context) {
         val scoreA = item.optNullableInt("scoreAway") ?: item.optNullableInt("away_score")
         val countdown = item.optNullableString("countdownText") ?: item.optNullableString("countdown")
 
+        // Parse custom servers if present
+        val serversList = mutableListOf<MatchStreamServer>()
+        val rawServers = item.optJSONArray("servers")
+        if (rawServers != null) {
+          for (s in 0 until rawServers.length()) {
+            val srv = rawServers.getJSONObject(s)
+            val srvUrl = srv.optString("url", srv.optString("streamUrl", ""))
+            val dec = if (srvUrl.startsWith("enc:") || srvUrl.startsWith("aes:") || srvUrl.startsWith("sec:") || srvUrl.startsWith("m7:")) {
+              StreamSecurityManager.decryptStreamUrl(srvUrl, secretKey)
+            } else srvUrl
+            if (dec.isNotBlank()) {
+              serversList.add(
+                MatchStreamServer(
+                  id = srv.optString("id", "srv_$s"),
+                  name = srv.optString("name", "سيرفر ${s + 1}"),
+                  streamUrl = dec,
+                  quality = srv.optString("quality", "HD")
+                )
+              )
+            }
+          }
+        }
+
         val match = SportsMatch(
           id = item.optString("id", "m_$i"),
           title = item.optString("title", "$homeTeamName ضد $awayTeamName"),
@@ -362,7 +856,8 @@ class SportsBackendRepository(private val context: Context) {
           commentator = item.optString("commentator", "تعليق عربي"),
           channelName = item.optString("channelName", item.optString("channel", "beIN SPORTS 1 HD")),
           channelId = item.optString("channelId", "bein_1"),
-          streamUrl = decryptedStream,
+          streamUrl = decryptedStream.ifBlank { serversList.firstOrNull()?.streamUrl ?: "" },
+          servers = serversList,
           isLive = item.optBoolean("isLive", item.optBoolean("is_live", false)),
           isEnded = item.optBoolean("isEnded", item.optBoolean("is_ended", false)),
           liveMinute = liveMin,
@@ -372,9 +867,9 @@ class SportsBackendRepository(private val context: Context) {
           bannerUrl = item.optString("bannerUrl", item.optString("poster", ""))
         )
         list.add(match)
+      } catch (e: Exception) {
+        Log.e("SportsBackendRepo", "JSON parse error safely handled", e)
       }
-    } catch (e: Exception) {
-      Log.e("SportsBackendRepo", "JSON parse error safely handled", e)
     }
     return list
   }
@@ -608,8 +1103,8 @@ class SportsBackendRepository(private val context: Context) {
       bannerUrl = germanyPosterUrl,
       isLive = true,
       liveMinute = "'72",
-      scoreHome = 2,
-      scoreAway = 1,
+      scoreHome = 0,
+      scoreAway = 0,
       stats = MatchStats(possessionHome = 62, possessionAway = 38, shotsOnTargetHome = 8, shotsOnTargetAway = 3, totalShotsHome = 18, totalShotsAway = 7, cornersHome = 7, cornersAway = 2, foulsHome = 8, foulsAway = 14, yellowCardsHome = 1, yellowCardsAway = 3),
       lineups = MatchLineup(
         formationHome = "4-2-3-1", formationAway = "3-4-2-1",
@@ -704,27 +1199,26 @@ class SportsBackendRepository(private val context: Context) {
       )
     )
 
-    // 4. Featured Hero Match from TOD Screenshot: روما ضد برشلونة (4 - 0)
+    // 4. Featured Hero Match from TOD Screenshot: روما ضد برشلونة (Screenshot 161604)
     defaultList.add(
       SportsMatch(
         id = "roma_barca_uwcl",
         title = "روما ضد برشلونة",
-        tournament = "دوري أبطال أوروبا للسيدات",
+        tournament = "دوري أبطال أوروبا",
         tournamentLogo = "https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/UEFA_Champions_League_logo_2.svg/512px-UEFA_Champions_League_logo_2.svg.png",
-        homeTeam = SportsTeam(name = "برشلونة", flagEmoji = "🔵🔴", code = "BAR", logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/512px-FC_Barcelona_%28crest%29.svg.png"),
-        awayTeam = SportsTeam(name = "روما", flagEmoji = "🟡🔴", code = "ROM", logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/f/f7/AS_Roma_logo_%282017%29.svg/512px-AS_Roma_logo_%282017%29.svg.png"),
+        homeTeam = SportsTeam(name = "روما", flagEmoji = "🟡🔴", code = "ROM", logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/f/f7/AS_Roma_logo_%282017%29.svg/512px-AS_Roma_logo_%282017%29.svg.png"),
+        awayTeam = SportsTeam(name = "برشلونة", flagEmoji = "🔵🔴", code = "BAR", logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/512px-FC_Barcelona_%28crest%29.svg.png"),
         kickoffTime = "19:45",
-        kickoffDate = "٣٠ سبتمبر",
+        kickoffDate = "30 سبتمبر 2026",
         stadium = "Stadio Tre Fontane",
         commentator = "عصام الشوالي",
         channelName = "beIN SPORTS 1 HD",
         channelId = "bein_1",
         streamUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
         bannerUrl = "android.resource://com.example/drawable/tod_hero_match_banner",
-        isLive = true,
-        liveMinute = "60'",
-        scoreHome = 4,
-        scoreAway = 0,
+        isLive = false,
+        scoreHome = null,
+        scoreAway = null,
         stats = MatchStats(possessionHome = 65, possessionAway = 35, shotsOnTargetHome = 9, shotsOnTargetAway = 2, totalShotsHome = 18, totalShotsAway = 5, cornersHome = 8, cornersAway = 2, foulsHome = 6, foulsAway = 10, yellowCardsHome = 1, yellowCardsAway = 2)
       )
     )
@@ -975,42 +1469,175 @@ class SportsBackendRepository(private val context: Context) {
       )
     )
 
-    // 10. La Liga match
+    // 13. Saudi Pro League: الهلال ضد النصر (Live)
     defaultList.add(
       SportsMatch(
-        id = "dep_levante",
-        title = "ديبورتيفو ضد ليفانتي",
-        tournament = "الدوري الإسباني - لا ليجا",
-        homeTeam = SportsTeam(name = "ديبورتيفو لاكو", flagEmoji = "⚪🔵", code = "DEP"),
-        awayTeam = SportsTeam(name = "ليفانتي", flagEmoji = "🔴🔵", code = "LEV"),
-        kickoffTime = "22:00",
-        kickoffDate = "16 أكتوبر 2026",
-        stadium = "استاد ريازور",
-        channelName = "beIN SPORTS 3 HD",
-        channelId = "bein_3",
+        id = "hilal_nassr_spl",
+        title = "الهلال ضد النصر",
+        tournament = "دوري روشن السعودي",
+        tournamentLogo = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Saudi_Pro_League_logo.svg/512px-Saudi_Pro_League_logo.svg.png",
+        homeTeam = SportsTeam(name = "الهلال", flagEmoji = "🔵", code = "HIL", logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/8/87/Al_Hilal_SFC_logo.svg/512px-Al_Hilal_SFC_logo.svg.png"),
+        awayTeam = SportsTeam(name = "النصر", flagEmoji = "🟡", code = "NAS", logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/c/c5/Al-Nassr_FC_logo.svg/512px-Al-Nassr_FC_logo.svg.png"),
+        kickoffTime = "21:00",
+        kickoffDate = "اليوم",
+        stadium = "المملكة أرينا",
+        commentator = "فهد العتيبي",
+        channelName = "beIN SPORTS 1 HD",
+        channelId = "bein_1",
+        streamUrl = "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8",
+        isLive = true,
+        liveMinute = "'82",
+        scoreHome = 2,
+        scoreAway = 1
+      )
+    )
+
+    // 14. Saudi Pro League: الاتحاد ضد الأهلي (Upcoming)
+    defaultList.add(
+      SportsMatch(
+        id = "ittihad_ahli_spl",
+        title = "الاتحاد ضد الأهلي",
+        tournament = "دوري روشن السعودي",
+        tournamentLogo = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Saudi_Pro_League_logo.svg/512px-Saudi_Pro_League_logo.svg.png",
+        homeTeam = SportsTeam(name = "الاتحاد", flagEmoji = "🟡⚫", code = "ITT", logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/5/53/Al-Ittihad_Club_logo.svg/512px-Al-Ittihad_Club_logo.svg.png"),
+        awayTeam = SportsTeam(name = "الأهلي", flagEmoji = "🟢", code = "AHL", logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/e/e0/Al-Ahli_Saudi_FC_logo.svg/512px-Al-Ahli_Saudi_FC_logo.svg.png"),
+        kickoffTime = "21:00",
+        kickoffDate = "غداً",
+        stadium = "مدينة الملك عبدالله الرياضية",
+        commentator = "فارس عوض",
+        channelName = "beIN SPORTS 2 HD",
+        channelId = "bein_2",
         streamUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
         isLive = false
       )
     )
 
-    // 11. CAF (Screenshot 15): الكونغو ضد الكاميرون
+    // 15. AFC Champions League: العين ضد الهلال (Live)
     defaultList.add(
       SportsMatch(
-        id = "congo_cameroon_caf",
-        title = "الكونغو ضد الكاميرون",
-        tournament = "تصفيات أمم أفريقيا",
-        homeTeam = SportsTeam(name = "الكونغو", flagEmoji = "🇨🇬", code = "CGO"),
-        awayTeam = SportsTeam(name = "الكاميرون", flagEmoji = "🇨🇲", code = "CMR"),
+        id = "ain_hilal_afc",
+        title = "العين ضد الهلال",
+        tournament = "دوري أبطال آسيا",
+        tournamentLogo = "https://upload.wikimedia.org/wikipedia/en/thumb/d/d4/AFC_Champions_League_Elite_logo.svg/512px-AFC_Champions_League_Elite_logo.svg.png",
+        homeTeam = SportsTeam(name = "العين", flagEmoji = "🟣", code = "AIN", logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/3/3f/Al_Ain_FC_logo.svg/512px-Al_Ain_FC_logo.svg.png"),
+        awayTeam = SportsTeam(name = "الهلال", flagEmoji = "🔵", code = "HIL", logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/8/87/Al_Hilal_SFC_logo.svg/512px-Al_Hilal_SFC_logo.svg.png"),
+        kickoffTime = "19:00",
+        kickoffDate = "اليوم",
+        stadium = "استاد هزاع بن زايد",
+        commentator = "عامر عبد الله",
+        channelName = "beIN SPORTS AFC HD",
+        channelId = "bein_afc",
+        streamUrl = "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8",
+        isLive = true,
+        liveMinute = "'79",
+        scoreHome = 2,
+        scoreAway = 3
+      )
+    )
+
+    // 16. Serie A: يوفنتوس ضد روما (Live)
+    defaultList.add(
+      SportsMatch(
+        id = "juve_roma_seriea",
+        title = "يوفنتوس ضد روما",
+        tournament = "الدوري الإيطالي",
+        tournamentLogo = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Serie_A_logo_2019.svg/512px-Serie_A_logo_2019.svg.png",
+        homeTeam = SportsTeam(name = "يوفنتوس", flagEmoji = "⚪⚫", code = "JUV", logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Juventus_FC_2017_logo.svg/512px-Juventus_FC_2017_logo.svg.png"),
+        awayTeam = SportsTeam(name = "روما", flagEmoji = "🟡🔴", code = "ROM", logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/f/f7/AS_Roma_logo_%282017%29.svg/512px-AS_Roma_logo_%282017%29.svg.png"),
+        kickoffTime = "21:45",
+        kickoffDate = "اليوم",
+        stadium = "أليانز ستاديوم - تورينو",
+        commentator = "علي محمد علي",
+        channelName = "beIN SPORTS 2 HD",
+        channelId = "bein_2",
+        streamUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+        isLive = true,
+        liveMinute = "'74",
+        scoreHome = 1,
+        scoreAway = 1
+      )
+    )
+
+    // 17. Serie A: إنتر ميلان ضد ميلان (Upcoming)
+    defaultList.add(
+      SportsMatch(
+        id = "inter_milan_seriea",
+        title = "إنتر ميلان ضد ميلان",
+        tournament = "الدوري الإيطالي",
+        tournamentLogo = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Serie_A_logo_2019.svg/512px-Serie_A_logo_2019.svg.png",
+        homeTeam = SportsTeam(name = "إنتر ميلان", flagEmoji = "🔵⚫", code = "INT", logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/FC_Internazionale_Milano_2021.svg/512px-FC_Internazionale_Milano_2021.svg.png"),
+        awayTeam = SportsTeam(name = "ميلان", flagEmoji = "🔴⚫", code = "MIL", logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Logo_of_AC_Milan.svg/512px-Logo_of_AC_Milan.svg.png"),
+        kickoffTime = "21:45",
+        kickoffDate = "الأحد 5 أكتوبر 2026",
+        stadium = "سان سيرو",
+        commentator = "حفيظ دراجي",
+        channelName = "beIN SPORTS 2 HD",
+        channelId = "bein_2",
+        streamUrl = "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8",
+        isLive = false
+      )
+    )
+
+    // 18. La Liga: ريال مدريد ضد برشلونة (Upcoming الكلاسيكو)
+    defaultList.add(
+      SportsMatch(
+        id = "clasico_real_barca",
+        title = "ريال مدريد ضد برشلونة",
+        tournament = "الدوري الإسباني",
+        tournamentLogo = "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/LaLiga_logo_2023.svg/512px-LaLiga_logo_2023.svg.png",
+        homeTeam = SportsTeam(name = "ريال مدريد", flagEmoji = "⚪", code = "RMA", logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/512px-Real_Madrid_CF.svg.png"),
+        awayTeam = SportsTeam(name = "برشلونة", flagEmoji = "🔵🔴", code = "BAR", logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/512px-FC_Barcelona_%28crest%29.svg.png"),
         kickoffTime = "22:00",
-        kickoffDate = "29 سبتمبر 2026",
-        stadium = "استاد ألفونس ماسيمبا",
-        channelName = "beIN SPORTS 4 HD",
-        channelId = "bein_4",
+        kickoffDate = "السبت 4 أكتوبر 2026",
+        stadium = "سانتياغو برنابيو",
+        commentator = "عصام الشوالي",
+        channelName = "beIN SPORTS 1 HD",
+        channelId = "bein_1",
+        streamUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+        isLive = false
+      )
+    )
+
+    // 19. Friendlies: البرتغال ضد الدنمارك (Ended)
+    defaultList.add(
+      SportsMatch(
+        id = "portugal_denmark_friendly",
+        title = "البرتغال ضد الدنمارك",
+        tournament = "مباريات دولية ودية",
+        tournamentLogo = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/FIFA_logo_without_slogan.svg/512px-FIFA_logo_without_slogan.svg.png",
+        homeTeam = SportsTeam(name = "البرتغال", flagEmoji = "🇵🇹", code = "POR", logoUrl = "https://flagcdn.com/w80/pt.png"),
+        awayTeam = SportsTeam(name = "الدنمارك", flagEmoji = "🇩🇰", code = "DEN", logoUrl = "https://flagcdn.com/w80/dk.png"),
+        kickoffTime = "21:45",
+        kickoffDate = "أمس",
+        stadium = "استاد خوسيه ألفالادي",
+        commentator = "خليل البلوشي",
+        channelName = "beIN SPORTS 1 HD",
+        channelId = "bein_1",
         streamUrl = "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8",
         isLive = false,
         isEnded = true,
-        scoreHome = 1,
-        scoreAway = 1
+        scoreHome = 3,
+        scoreAway = 2
+      )
+    )
+
+    // 20. Tennis: كارلوس ألكاراز ضد يانيك سينر (Upcoming)
+    defaultList.add(
+      SportsMatch(
+        id = "tennis_alcaraz_sinner",
+        title = "كارلوس ألكاراز ضد يانيك سينر",
+        tournament = "بث مباشر - رياضات متنوعة",
+        tournamentLogo = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/ATP_Tour_logo.svg/512px-ATP_Tour_logo.svg.png",
+        homeTeam = SportsTeam(name = "كارلوس ألكاراز", flagEmoji = "🇪🇸", code = "ESP", logoUrl = "https://flagcdn.com/w80/es.png"),
+        awayTeam = SportsTeam(name = "يانيك سينر", flagEmoji = "🇮🇹", code = "ITA", logoUrl = "https://flagcdn.com/w80/it.png"),
+        kickoffTime = "16:30",
+        kickoffDate = "غداً",
+        stadium = "الملعب الرئيسي - بكين",
+        commentator = "أحمد عبده",
+        channelName = "beIN SPORTS 6 HD",
+        channelId = "bein_6",
+        streamUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+        isLive = false
       )
     )
 

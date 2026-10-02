@@ -42,6 +42,9 @@ import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material.icons.filled.Tv
@@ -53,9 +56,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,7 +76,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
+import kotlinx.coroutines.launch
 import com.example.data.SportsBackendRepository
 import com.example.model.BroadcastStream
 import com.example.model.SportsMatch
@@ -86,6 +94,7 @@ import com.example.ui.theme.TodGold
 enum class TodTopSection(val title: String) {
   HOME("الرئيسية"),
   MATCHES("المباريات"),
+  NEWS("الأخبار"),
   LIVE_TV("قنوات مباشرة"),
   COMPETITIONS("المنافسات"),
   SHOWS("ملخصات وبرامج")
@@ -120,6 +129,22 @@ fun TodHomeScreen(
   val dateOptions = listOf("أمس", "اليوم", "غداً", "الجمعة", "السبت", "الأحد")
   var selectedDate by remember { mutableStateOf("اليوم") }
   var selectedTournamentFilter by remember { mutableStateOf<String?>(null) }
+  var selectedMatchStatusFilter by remember { mutableStateOf("ALL") }
+  var isGroupingByTournament by remember { mutableStateOf(true) }
+  var matchForServerSelection by remember { mutableStateOf<SportsMatch?>(null) }
+
+  val coroutineScope = rememberCoroutineScope()
+  val isSyncing by sportsBackendRepo.isSyncing.collectAsState()
+
+  // Sync matches when selectedDate changes
+  LaunchedEffect(selectedDate) {
+    val dateParam = when (selectedDate) {
+      "أمس" -> "yesterday"
+      "غداً" -> "tomorrow"
+      else -> "today"
+    }
+    sportsBackendRepo.syncForDate(dateParam)
+  }
 
   // Observe Sports Backend Data (AlwaysData or synced backend)
   val sportsMatches by sportsBackendRepo.matches.collectAsState()
@@ -188,10 +213,25 @@ fun TodHomeScreen(
                 map
               }
 
+              // Categorized Match Lists (Screenshots 1, 2, 3, 4)
+              val liveMatches = remember(sportsMatches) { sportsMatches.filter { it.isLive } }
+              val upcomingMatches = remember(sportsMatches) { sportsMatches.filter { !it.isLive && !it.isEnded } }
+              val featuredMatches = remember(sportsMatches) { sportsMatches.filter { it.isEnded } }
+              val sportsNews by sportsBackendRepo.news.collectAsState()
+              val announcementConfig by sportsBackendRepo.announcement.collectAsState()
+
               LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 100.dp)
               ) {
+                // 0. Top Breaking Announcement Bar
+                if (announcementConfig.isEnabled && announcementConfig.message.isNotBlank()) {
+                  item(key = "announcement_bar") {
+                    TodMarqueeAnnouncementBar(config = announcementConfig)
+                    Spacer(modifier = Modifier.height(4.dp))
+                  }
+                }
+
                 // 1. Dynamic Multi-Poster Hero Banner Carousel
                 if (heroMatches.isNotEmpty()) {
                   item(key = "hero_carousel") {
@@ -204,12 +244,47 @@ fun TodHomeScreen(
                   }
                 }
 
-                // 2. بطاقات مباريات كرة القدم (Screenshots 165527, 165536, 165601)
-                // تختلف الألوان حسب البطولة مع التدرجات المناسبة من الإعدادات
-                if (sportsMatches.isNotEmpty()) {
-                  item(key = "live_and_today_matches") {
+                // 2. بطاقات مباريات كرة القدم (مطابقة 100% للصور 1 و 2 و 3 و 4)
+                if (liveMatches.isNotEmpty()) {
+                  item(key = "live_matches_rail") {
                     TodLiveSportsRail(
-                      matches = sportsMatches,
+                      matches = liveMatches,
+                      title = "البث المباشر - رياضات متعددة",
+                      onPlayMatch = onPlayMatchDirectly,
+                      onOpenDetails = onOpenMatchDetail
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                  }
+                }
+
+                // 3. آخر الأخبار الرياضية الحية (Yallakora Live News Feed)
+                if (sportsNews.isNotEmpty()) {
+                  item(key = "sports_news_feed_rail") {
+                    TodSportsNewsRail(
+                      news = sportsNews,
+                      onViewAllClick = { activeTopSection = TodTopSection.NEWS }
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                  }
+                }
+
+                if (upcomingMatches.isNotEmpty()) {
+                  item(key = "upcoming_matches_rail") {
+                    TodLiveSportsRail(
+                      matches = upcomingMatches,
+                      title = "الرياضة القادمة",
+                      onPlayMatch = onPlayMatchDirectly,
+                      onOpenDetails = onOpenMatchDetail
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                  }
+                }
+
+                if (featuredMatches.isNotEmpty()) {
+                  item(key = "featured_matches_rail") {
+                    TodLiveSportsRail(
+                      matches = featuredMatches,
+                      title = "أفضل مباريات كرة القدم مباشرةً هذا الأسبوع",
                       onPlayMatch = onPlayMatchDirectly,
                       onOpenDetails = onOpenMatchDetail
                     )
@@ -303,6 +378,145 @@ fun TodHomeScreen(
               }
             }
 
+            // Live Status & Action Toolbar
+            Row(
+              modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 4.dp),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+              ) {
+                Box(
+                  modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(if (liveMatches.isNotEmpty()) Color(0xFF30D158) else Color(0x60FFFFFF))
+                )
+                Text(
+                  text = if (isSyncing) "جاري تحديث النتائج..." else "مباريات $selectedDate (${sportsMatches.size})",
+                  color = if (isSyncing) TodGold else Color(0xCCFFFFFF),
+                  fontSize = 12.sp,
+                  fontFamily = ThmanyahFontFamily,
+                  fontWeight = FontWeight.Bold
+                )
+              }
+
+              Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+              ) {
+                // Grouping Toggle
+                Box(
+                  modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (isGroupingByTournament) Color(0x350A84FF) else Color(0x18FFFFFF))
+                    .clickable { isGroupingByTournament = !isGroupingByTournament }
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                  Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                  ) {
+                    Icon(
+                      imageVector = Icons.Default.Layers,
+                      contentDescription = null,
+                      tint = if (isGroupingByTournament) Color(0xFF64D2FF) else Color(0xAAFFFFFF),
+                      modifier = Modifier.size(13.dp)
+                    )
+                    Text(
+                      text = "حسب البطولة",
+                      color = if (isGroupingByTournament) Color(0xFF64D2FF) else Color(0xAAFFFFFF),
+                      fontSize = 11.sp,
+                      fontFamily = ThmanyahFontFamily
+                    )
+                  }
+                }
+
+                // Instant Refresh Button
+                Box(
+                  modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0x18FFFFFF))
+                    .clickable {
+                      coroutineScope.launch {
+                        val dateParam = when (selectedDate) {
+                          "أمس" -> "yesterday"
+                          "غداً" -> "tomorrow"
+                          else -> "today"
+                        }
+                        sportsBackendRepo.syncForDate(dateParam, forceRefresh = true)
+                      }
+                    }
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                  Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                  ) {
+                    if (isSyncing) {
+                      CircularProgressIndicator(
+                        modifier = Modifier.size(13.dp),
+                        color = TodGold,
+                        strokeWidth = 1.5.dp
+                      )
+                    } else {
+                      Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "تحديث",
+                        tint = TodGold,
+                        modifier = Modifier.size(13.dp)
+                      )
+                    }
+                    Text(
+                      text = "تحديث",
+                      color = TodGold,
+                      fontSize = 11.sp,
+                      fontFamily = ThmanyahFontFamily,
+                      fontWeight = FontWeight.Bold
+                    )
+                  }
+                }
+              }
+            }
+
+            // Status Filter Row (الكل، مباشر، قادمة، منتهية)
+            val statusOptions = listOf(
+              "ALL" to "الكل (${sportsMatches.size})",
+              "LIVE" to "مباشر الآن (${sportsMatches.count { it.isLive }})",
+              "UPCOMING" to "القادمة (${sportsMatches.count { !it.isLive && !it.isEnded }})",
+              "ENDED" to "المنتهية (${sportsMatches.count { it.isEnded }})"
+            )
+            Row(
+              modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 14.dp, vertical = 2.dp),
+              horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+              statusOptions.forEach { (key, label) ->
+                val isSelected = selectedMatchStatusFilter == key
+                Box(
+                  modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (isSelected) TodGold else Color(0x14FFFFFF))
+                    .clickable { selectedMatchStatusFilter = key }
+                    .padding(horizontal = 12.dp, vertical = 5.dp)
+                ) {
+                  Text(
+                    text = label,
+                    color = if (isSelected) Color.Black else Color.White,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                    fontSize = 11.5.sp,
+                    fontFamily = ThmanyahFontFamily
+                  )
+                }
+              }
+            }
+
             // Tournament Filter Chips
             val tournaments = remember(sportsMatches) {
               listOf("الكل") + sportsMatches.map { it.tournament }.distinct()
@@ -311,7 +525,7 @@ fun TodHomeScreen(
               modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 14.dp, vertical = 4.dp),
+                .padding(horizontal = 14.dp, vertical = 3.dp),
               horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
               tournaments.forEach { tour ->
@@ -337,25 +551,142 @@ fun TodHomeScreen(
               }
             }
 
-            val filteredMatches = remember(sportsMatches, selectedTournamentFilter) {
-              if (selectedTournamentFilter == null) sportsMatches
-              else sportsMatches.filter { it.tournament == selectedTournamentFilter }
+            val filteredMatches = remember(sportsMatches, selectedTournamentFilter, selectedMatchStatusFilter) {
+              var list = if (selectedTournamentFilter == null) sportsMatches else sportsMatches.filter { it.tournament == selectedTournamentFilter }
+              when (selectedMatchStatusFilter) {
+                "LIVE" -> list.filter { it.isLive }
+                "UPCOMING" -> list.filter { !it.isLive && !it.isEnded }
+                "ENDED" -> list.filter { it.isEnded }
+                else -> list
+              }
+            }
+
+            val groupedMatches = remember(filteredMatches, isGroupingByTournament) {
+              if (isGroupingByTournament) {
+                filteredMatches.groupBy { it.tournament }
+              } else {
+                mapOf("all" to filteredMatches)
+              }
             }
 
             LazyColumn(
               modifier = Modifier.fillMaxSize(),
-              contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 100.dp),
+              contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 6.dp, bottom = 100.dp),
               verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-              items(filteredMatches, key = { it.id }) { match ->
-                TodMatchScheduleCard(
-                  match = match,
-                  onPlayMatch = onPlayMatchDirectly,
-                  onOpenDetails = onOpenMatchDetail
-                )
+              if (filteredMatches.isEmpty()) {
+                item(key = "empty_matches_box") {
+                  Box(
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .padding(top = 40.dp, bottom = 60.dp),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Column(
+                      horizontalAlignment = Alignment.CenterHorizontally,
+                      verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                      Box(
+                        modifier = Modifier
+                          .size(60.dp)
+                          .clip(CircleShape)
+                          .background(Color(0x200A84FF)),
+                        contentAlignment = Alignment.Center
+                      ) {
+                        Icon(
+                          imageVector = Icons.Default.SportsSoccer,
+                          contentDescription = null,
+                          tint = Color(0xFF64D2FF),
+                          modifier = Modifier.size(30.dp)
+                        )
+                      }
+                      Text(
+                        text = "لا توجد مباريات مسجلة لـ $selectedDate",
+                        color = Color.White,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = ThmanyahFontFamily
+                      )
+                      Text(
+                        text = "يمكنك التبديل إلى يوم آخر أو عرض مباريات اليوم",
+                        color = Color(0xFF8E9BAE),
+                        fontSize = 12.sp,
+                        fontFamily = ThmanyahFontFamily
+                      )
+                      Box(
+                        modifier = Modifier
+                          .clip(RoundedCornerShape(12.dp))
+                          .background(TodGold)
+                          .clickable {
+                            selectedDate = "اليوم"
+                            selectedTournamentFilter = null
+                            selectedMatchStatusFilter = "ALL"
+                            coroutineScope.launch { sportsBackendRepo.syncForDate("today", forceRefresh = true) }
+                          }
+                          .padding(horizontal = 16.dp, vertical = 8.dp)
+                      ) {
+                        Text(
+                          text = "عرض مباريات اليوم ⚡",
+                          color = Color.Black,
+                          fontWeight = FontWeight.Black,
+                          fontSize = 12.5.sp,
+                          fontFamily = ThmanyahFontFamily
+                        )
+                      }
+                    }
+                  }
+                }
+              } else if (isGroupingByTournament && selectedTournamentFilter == null) {
+                groupedMatches.forEach { (tourName, matchesInTour) ->
+                  item(key = "hdr_$tourName") {
+                    TodTournamentSectionHeader(
+                      tournamentName = tourName,
+                      tournamentLogo = matchesInTour.firstOrNull()?.tournamentLogo ?: "",
+                      count = matchesInTour.size
+                    )
+                  }
+                  itemsIndexed(matchesInTour, key = { idx, match -> "${match.id}_${tourName}_$idx" }) { _, match ->
+                    TodMatchScheduleCard(
+                      match = match,
+                      onPlayMatch = { m ->
+                        if (m.servers.size > 1) {
+                          matchForServerSelection = m
+                        } else {
+                          onPlayMatchDirectly(m)
+                        }
+                      },
+                      onOpenDetails = onOpenMatchDetail
+                    )
+                  }
+                }
+              } else {
+                itemsIndexed(filteredMatches, key = { idx, match -> "${match.id}_$idx" }) { _, match ->
+                  TodMatchScheduleCard(
+                    match = match,
+                    onPlayMatch = { m ->
+                      if (m.servers.size > 1) {
+                        matchForServerSelection = m
+                      } else {
+                        onPlayMatchDirectly(m)
+                      }
+                    },
+                    onOpenDetails = onOpenMatchDetail
+                  )
+                }
               }
             }
           }
+        }
+
+        TodTopSection.NEWS -> {
+          // =====================================================================
+          // TAB: DEDICATED SPORTS NEWS (Yallakora, beIN & Live Sports Feeds)
+          // =====================================================================
+          val sportsNews by sportsBackendRepo.news.collectAsState()
+          TodDedicatedNewsScreen(
+            news = sportsNews,
+            onRefreshNews = { sportsBackendRepo.fetchYallakoraNews() }
+          )
         }
 
         TodTopSection.LIVE_TV -> {
@@ -743,10 +1074,244 @@ fun TodHomeScreen(
           }
         }
       }
+
+      // Multi-Server Selection Dialog / Modal
+      if (matchForServerSelection != null) {
+        val selectedMatch = matchForServerSelection!!
+        TodServerSelectionDialog(
+          match = selectedMatch,
+          onDismiss = { matchForServerSelection = null },
+          onSelectServer = { srv ->
+            matchForServerSelection = null
+            onPlayMatchDirectly(selectedMatch.copy(streamUrl = srv.streamUrl))
+          }
+        )
+      }
     }
   }
 }
 }
+}
+
+/**
+ * Tournament Header Badge in Matches Schedule Tab
+ */
+@Composable
+fun TodTournamentSectionHeader(
+  tournamentName: String,
+  tournamentLogo: String,
+  count: Int,
+  modifier: Modifier = Modifier
+) {
+  Row(
+    modifier = modifier
+      .fillMaxWidth()
+      .padding(horizontal = 4.dp, vertical = 6.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.SpaceBetween
+  ) {
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+      if (tournamentLogo.isNotBlank()) {
+        SubcomposeAsyncImage(
+          model = tournamentLogo,
+          contentDescription = null,
+          modifier = Modifier.size(24.dp),
+          contentScale = ContentScale.Fit,
+          error = {
+            Box(
+              modifier = Modifier
+                .size(24.dp)
+                .clip(CircleShape)
+                .background(Color(0x250A84FF)),
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(Icons.Default.SportsSoccer, contentDescription = null, tint = Color(0xFF64D2FF), modifier = Modifier.size(14.dp))
+            }
+          }
+        )
+      } else {
+        Box(
+          modifier = Modifier
+            .size(24.dp)
+            .clip(CircleShape)
+            .background(Color(0x250A84FF)),
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(Icons.Default.SportsSoccer, contentDescription = null, tint = Color(0xFF64D2FF), modifier = Modifier.size(14.dp))
+        }
+      }
+      Text(
+        text = tournamentName,
+        color = Color.White,
+        fontWeight = FontWeight.Bold,
+        fontSize = 13.5.sp,
+        fontFamily = ThmanyahFontFamily
+      )
+    }
+
+    Box(
+      modifier = Modifier
+        .clip(RoundedCornerShape(8.dp))
+        .background(Color(0x200A84FF))
+        .border(0.75.dp, Color(0x400A84FF), RoundedCornerShape(8.dp))
+        .padding(horizontal = 8.dp, vertical = 2.5.dp)
+    ) {
+      Text(
+        text = "$count مباريات",
+        color = Color(0xFF64D2FF),
+        fontSize = 10.5.sp,
+        fontWeight = FontWeight.Medium,
+        fontFamily = ThmanyahFontFamily
+      )
+    }
+  }
+}
+
+/**
+ * Modern Server Selection Dialog for matches with multiple streaming feeds
+ */
+@Composable
+fun TodServerSelectionDialog(
+  match: SportsMatch,
+  onDismiss: () -> Unit,
+  onSelectServer: (com.example.model.MatchStreamServer) -> Unit
+) {
+  Dialog(onDismissRequest = onDismiss) {
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .clip(RoundedCornerShape(24.dp))
+        .background(
+          Brush.verticalGradient(
+            colors = listOf(Color(0xFF141C2E), Color(0xFF0C101A))
+          )
+        )
+        .border(1.2.dp, TodGold.copy(alpha = 0.6f), RoundedCornerShape(24.dp))
+        .padding(22.dp)
+    ) {
+      Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+      ) {
+        // Header with close button
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          IconButton(
+            onClick = onDismiss,
+            modifier = Modifier
+              .size(32.dp)
+              .clip(CircleShape)
+              .background(Color(0x20FFFFFF))
+          ) {
+            Icon(Icons.Default.Close, contentDescription = "إغلاق", tint = Color.White, modifier = Modifier.size(16.dp))
+          }
+
+          Text(
+            text = "اختر سيرفر المشاهدة",
+            color = TodGold,
+            fontSize = 16.sp,
+            fontFamily = ThmanyahFontFamily,
+            fontWeight = FontWeight.Black
+          )
+
+          Spacer(modifier = Modifier.size(32.dp))
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Match Teams subtitle
+        Text(
+          text = "${match.homeTeam.name} ضد ${match.awayTeam.name}",
+          color = Color.White,
+          fontSize = 15.sp,
+          fontFamily = ThmanyahFontFamily,
+          fontWeight = FontWeight.Bold,
+          textAlign = TextAlign.Center
+        )
+        Text(
+          text = "${match.tournament} • ${match.channelName}",
+          color = Color(0xFF8E9BAE),
+          fontSize = 11.5.sp,
+          fontFamily = ThmanyahFontFamily,
+          modifier = Modifier.padding(top = 2.dp, bottom = 16.dp)
+        )
+
+        // List of Servers
+        Column(
+          modifier = Modifier.fillMaxWidth(),
+          verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+          match.servers.forEachIndexed { idx, srv ->
+            val isFirst = idx == 0
+            Box(
+              modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(
+                  if (isFirst) {
+                    Brush.horizontalGradient(listOf(TodGold, Color(0xFFFF9500)))
+                  } else {
+                    Brush.horizontalGradient(listOf(Color(0x250A84FF), Color(0x150A84FF)))
+                  }
+                )
+                .border(
+                  1.dp,
+                  if (isFirst) TodGold else Color(0x400A84FF),
+                  RoundedCornerShape(14.dp)
+                )
+                .clickable { onSelectServer(srv) }
+                .padding(horizontal = 14.dp, vertical = 12.dp)
+            ) {
+              Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                  Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    tint = if (isFirst) Color.Black else Color(0xFF64D2FF),
+                    modifier = Modifier.size(20.dp)
+                  )
+                  Text(
+                    text = srv.name.ifBlank { "سيرفر ${idx + 1}" },
+                    color = if (isFirst) Color.Black else Color.White,
+                    fontSize = 13.5.sp,
+                    fontFamily = ThmanyahFontFamily,
+                    fontWeight = FontWeight.Bold
+                  )
+                }
+
+                Box(
+                  modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (isFirst) Color(0x30000000) else Color(0x200A84FF))
+                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                  Text(
+                    text = srv.quality.ifBlank { "HD" },
+                    color = if (isFirst) Color.Black else Color(0xFF64D2FF),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Black
+                  )
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 

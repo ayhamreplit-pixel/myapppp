@@ -2,7 +2,6 @@
 /**
  * =========================================================================
  *  لوحة تحكم وسيرفر TOD / HERO Cast للمباريات والبث المباشر (m7)
- *  المسار: /m7/api.php أو /m7/index.php
  *  - جلب تلقائي لمباريات اليوم من YSScores مع نظام كاش متطور لمنع الحظر
  *  - لوحة تحكم عربية متقدمة: إضافة وتعديل السيرفرات، النتائج، الدقائق، والمعلقين
  *  - مشغل فيديو مدمج (HLS / m3u8) لفحص واختبار سيرفرات البث قبل النشر
@@ -24,15 +23,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 date_default_timezone_set('Asia/Riyadh');
 $todayDate = date('Y-m-d');
 
-// إعداد مسار حفظ ملفات البيانات والتعديلات داخل مجلد m7
+// إعداد مسار حفظ ملفات البيانات والتعديلات
 $dataDir = __DIR__ . '/data';
 if (!is_dir($dataDir)) {
     @mkdir($dataDir, 0777, true);
 }
 $overridesFile = $dataDir . '/match_overrides.json';
 $customMatchesFile = $dataDir . '/custom_matches.json';
-$channelsFile = __DIR__ . '/channels.json';
-$matchesLegacyFile = __DIR__ . '/matches.json';
+$settingsFile = $dataDir . '/settings.json';
 
 // تهيئة الملفات إذا لم تكن موجودة
 if (!file_exists($overridesFile)) {
@@ -40,6 +38,9 @@ if (!file_exists($overridesFile)) {
 }
 if (!file_exists($customMatchesFile)) {
     @file_put_contents($customMatchesFile, json_encode([], JSON_UNESCAPED_UNICODE));
+}
+if (!file_exists($settingsFile)) {
+    @file_put_contents($settingsFile, json_encode(["site_title" => "HERO Cast / TOD"], JSON_UNESCAPED_UNICODE));
 }
 
 function getJsonData($file) {
@@ -316,6 +317,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode(["status" => true, "message" => "تمت إضافة المباراة المخصصة بنجاح"]);
         exit;
     }
+
+    // 7. استعادة النسخة الاحتياطية
+    if ($postAction === 'restore_backup') {
+        $backupData = $input['backup_data'] ?? null;
+        if (is_array($backupData)) {
+            if (isset($backupData['overrides'])) saveJsonData($overridesFile, $backupData['overrides']);
+            if (isset($backupData['custom_matches'])) saveJsonData($customMatchesFile, $backupData['custom_matches']);
+            echo json_encode(["status" => true, "message" => "تمت استعادة النسخة الاحتياطية بنجاح"]);
+            exit;
+        }
+        echo json_encode(["status" => false, "message" => "ملف النسخة الاحتياطية غير صالح"]);
+        exit;
+    }
 }
 
 // -------------------------------------------------------------------------
@@ -328,37 +342,6 @@ if ($action === 'clear_cache') {
         @unlink($cacheFile);
     }
     $forceRefresh = true;
-}
-
-// طلب الأخبار الرياضية
-if ($action === 'news') {
-    header('Content-Type: application/json; charset=utf-8');
-    $newsCache = sys_get_temp_dir() . "/sports_news.json";
-    if (file_exists($newsCache) && (time() - filemtime($newsCache) < 300)) {
-        echo file_get_contents($newsCache);
-        exit;
-    }
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, "https://sportfeeds.gemini.media/yallakoraapi/NewsList?pageIndex=1&pageSize=30&otherSportsNews=false");
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 6);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    $newsResp = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    if ($httpCode === 200 && !empty($newsResp)) {
-        @file_put_contents($newsCache, $newsResp);
-        echo $newsResp;
-        exit;
-    }
-    if (file_exists($newsCache)) {
-        echo file_get_contents($newsCache);
-        exit;
-    }
-    echo json_encode(["status" => true, "news" => []]);
-    exit;
 }
 
 $rawMatches = fetchYsscoresMatches($targetDate, $forceRefresh);
@@ -430,21 +413,10 @@ foreach ($rawMatches as $m) {
 }
 
 // -------------------------------------------------------------------------
-// API Responses
+// API Responses (للتطبيق وأوامر الـ AJAX المباشرة)
 // -------------------------------------------------------------------------
 
-// أ) إرجاع القنوات (Channels)
-if ($action === 'channels' || $action === 'get_channels') {
-    header('Content-Type: application/json; charset=utf-8');
-    if (file_exists($channelsFile)) {
-        echo file_get_contents($channelsFile);
-    } else {
-        echo json_encode(["status" => true, "channels" => []]);
-    }
-    exit;
-}
-
-// ب) إرجاع كائن التحديث الخفيف للنتائج والدقائق فقط (Lightweight Live Polling)
+// أ) إرجاع كائن التحديث الخفيف للنتائج والدقائق فقط (Lightweight Live Polling)
 if ($action === 'live_scores') {
     header('Content-Type: application/json; charset=utf-8');
     $scores = [];
@@ -462,7 +434,7 @@ if ($action === 'live_scores') {
     exit;
 }
 
-// ج) تصدير النسخة الاحتياطية كملف JSON
+// ب) تصدير النسخة الاحتياطية كملف JSON
 if ($action === 'export_backup') {
     header('Content-Type: application/json; charset=utf-8');
     header('Content-Disposition: attachment; filename="m7_backup_' . date('Y-m-d_H-i') . '.json"');
@@ -475,10 +447,9 @@ if ($action === 'export_backup') {
     exit;
 }
 
-// د) إرجاع قائمة المباريات الكاملة لتطبيق الأندرويد
+// ج) إرجاع قائمة المباريات الكاملة لتطبيق الأندرويد
 $isApiRequest = (
     $action === 'matches' ||
-    $action === 'get_matches' ||
     $action === 'ysscores' ||
     isset($_GET['json']) ||
     (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) ||
@@ -1162,6 +1133,7 @@ setInterval(() => {
         .then(r => r.json())
         .then(res => {
             if (res.status && res.live_scores) {
+                // تحديث مباشر بدون إعادة تحميل
                 res.live_scores.forEach(s => {
                     const row = document.querySelector(`[onclick*="'${s.id}'"]`)?.closest('.match-row');
                     if (row) {

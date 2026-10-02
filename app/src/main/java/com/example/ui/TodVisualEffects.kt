@@ -756,7 +756,6 @@ fun LiquidGlassBottomBar(
     Pair(TodNavTab.HOME, "الرئيسية"),
     Pair(TodNavTab.MATCHES, "المباريات"),
     Pair(TodNavTab.LIVE_TV, "مباشر"),
-    Pair(TodNavTab.SEARCH, "بحث"),
     Pair(TodNavTab.MORE, "حسابي")
   )
 

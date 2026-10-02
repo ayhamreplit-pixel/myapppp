@@ -9,6 +9,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -35,6 +36,8 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -57,6 +60,7 @@ import com.example.ui.theme.DarkTextTertiary
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -74,12 +78,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import com.example.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -556,26 +562,26 @@ fun TodMatchCountdownHero(
         }
       }
 
-      // 4.2 Match Title (Larger, Clear & Prominent, RTL Right-aligned)
+      // 4.2 Match Title (RTL Right-aligned, sized moderately)
       Text(
         text = match.title.ifBlank { "${match.homeTeam.name} ضد ${match.awayTeam.name}" },
         color = Color.White,
-        fontSize = 28.sp,
-        fontWeight = FontWeight.Black,
+        fontSize = 21.sp,
+        fontWeight = FontWeight.Bold,
         fontFamily = ThmanyahFontFamily,
         textAlign = TextAlign.Right,
         modifier = Modifier.fillMaxWidth()
       )
 
-      Spacer(modifier = Modifier.height(6.dp))
+      Spacer(modifier = Modifier.height(4.dp))
 
-      // 4.3 Match Subtitle Metadata (Larger & Clearer: Date • Time • Stadium • Tournament)
+      // 4.3 Match Subtitle Metadata (Date • Time • Stadium • Tournament)
       Text(
         text = "${match.kickoffDate} • ${match.kickoffTime} • ${match.stadium.ifBlank { "الملعب الرئيسي" }} • ${match.tournament}",
-        color = Color(0xFFF1F5F9),
-        fontSize = 16.5.sp,
+        color = Color(0xFFD1D5DB),
+        fontSize = 13.5.sp,
         fontFamily = ThmanyahFontFamily,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.Normal,
         textAlign = TextAlign.Right,
         maxLines = 2,
         overflow = TextOverflow.Ellipsis,
@@ -584,19 +590,19 @@ fun TodMatchCountdownHero(
 
       Spacer(modifier = Modifier.height(6.dp))
 
-      // 4.4 Compact & Small Red "مباشر" Badge
+      // 4.4 Red "مباشر" Badge (Slightly enlarged and clearly visible)
       if (match.isLive || isNowLive) {
         Box(
           modifier = Modifier
-            .clip(RoundedCornerShape(5.dp))
+            .clip(RoundedCornerShape(6.dp))
             .background(Color(0xFFE50914))
-            .padding(horizontal = 7.dp, vertical = 2.dp),
+            .padding(horizontal = 10.dp, vertical = 3.5.dp),
           contentAlignment = Alignment.Center
         ) {
           Text(
             text = "مباشر",
             color = Color.White,
-            fontSize = 10.sp,
+            fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = ThmanyahFontFamily
           )
@@ -1337,150 +1343,268 @@ fun TodChannelsGroupRail(
  * Tournament Visual Style definition for match cards (Screenshots 165527, 165536, 165601)
  * Colors vary strictly according to tournament brand identity and blend with user settings glow.
  */
+/**
+ * Authentic Tournament Card Watermark Types
+ */
+enum class TournamentWatermark {
+  NONE,
+  GEOMETRIC_CIRCLES, // Overlapping circular grid pattern (Screenshot 161624, 220513)
+  UCL_STARS,         // Ambient UCL starball curves (Screenshot 162954, 161604)
+  FRIENDLIES_LINES   // International Friendlies ambient field glow (Screenshot 161624)
+}
+
+/**
+ * Tournament Visual Style definition for match cards (100% Matches Screenshots 1, 2, 3, 4)
+ * Colors vary strictly according to tournament brand identity for ALL tournaments without exception.
+ */
 data class TournamentCardStyle(
   val tournamentKey: String,
   val displayName: String,
   val bgGradient: List<Color>,
   val accentColor: Color,
   val secondaryColor: Color,
-  val logoUrl: String
+  val logoUrl: String,
+  val watermark: TournamentWatermark = TournamentWatermark.GEOMETRIC_CIRCLES
 )
 
 fun getTournamentCardStyle(tournamentName: String): TournamentCardStyle {
   val name = tournamentName.lowercase()
   return when {
+    // 1. UEFA Champions League (Screenshots 1 & 3): Deep Royal Navy Blue & Starball
     name.contains("أبطال أوروبا") || name.contains("champions league") || name.contains("ucl") -> {
-      // UEFA Champions League: Starball Midnight Blue & Electric Cyan (Screenshot 165536)
       TournamentCardStyle(
         tournamentKey = "ucl",
         displayName = "دوري أبطال أوروبا",
         bgGradient = listOf(
-          Color(0xFF091E44),
-          Color(0xFF06132C),
-          Color(0xFF030917)
+          Color(0xFF041138),
+          Color(0xFF09205E),
+          Color(0xFF030A20)
         ),
         accentColor = Color(0xFF00D4FF),
         secondaryColor = Color(0xFF0077B6),
-        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/UEFA_Champions_League_logo_2.svg/512px-UEFA_Champions_League_logo_2.svg.png"
+        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/UEFA_Champions_League_logo_2.svg/512px-UEFA_Champions_League_logo_2.svg.png",
+        watermark = TournamentWatermark.UCL_STARS
       )
     }
-    name.contains("إنجليزي") || name.contains("premier") || name.contains("بريمير") -> {
-      // Premier League: Regal Deep Purple & Neon Magenta/Mint (Screenshot 165527)
+
+    // 2. International Friendlies / مباريات ودية (Screenshot 4): Deep Rich Emerald Green
+    name.contains("ودية") || name.contains("وديات") || name.contains("friendly") || name.contains("friendlies") -> {
       TournamentCardStyle(
-        tournamentKey = "pl",
-        displayName = "الدوري الإنجليزي الممتاز",
+        tournamentKey = "friendlies",
+        displayName = "مباريات ودية دولية",
         bgGradient = listOf(
-          Color(0xFF380242),
-          Color(0xFF22002A),
-          Color(0xFF110016)
+          Color(0xFF063618),
+          Color(0xFF0B4E26),
+          Color(0xFF042611)
         ),
-        accentColor = Color(0xFF00FF85),
-        secondaryColor = Color(0xFFE90052),
-        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/f/f2/Premier_League_Logo.svg/512px-Premier_League_Logo.svg.png"
+        accentColor = Color(0xFF30D158),
+        secondaryColor = Color(0xFF34C759),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/FIFA_logo_without_slogan.svg/512px-FIFA_logo_without_slogan.svg.png",
+        watermark = TournamentWatermark.FRIENDLIES_LINES
       )
     }
-    name.contains("أفريقيا") || name.contains("caf") || name.contains("افريقيا") -> {
-      // African Cup of Nations / CAF: Deep Savannah Earth & Vibrant Gold/Emerald (Screenshot 165601)
-      TournamentCardStyle(
-        tournamentKey = "caf",
-        displayName = "تصفيات أمم أفريقيا",
-        bgGradient = listOf(
-          Color(0xFF1E280C),
-          Color(0xFF131A07),
-          Color(0xFF090D03)
-        ),
-        accentColor = Color(0xFFFFC72C),
-        secondaryColor = Color(0xFF22C55E),
-        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/0/07/Confederation_of_African_Football_logo.svg/512px-Confederation_of_African_Football_logo.svg.png"
-      )
-    }
-    name.contains("إسباني") || name.contains("لا ليغا") || name.contains("laliga") || name.contains("اسباني") -> {
-      // La Liga: Deep Spanish Burgundy & Crimson Red
-      TournamentCardStyle(
-        tournamentKey = "laliga",
-        displayName = "الدوري الإسباني",
-        bgGradient = listOf(
-          Color(0xFF3B0813),
-          Color(0xFF220309),
-          Color(0xFF110104)
-        ),
-        accentColor = Color(0xFFFF2E50),
-        secondaryColor = Color(0xFFFF6B6B),
-        logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/LaLiga_logo_2023.svg/512px-LaLiga_logo_2023.svg.png"
-      )
-    }
-    name.contains("أمم") || name.contains("nations") -> {
-      // UEFA Nations League: Deep Midnight Space Slate & Azure Blue
+
+    // 3. UEFA Nations League / Euro / World Cup (Screenshot 2): Deep Slate Navy with Circular Watermark
+    name.contains("أمم") || name.contains("nations") || name.contains("euro") || name.contains("يورو") ||
+        name.contains("كأس العالم") || name.contains("world cup") || name.contains("فيفا") || name.contains("دولي") -> {
       TournamentCardStyle(
         tournamentKey = "nations",
         displayName = "دوري الأمم الأوروبية",
         bgGradient = listOf(
-          Color(0xFF121B33),
-          Color(0xFF0A1020),
-          Color(0xFF050810)
+          Color(0xFF101726),
+          Color(0xFF17243B),
+          Color(0xFF0A0F1A)
         ),
         accentColor = Color(0xFF38BDF8),
         secondaryColor = Color(0xFF64D2FF),
-        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/0/03/UEFA_Nations_League_logo.svg/512px-UEFA_Nations_League_logo.svg.png"
+        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/0/03/UEFA_Nations_League_logo.svg/512px-UEFA_Nations_League_logo.svg.png",
+        watermark = TournamentWatermark.GEOMETRIC_CIRCLES
       )
     }
-    name.contains("روشن") || name.contains("سعودي") || name.contains("آسيا") || name.contains("afc") -> {
-      // Saudi Pro League & AFC: Deep Royal Emerald & Gold
+
+    // 4. Premier League: Regal Deep Purple & Neon Mint
+    name.contains("إنجليزي") || name.contains("premier") || name.contains("بريمير") -> {
+      TournamentCardStyle(
+        tournamentKey = "pl",
+        displayName = "الدوري الإنجليزي الممتاز",
+        bgGradient = listOf(
+          Color(0xFF2C003D),
+          Color(0xFF42005A),
+          Color(0xFF1B0027)
+        ),
+        accentColor = Color(0xFF00FF85),
+        secondaryColor = Color(0xFFE90052),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/f/f2/Premier_League_Logo.svg/512px-Premier_League_Logo.svg.png",
+        watermark = TournamentWatermark.GEOMETRIC_CIRCLES
+      )
+    }
+
+    // 5. La Liga: Deep Spanish Burgundy & Crimson Red
+    name.contains("إسباني") || name.contains("لا ليغا") || name.contains("laliga") || name.contains("اسباني") -> {
+      TournamentCardStyle(
+        tournamentKey = "laliga",
+        displayName = "الدوري الإسباني",
+        bgGradient = listOf(
+          Color(0xFF2E050F),
+          Color(0xFF440917),
+          Color(0xFF1C0209)
+        ),
+        accentColor = Color(0xFFFF2E50),
+        secondaryColor = Color(0xFFFF6B6B),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/LaLiga_logo_2023.svg/512px-LaLiga_logo_2023.svg.png",
+        watermark = TournamentWatermark.GEOMETRIC_CIRCLES
+      )
+    }
+
+    // 6. Serie A: Deep Ocean Sapphire Blue
+    name.contains("إيطالي") || name.contains("serie") || name.contains("كالتشيو") -> {
+      TournamentCardStyle(
+        tournamentKey = "seriea",
+        displayName = "الدوري الإيطالي",
+        bgGradient = listOf(
+          Color(0xFF031A3A),
+          Color(0xFF063063),
+          Color(0xFF021228)
+        ),
+        accentColor = Color(0xFF008CFF),
+        secondaryColor = Color(0xFF64D2FF),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Serie_A_logo_2019.svg/512px-Serie_A_logo_2019.svg.png",
+        watermark = TournamentWatermark.GEOMETRIC_CIRCLES
+      )
+    }
+
+    // 7. Saudi Pro League: Deep Royal Malachite & Gold
+    name.contains("روشن") || name.contains("سعودي") -> {
       TournamentCardStyle(
         tournamentKey = "spl",
         displayName = "دوري روشن السعودي",
         bgGradient = listOf(
-          Color(0xFF092918),
-          Color(0xFF05170D),
-          Color(0xFF020B06)
+          Color(0xFF04271D),
+          Color(0xFF073C2D),
+          Color(0xFF021812)
         ),
         accentColor = Color(0xFF00E676),
         secondaryColor = Color(0xFFF59E0B),
-        logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Saudi_Pro_League_logo.svg/512px-Saudi_Pro_League_logo.svg.png"
+        logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Saudi_Pro_League_logo.svg/512px-Saudi_Pro_League_logo.svg.png",
+        watermark = TournamentWatermark.GEOMETRIC_CIRCLES
       )
     }
-    name.contains("فيفا") || name.contains("دولي") || name.contains("عالم") -> {
-      // International / FIFA: Rich Imperial Burgundy & Pure Gold
+
+    // 8. AFC Champions League: Deep Charcoal Gold
+    name.contains("آسيا") || name.contains("afc") -> {
       TournamentCardStyle(
-        tournamentKey = "fifa",
-        displayName = "مباريات دولية",
+        tournamentKey = "afc",
+        displayName = "دوري أبطال آسيا",
         bgGradient = listOf(
-          Color(0xFF2B0E1E),
-          Color(0xFF1B0712),
-          Color(0xFF0E0309)
+          Color(0xFF1D180D),
+          Color(0xFF2E2715),
+          Color(0xFF120F08)
         ),
         accentColor = Color(0xFFFFB800),
-        secondaryColor = Color(0xFFFF3B30),
-        logoUrl = ""
+        secondaryColor = Color(0xFFF59E0B),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/d/d4/AFC_Champions_League_Elite_logo.svg/512px-AFC_Champions_League_Elite_logo.svg.png",
+        watermark = TournamentWatermark.GEOMETRIC_CIRCLES
       )
     }
+
+    // 9. CAF / تصفيات أمم أفريقيا: Deep Savannah Earth
+    name.contains("أفريقيا") || name.contains("caf") || name.contains("افريقيا") -> {
+      TournamentCardStyle(
+        tournamentKey = "caf",
+        displayName = "تصفيات أمم أفريقيا",
+        bgGradient = listOf(
+          Color(0xFF1C2609),
+          Color(0xFF2B3B0D),
+          Color(0xFF101704)
+        ),
+        accentColor = Color(0xFFFFC72C),
+        secondaryColor = Color(0xFF22C55E),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/0/07/Confederation_of_African_Football_logo.svg/512px-Confederation_of_African_Football_logo.svg.png",
+        watermark = TournamentWatermark.GEOMETRIC_CIRCLES
+      )
+    }
+
+    // 10. Padel, Tennis & Multi-Sports (Screenshot 4): Deep Carbon Slate
+    name.contains("بادل") || name.contains("تنس") || name.contains("padel") || name.contains("tennis") || name.contains("رياضات") -> {
+      TournamentCardStyle(
+        tournamentKey = "padel",
+        displayName = "بث مباشر - رياضات متنوعة",
+        bgGradient = listOf(
+          Color(0xFF14171E),
+          Color(0xFF1E232E),
+          Color(0xFF0F1116)
+        ),
+        accentColor = Color(0xFFE50914),
+        secondaryColor = Color(0xFF8E8E93),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/ATP_Tour_logo.svg/512px-ATP_Tour_logo.svg.png",
+        watermark = TournamentWatermark.GEOMETRIC_CIRCLES
+      )
+    }
+
+    // 11. Universal / General Default
     else -> {
-      // Universal Sports Match
       TournamentCardStyle(
         tournamentKey = "general",
         displayName = tournamentName,
         bgGradient = listOf(
-          Color(0xFF141F3B),
-          Color(0xFF0C1326),
-          Color(0xFF060914)
+          Color(0xFF0C142A),
+          Color(0xFF142244),
+          Color(0xFF080D1D)
         ),
         accentColor = Color(0xFF64D2FF),
         secondaryColor = Color(0xFF0A84FF),
-        logoUrl = ""
+        logoUrl = "",
+        watermark = TournamentWatermark.GEOMETRIC_CIRCLES
       )
     }
   }
 }
 
 /**
- * 2. High-Precision Tournament Match Card (100% Matches Screenshots 165527, 165536, 165601)
- * Features:
- * - Dynamic tournament theme color gradient (UCL Blue, PL Purple, CAF Green/Gold, La Liga Crimson)
- * - Harmonious blending with user settings glow aura (LocalAppTheme.current)
- * - Pure team crests with NO circular discs underneath
- * - Prominent live score or athletic glowing VS
- * - Kickoff time / live minute chip
- * - Footer with channel, commentator, and "تابع الآن" action button
+ * Team Crest or Country Flag Badge
+ * Flags are wrapped in a rounded white-bordered badge (Screenshots 2 and 4),
+ * while club logos are displayed cleanly as pure crests (Screenshots 1 and 3).
+ */
+@Composable
+fun TodTeamBadgeOrFlag(
+  team: SportsTeam,
+  size: Dp = 28.dp,
+  modifier: Modifier = Modifier
+) {
+  val knownCountries = listOf(
+    "ألمانيا", "صربيا", "ليتوانيا", "أندورا", "البرتغال", "الدنمارك",
+    "إسبانيا", "فرنسا", "إيطاليا", "إنجلترا", "البرازيل", "الأرجنتين",
+    "السعودية", "مصر", "المغرب", "العراق", "الجزائر", "تونس", "قطر",
+    "الإمارات", "غينيا", "كينيا", "كرواتيا", "هولندا", "بلجيكا",
+    "النرويج", "ويلز", "الكاميرون", "الكونغو", "الغابون"
+  )
+  val isCountry = knownCountries.any { team.name.contains(it) } ||
+      team.code in listOf("GER", "SRB", "LTU", "AND", "POR", "DEN", "ESP", "FRA", "ITA", "ENG", "BRA", "ARG", "KSA", "EGY", "MAR", "IRQ", "ALG", "TUN", "QAT", "UAE", "GUI", "KEN", "NOR", "WAL", "CMR", "CGO", "GAB")
+
+  if (isCountry) {
+    Box(
+      modifier = modifier
+        .size(width = 38.dp, height = 26.dp)
+        .clip(RoundedCornerShape(5.dp))
+        .background(Color(0x30FFFFFF))
+        .border(0.85.dp, Color.White, RoundedCornerShape(5.dp)),
+      contentAlignment = Alignment.Center
+    ) {
+      TodTeamCrest(team = team, size = 26.dp)
+    }
+  } else {
+    TodTeamCrest(team = team, size = size, modifier = modifier)
+  }
+}
+
+/**
+ * 2. High-Precision Official TOD Match Card (100% Matches Screenshots 1, 2, 3, 4)
+ * Architecture (Strict Right-To-Left RTL Layout):
+ * - 3 horizontal stacked bands with subtle divider lines
+ * - Band 1: Header (Right side: Kickoff Time/Date or Red "مباشر" Block, Left side: Tournament Logo)
+ * - Band 2: Team 1 (Right side: Team Crest/Flag + Name, Left side: Score)
+ * - Band 3: Team 2 (Right side: Team Crest/Flag + Name, Left side: Score)
+ * - Dynamic tournament theme color gradients & authentic watermarks
  */
 @Composable
 fun TodTournamentMatchCard(
@@ -1491,19 +1615,7 @@ fun TodTournamentMatchCard(
   isCompactWidth: Boolean = true
 ) {
   val tournamentStyle = getTournamentCardStyle(match.tournament)
-  val activeTheme = com.example.ui.theme.LocalAppTheme.current
 
-  // Card Border: Blends tournament identity with active user settings glow
-  val cardBorder = Brush.linearGradient(
-    listOf(
-      tournamentStyle.accentColor.copy(alpha = 0.70f),
-      activeTheme.glowColor.copy(alpha = 0.50f),
-      tournamentStyle.secondaryColor.copy(alpha = 0.35f),
-      Color(0x28FFFFFF)
-    )
-  )
-
-  // Card Background: Rich Tournament Gradient
   val cardBackground = Brush.verticalGradient(
     listOf(
       tournamentStyle.bgGradient[0],
@@ -1512,295 +1624,249 @@ fun TodTournamentMatchCard(
     )
   )
 
-  Box(
-    modifier = modifier
-      .then(if (isCompactWidth) Modifier.width(315.dp).height(178.dp) else Modifier.fillMaxWidth())
-      .iosBounceClick(scaleDown = 0.97f, onClick = onClick)
-      .clip(RoundedCornerShape(20.dp))
-      .background(cardBackground)
-      .border(1.dp, cardBorder, RoundedCornerShape(20.dp))
-  ) {
-    // Top Ambient Glow Reflection (Mirrors User Theme from Settings)
+  CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
     Box(
-      modifier = Modifier
-        .fillMaxWidth()
-        .height(55.dp)
-        .align(Alignment.TopCenter)
-        .background(
-          Brush.verticalGradient(
-            listOf(
-              activeTheme.primaryColor.copy(alpha = 0.16f),
-              tournamentStyle.accentColor.copy(alpha = 0.08f),
-              Color.Transparent
-            )
-          )
-        )
-    )
-
-    Column(
-      modifier = Modifier
-        .fillMaxSize()
-        .padding(horizontal = 14.dp, vertical = 11.dp),
-      verticalArrangement = Arrangement.SpaceBetween
+      modifier = modifier
+        .then(if (isCompactWidth) Modifier.width(280.dp).height(162.dp) else Modifier.fillMaxWidth().height(162.dp))
+        .iosBounceClick(scaleDown = 0.97f, onClick = { if (match.isLive) onPlayClick() else onClick() })
+        .clip(RoundedCornerShape(16.dp))
+        .background(cardBackground)
+        .border(0.75.dp, Color(0x35FFFFFF), RoundedCornerShape(16.dp))
     ) {
-      // 1. Top Header Row: Tournament Badge + Live / Time Chip
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        // Tournament Logo & Name (Right side in Arabic RTL)
-        Row(
-          modifier = Modifier.weight(1f),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          val logoUrl = if (match.tournamentLogo.isNotBlank()) match.tournamentLogo else tournamentStyle.logoUrl
-          if (logoUrl.isNotBlank()) {
-            AsyncImage(
-              model = logoUrl,
-              contentDescription = match.tournament,
-              modifier = Modifier.size(20.dp),
-              contentScale = ContentScale.Fit
+      // 1. Authentic Watermark Background Texture
+      when (tournamentStyle.watermark) {
+        TournamentWatermark.GEOMETRIC_CIRCLES -> {
+          Canvas(modifier = Modifier.fillMaxSize()) {
+            val step = 28.dp.toPx()
+            val radius = 13.dp.toPx()
+            val col = Color(0x0EFFFFFF)
+            val col2 = Color(0x05FFFFFF)
+            for (x in -radius.toInt()..(size.width.toInt() + radius.toInt()) step step.toInt()) {
+              for (y in -radius.toInt()..(size.height.toInt() + radius.toInt()) step step.toInt()) {
+                drawCircle(
+                  color = col,
+                  radius = radius,
+                  center = Offset(x.toFloat(), y.toFloat()),
+                  style = Stroke(width = 1.2.dp.toPx())
+                )
+                drawCircle(
+                  color = col2,
+                  radius = radius * 0.5f,
+                  center = Offset(x.toFloat(), y.toFloat())
+                )
+              }
+            }
+          }
+        }
+        TournamentWatermark.UCL_STARS -> {
+          Canvas(modifier = Modifier.fillMaxSize()) {
+            drawCircle(
+              color = Color(0x1000D4FF),
+              radius = size.width * 0.55f,
+              center = Offset(size.width * 0.85f, size.height * 0.15f)
             )
-          } else {
-            Icon(
-              Icons.Default.SportsSoccer,
-              contentDescription = null,
-              tint = tournamentStyle.accentColor,
-              modifier = Modifier.size(18.dp)
+            drawCircle(
+              color = Color(0x08FFFFFF),
+              radius = size.width * 0.35f,
+              center = Offset(size.width * 0.15f, size.height * 0.85f)
             )
           }
-          Spacer(modifier = Modifier.width(7.dp))
-          Text(
-            text = match.tournament,
-            color = Color(0xFFE2E8F0),
-            fontSize = 12.sp,
-            fontFamily = ThmanyahFontFamily,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-          )
         }
+        TournamentWatermark.FRIENDLIES_LINES -> {
+          Canvas(modifier = Modifier.fillMaxSize()) {
+            drawCircle(
+              color = Color(0x1230D158),
+              radius = size.width * 0.50f,
+              center = Offset(size.width * 0.5f, size.height * 0.5f)
+            )
+          }
+        }
+        else -> {}
+      }
 
-        // Live Indicator or Kickoff Time
-        if (match.isLive) {
-          Box(
-            modifier = Modifier
-              .clip(RoundedCornerShape(6.dp))
-              .background(Color(0xFFE50914))
-              .padding(horizontal = 8.dp, vertical = 3.dp)
+      // 2. Card Content: 3 Stacked Horizontal Bands (Strict RTL: Right -> Left)
+      Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.SpaceBetween
+      ) {
+        // Band 1: Top Header (Right: Time/Date or "مباشر", Left: Tournament Logo)
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(44.dp)
+            .background(Color(0x18000000))
+            .padding(horizontal = 14.dp)
+        ) {
+          Row(
+            modifier = Modifier.fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
           ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // Right side (START in RTL): Red "مباشر" Block or Kickoff Time/Date
+            if (match.isLive) {
+              Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier
+                  .clip(RoundedCornerShape(8.dp))
+                  .background(
+                    Brush.horizontalGradient(
+                      listOf(Color(0xFFE50914), Color(0xFFCC0018))
+                    )
+                  )
+                  .padding(horizontal = 10.dp, vertical = 4.dp)
+              ) {
+                Box(
+                  modifier = Modifier
+                    .size(6.dp)
+                    .clip(CircleShape)
+                    .background(Color.White)
+                )
+                Text(
+                  text = if (!match.liveMinute.isNullOrBlank()) "مباشر ${match.liveMinute}" else "مباشر",
+                  color = Color.White,
+                  fontSize = 12.sp,
+                  fontWeight = FontWeight.Bold,
+                  fontFamily = ThmanyahFontFamily
+                )
+              }
+            } else {
+              Column(
+                horizontalAlignment = Alignment.Start,
+                verticalArrangement = Arrangement.Center
+              ) {
+                Text(
+                  text = match.kickoffTime,
+                  color = Color.White,
+                  fontSize = 14.sp,
+                  fontWeight = FontWeight.Bold,
+                  fontFamily = ThmanyahFontFamily
+                )
+                Text(
+                  text = match.kickoffDate,
+                  color = Color(0xCCFFFFFF),
+                  fontSize = 11.5.sp,
+                  fontWeight = FontWeight.Normal,
+                  fontFamily = ThmanyahFontFamily
+                )
+              }
+            }
+
+            // Left side (END in RTL): Tournament Logo
+            val logoUrl = if (match.tournamentLogo.isNotBlank()) match.tournamentLogo else tournamentStyle.logoUrl
+            if (logoUrl.isNotBlank()) {
+              AsyncImage(
+                model = logoUrl,
+                contentDescription = match.tournament,
+                modifier = Modifier
+                  .size(26.dp)
+                  .padding(1.dp),
+                contentScale = ContentScale.Fit
+              )
+            } else {
               Icon(
-                Icons.Default.FiberManualRecord,
+                Icons.Default.SportsSoccer,
                 contentDescription = null,
                 tint = Color.White,
-                modifier = Modifier.size(6.dp)
-              )
-              Spacer(modifier = Modifier.width(4.dp))
-              val minuteText = if (!match.liveMinute.isNullOrBlank()) "مباشر ${match.liveMinute}" else "مباشر"
-              Text(
-                text = minuteText,
-                color = Color.White,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Black,
-                fontFamily = ThmanyahFontFamily
+                modifier = Modifier.size(22.dp)
               )
             }
           }
-        } else if (match.isEnded) {
-          Box(
-            modifier = Modifier
-              .clip(RoundedCornerShape(6.dp))
-              .background(Color(0x30FFFFFF))
-              .padding(horizontal = 8.dp, vertical = 3.dp)
-          ) {
-            Text(
-              text = "انتهت",
-              color = Color(0xFFB0B0B0),
-              fontSize = 10.5.sp,
-              fontWeight = FontWeight.Bold,
-              fontFamily = ThmanyahFontFamily
-            )
-          }
-        } else {
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-              text = match.kickoffTime,
-              color = TodGold,
-              fontSize = 13.5.sp,
-              fontWeight = FontWeight.Black,
-              fontFamily = ThmanyahFontFamily
-            )
-            Spacer(modifier = Modifier.width(5.dp))
-            Text(
-              text = match.kickoffDate,
-              color = Color(0x99FFFFFF),
-              fontSize = 11.sp,
-              fontFamily = ThmanyahFontFamily
-            )
-          }
-        }
-      }
-
-      // 2. Middle Teams Duel Row (Pure Crests - Zero Circles Underneath)
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        // Home Team (Right in RTL)
-        Row(
-          modifier = Modifier.weight(1f),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          TodTeamCrest(
-            team = match.homeTeam,
-            size = 42.dp
-          )
-          Spacer(modifier = Modifier.width(8.dp))
-          Text(
-            text = match.homeTeam.name,
-            color = Color.White,
-            fontSize = 14.5.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = ThmanyahFontFamily,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-          )
         }
 
-        // Center: Live Score or VS Badge
+        // Divider 1
+        Box(modifier = Modifier.fillMaxWidth().height(0.6.dp).background(Color(0x18FFFFFF)))
+
+        // Band 2: Team 1 Row (Right: Crest + Team Name, Left: Score)
         Box(
-          modifier = Modifier.padding(horizontal = 8.dp),
+          modifier = Modifier
+            .fillMaxWidth()
+            .weight(1f)
+            .padding(horizontal = 14.dp),
           contentAlignment = Alignment.Center
         ) {
-          if (match.scoreHome != null && match.scoreAway != null) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+          ) {
+            // Right side (START in RTL): Team Crest/Flag + Team Name
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+              TodTeamBadgeOrFlag(team = match.homeTeam)
               Text(
-                text = "${match.scoreHome} - ${match.scoreAway}",
-                color = if (match.isLive) tournamentStyle.accentColor else Color.White,
+                text = match.homeTeam.name,
+                color = Color.White,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = ThmanyahFontFamily,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+              )
+            }
+
+            // Left side (END in RTL): Score number (bold white if live or ended, otherwise blank)
+            if (match.scoreHome != null && (match.isLive || match.isEnded)) {
+              Text(
+                text = "${match.scoreHome}",
+                color = Color.White,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Black,
                 fontFamily = ThmanyahFontFamily
               )
-              if (match.isLive && !match.liveMinute.isNullOrBlank()) {
-                Text(
-                  text = match.liveMinute ?: "",
-                  color = Color(0xFFE50914),
-                  fontSize = 10.sp,
-                  fontWeight = FontWeight.Black
-                )
-              }
-            }
-          } else {
-            Box(
-              modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(tournamentStyle.accentColor.copy(alpha = 0.15f))
-                .border(0.75.dp, tournamentStyle.accentColor.copy(alpha = 0.40f), RoundedCornerShape(8.dp))
-                .padding(horizontal = 10.dp, vertical = 4.dp),
-              contentAlignment = Alignment.Center
-            ) {
-              Text(
-                text = "VS",
-                color = tournamentStyle.accentColor,
-                fontSize = 12.5.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 1.sp,
-                fontFamily = ThmanyahFontFamily
-              )
+            } else {
+              Spacer(modifier = Modifier.width(4.dp))
             }
           }
         }
 
-        // Away Team (Left in RTL)
-        Row(
-          modifier = Modifier.weight(1f),
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.End
-        ) {
-          Text(
-            text = match.awayTeam.name,
-            color = Color.White,
-            fontSize = 14.5.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = ThmanyahFontFamily,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.End
-          )
-          Spacer(modifier = Modifier.width(8.dp))
-          TodTeamCrest(
-            team = match.awayTeam,
-            size = 42.dp
-          )
-        }
-      }
+        // Divider 2
+        Box(modifier = Modifier.fillMaxWidth().height(0.6.dp).background(Color(0x18FFFFFF)))
 
-      // 3. Bottom Footer Strip: Channel, Commentator, and Quick Action Button
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(10.dp))
-          .background(Color(0x20000000))
-          .border(0.5.dp, Color(0x18FFFFFF), RoundedCornerShape(10.dp))
-          .padding(horizontal = 9.dp, vertical = 5.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        // Channel Pill
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Text("📺", fontSize = 11.sp)
-          Spacer(modifier = Modifier.width(4.dp))
-          Text(
-            text = match.channelName,
-            color = tournamentStyle.accentColor,
-            fontSize = 11.sp,
-            fontFamily = ThmanyahFontFamily,
-            fontWeight = FontWeight.Bold
-          )
-        }
-
-        // Commentator Pill
-        if (!match.commentator.isNullOrBlank()) {
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("🎙️", fontSize = 10.sp)
-            Spacer(modifier = Modifier.width(3.dp))
-            Text(
-              text = match.commentator,
-              color = Color(0xFFB0B8C8),
-              fontSize = 10.5.sp,
-              fontFamily = ThmanyahFontFamily
-            )
-          }
-        }
-
-        // Action Button: "تابع الآن"
+        // Band 3: Team 2 Row (Right: Crest + Team Name, Left: Score)
         Box(
           modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (match.isLive) Color(0xFFFFB800) else Color(0x25FFFFFF))
-            .clickable { onPlayClick() }
-            .padding(horizontal = 9.dp, vertical = 3.5.dp)
+            .fillMaxWidth()
+            .weight(1f)
+            .padding(horizontal = 14.dp),
+          contentAlignment = Alignment.Center
         ) {
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-              Icons.Default.PlayArrow,
-              contentDescription = null,
-              tint = if (match.isLive) Color.Black else Color.White,
-              modifier = Modifier.size(13.dp)
-            )
-            Spacer(modifier = Modifier.width(3.dp))
-            Text(
-              text = if (match.isLive) "تابع الآن" else "مشاهدة",
-              color = if (match.isLive) Color.Black else Color.White,
-              fontSize = 10.5.sp,
-              fontWeight = FontWeight.Black,
-              fontFamily = ThmanyahFontFamily
-            )
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+          ) {
+            // Right side (START in RTL): Team Crest/Flag + Team Name
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+              TodTeamBadgeOrFlag(team = match.awayTeam)
+              Text(
+                text = match.awayTeam.name,
+                color = Color.White,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = ThmanyahFontFamily,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+              )
+            }
+
+            // Left side (END in RTL): Score number (bold white if live or ended, otherwise blank)
+            if (match.scoreAway != null && (match.isLive || match.isEnded)) {
+              Text(
+                text = "${match.scoreAway}",
+                color = Color.White,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Black,
+                fontFamily = ThmanyahFontFamily
+              )
+            } else {
+              Spacer(modifier = Modifier.width(4.dp))
+            }
           }
         }
       }
@@ -1815,6 +1881,7 @@ fun TodTournamentMatchCard(
 @Composable
 fun TodLiveSportsRail(
   matches: List<SportsMatch>,
+  title: String = "مباريات كرة القدم بث مباشر",
   onPlayMatch: (SportsMatch) -> Unit,
   onOpenDetails: (SportsMatch) -> Unit,
   modifier: Modifier = Modifier
@@ -1830,7 +1897,7 @@ fun TodLiveSportsRail(
       verticalAlignment = Alignment.CenterVertically
     ) {
       Text(
-        text = "مباريات كرة القدم بث مباشر",
+        text = title,
         color = Color.White,
         fontSize = 18.sp,
         fontFamily = ThmanyahFontFamily,

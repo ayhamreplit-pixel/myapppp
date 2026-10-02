@@ -357,60 +357,161 @@ fun TodMatchDetailModal(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Main Primary Play Live Stream Button (Official Yellow/Gold TOD Button)
-            val playInteraction = remember { MutableInteractionSource() }
-            val isPlayPressed by playInteraction.collectIsPressedAsState()
-            val playScale by animateFloatAsState(
-              targetValue = if (isPlayPressed) 0.94f else 1.0f,
-              animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-              label = "matchPlayScale"
-            )
-
-            Box(
-              modifier = Modifier
-                .fillMaxWidth()
-                .scale(playScale)
-                .height(48.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(
-                  Brush.horizontalGradient(
-                    listOf(TodGold, Color(0xFFFF9500), Color(0xFFFF7A00))
-                  )
-                )
-                .clickable(
-                  interactionSource = playInteraction,
-                  indication = null,
-                  onClick = {
-                    val stream = BroadcastStream(
-                      id = match.id,
-                      title = match.title,
-                      subtitle = "${match.tournament} • ${match.channelName}",
-                      category = match.tournament,
-                      streamUrl = match.streamUrl.ifBlank { "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" },
-                      isLive = true
+            // Main Stream Button or Multi-Server Selector (Configured from m7 PHP panel)
+            if (match.servers.isNotEmpty()) {
+              Text(
+                text = "📺 سيرفرات البث المباشر المتاحة (اختر سيرفر المشاهدة):",
+                color = Color(0xFF64D2FF),
+                fontSize = 13.sp,
+                fontFamily = AppFontFamily,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 6.dp)
+              )
+              match.servers.forEachIndexed { idx, srv ->
+                val isFirst = idx == 0
+                Box(
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(
+                      if (isFirst) {
+                        Brush.horizontalGradient(listOf(TodGold, Color(0xFFFF9500), Color(0xFFFF7A00)))
+                      } else {
+                        Brush.horizontalGradient(listOf(Color(0xFF142035), Color(0xFF1B2C4B)))
+                      }
                     )
-                    onPlayStream(stream)
+                    .border(
+                      1.dp,
+                      if (isFirst) Color(0xFFFFD60A) else Color(0x400A84FF),
+                      RoundedCornerShape(14.dp)
+                    )
+                    .clickable {
+                      val stream = BroadcastStream(
+                        id = "${match.id}_${srv.id}",
+                        title = "${match.title} - ${srv.name}",
+                        subtitle = "${match.tournament} • ${srv.quality}",
+                        category = match.tournament,
+                        streamUrl = srv.streamUrl,
+                        isLive = true
+                      )
+                      onPlayStream(stream)
+                    }
+                    .padding(horizontal = 16.dp, vertical = 13.dp)
+                ) {
+                  Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                  ) {
+                    Row(
+                      verticalAlignment = Alignment.CenterVertically,
+                      horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                      Icon(
+                        Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        tint = if (isFirst) Color.Black else Color.White,
+                        modifier = Modifier.size(22.dp)
+                      )
+                      Text(
+                        text = srv.name,
+                        color = if (isFirst) Color.Black else Color.White,
+                        fontSize = 14.5.sp,
+                        fontFamily = AppFontFamily,
+                        fontWeight = FontWeight.Black
+                      )
+                    }
+                    Box(
+                      modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (isFirst) Color(0x30000000) else Color(0x250A84FF))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                      Text(
+                        text = srv.quality,
+                        color = if (isFirst) Color.Black else Color(0xFF64D2FF),
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Bold
+                      )
+                    }
                   }
-                ),
-              contentAlignment = Alignment.Center
-            ) {
-              Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
+                }
+              }
+              Spacer(modifier = Modifier.height(10.dp))
+            } else if (match.streamUrl.isNotBlank()) {
+              val playInteraction = remember { MutableInteractionSource() }
+              val isPlayPressed by playInteraction.collectIsPressedAsState()
+              val playScale by animateFloatAsState(
+                targetValue = if (isPlayPressed) 0.94f else 1.0f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                label = "matchPlayScale"
+              )
+
+              Box(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .scale(playScale)
+                  .height(48.dp)
+                  .clip(RoundedCornerShape(14.dp))
+                  .background(
+                    Brush.horizontalGradient(
+                      listOf(TodGold, Color(0xFFFF9500), Color(0xFFFF7A00))
+                    )
+                  )
+                  .clickable(
+                    interactionSource = playInteraction,
+                    indication = null,
+                    onClick = {
+                      val stream = BroadcastStream(
+                        id = match.id,
+                        title = match.title,
+                        subtitle = "${match.tournament} • ${match.channelName}",
+                        category = match.tournament,
+                        streamUrl = match.streamUrl,
+                        isLive = true
+                      )
+                      onPlayStream(stream)
+                    }
+                  ),
+                contentAlignment = Alignment.Center
               ) {
-                Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.Black, modifier = Modifier.size(24.dp))
-                Spacer(modifier = Modifier.width(6.dp))
+                Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.Center
+                ) {
+                  Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.Black, modifier = Modifier.size(24.dp))
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Text(
+                    text = if (match.isLive) "مشاهدة البث المباشر (FHD)" else "تشغيل البث المباشر للقناة",
+                    color = Color.Black,
+                    fontSize = 15.sp,
+                    fontFamily = AppFontFamily,
+                    fontWeight = FontWeight.Black
+                  )
+                }
+              }
+              Spacer(modifier = Modifier.height(10.dp))
+            } else {
+              Box(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .clip(RoundedCornerShape(14.dp))
+                  .background(Color(0x18FFFFFF))
+                  .border(0.75.dp, Color(0x25FFFFFF), RoundedCornerShape(14.dp))
+                  .padding(14.dp),
+                contentAlignment = Alignment.Center
+              ) {
                 Text(
-                  text = if (match.isLive) "مشاهدة البث المباشر (FHD)" else "تشغيل البث المباشر للقناة",
-                  color = Color.Black,
-                  fontSize = 15.sp,
+                  text = "📡 لم يتم إضافة سيرفر بث مباشر لهذه المباراة حتى الآن - تابع النتيجة الحية والتفاصيل بالأسفل",
+                  color = Color(0xCCFFFFFF),
+                  fontSize = 12.sp,
                   fontFamily = AppFontFamily,
-                  fontWeight = FontWeight.Black
+                  textAlign = TextAlign.Center
                 )
               }
+              Spacer(modifier = Modifier.height(10.dp))
             }
-
-            Spacer(modifier = Modifier.height(10.dp))
 
             // Secondary: Add to My TOD / Favorites
             Button(

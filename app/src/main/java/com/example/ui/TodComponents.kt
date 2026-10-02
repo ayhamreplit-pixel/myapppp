@@ -334,14 +334,7 @@ fun TodBottomNavBar(
           icon = { isSel -> TodMoreNavIcon(isSelected = isSel) }
         )
 
-        // Tab 2: بحث (Search)
-        TodIosTabItem(
-          isSelected = currentTab == TodNavTab.SEARCH,
-          onClick = { onTabSelected(TodNavTab.SEARCH) },
-          icon = { isSel -> TodSearchNavIcon(isSelected = isSel) }
-        )
-
-        // Tab 3: الرئيسية (Home)
+        // Tab 2: الرئيسية (Home)
         TodIosTabItem(
           isSelected = currentTab == TodNavTab.HOME,
           onClick = { onTabSelected(TodNavTab.HOME) },
