@@ -38,6 +38,64 @@ $customMatchesFile = $dataDir . '/custom_matches.json';
 $channelsFile = $dataDir . '/channels.json';
 $sliderFile = $dataDir . '/slider.json';
 $announcementFile = $dataDir . '/announcement.json';
+$heroBannersFile = $dataDir . '/hero_banners.json';
+$featuredWeeklyFile = $dataDir . '/featured_weekly.json';
+
+// استيراد الهيرو الافتراضي إذا لم يكن موجوداً
+if (!file_exists($heroBannersFile)) {
+    $defaultHero = [
+        [
+            "id" => "hero_germany_serbia",
+            "title" => "ألمانيا ضد صربيا",
+            "subtitle" => "دوري الأمم الأوروبية • قمة الحسم",
+            "tournament" => "دوري الأمم الأوروبية",
+            "tournamentLogo" => "https://upload.wikimedia.org/wikipedia/en/thumb/0/03/UEFA_Nations_League_logo.svg/512px-UEFA_Nations_League_logo.svg.png",
+            "homeTeam" => "ألمانيا",
+            "homeLogo" => "https://flagcdn.com/w80/de.png",
+            "awayTeam" => "صربيا",
+            "awayLogo" => "https://flagcdn.com/w80/rs.png",
+            "kickoffTime" => "21:45",
+            "kickoffDate" => "اليوم",
+            "bannerUrl" => "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1200&auto=format&fit=crop",
+            "channelName" => "beIN SPORTS 1 HD",
+            "commentator" => "عصام الشوالي",
+            "isLive" => true,
+            "liveMinute" => "'72",
+            "scoreHome" => 2,
+            "scoreAway" => 1,
+            "servers" => [
+                ["id" => "s1", "name" => "سيرفر رئيسي 4K", "url" => "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", "quality" => "4K UHD"],
+                ["id" => "s2", "name" => "سيرفر احتياطي FHD", "url" => "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", "quality" => "1080p"]
+            ]
+        ]
+    ];
+    @file_put_contents($heroBannersFile, json_encode($defaultHero, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+}
+
+// استيراد المباريات الأسبوعية المميزة
+if (!file_exists($featuredWeeklyFile)) {
+    $defaultFeatured = [
+        [
+            "id" => "feat_real_barca",
+            "title" => "ريال مدريد ضد برشلونة",
+            "tournament" => "الدوري الإسباني (LaLiga)",
+            "tournamentLogo" => "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/LaLiga_logo_2023.svg/512px-LaLiga_logo_2023.svg.png",
+            "homeTeam" => "ريال مدريد",
+            "homeLogo" => "https://upload.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/512px-Real_Madrid_CF.svg.png",
+            "awayTeam" => "برشلونة",
+            "awayLogo" => "https://upload.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/512px-FC_Barcelona_%28crest%29.svg.png",
+            "kickoffTime" => "22:00",
+            "kickoffDate" => "السبت",
+            "channelName" => "beIN SPORTS 1 HD",
+            "commentator" => "حفيظ دراجي",
+            "isLive" => false,
+            "servers" => [
+                ["id" => "s1", "name" => "سيرفر الكلاسيكو HD", "url" => "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", "quality" => "HD"]
+            ]
+        ]
+    ];
+    @file_put_contents($featuredWeeklyFile, json_encode($defaultFeatured, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+}
 
 // استيراد القنوات الافتراضية إذا لم تكن موجودة
 if (!file_exists($channelsFile)) {
@@ -469,6 +527,124 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode(["status" => true, "message" => "تم تعطيل الإشعار"]);
         exit;
     }
+
+    // 13. حفظ وتعديل بوستر الهيرو والواجهة (Save Hero Banner)
+    if ($postAction === 'save_hero_banner') {
+        $heroBanners = getJsonData($heroBannersFile);
+        $hId = trim($input['id'] ?? ('hero_' . time()));
+        $newHero = [
+            "id" => $hId,
+            "title" => trim($input['title'] ?? 'مباراة القمة'),
+            "subtitle" => trim($input['subtitle'] ?? ''),
+            "tournament" => trim($input['tournament'] ?? 'دوري أبطال أوروبا'),
+            "tournamentLogo" => trim($input['tournamentLogo'] ?? ''),
+            "homeTeam" => trim($input['homeTeam'] ?? 'الفريق 1'),
+            "homeLogo" => trim($input['homeLogo'] ?? ''),
+            "awayTeam" => trim($input['awayTeam'] ?? 'الفريق 2'),
+            "awayLogo" => trim($input['awayLogo'] ?? ''),
+            "kickoffTime" => trim($input['kickoffTime'] ?? '22:00'),
+            "kickoffDate" => trim($input['kickoffDate'] ?? 'اليوم'),
+            "bannerUrl" => trim($input['bannerUrl'] ?? 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1200&auto=format&fit=crop'),
+            "channelName" => trim($input['channelName'] ?? 'beIN SPORTS 1 HD'),
+            "commentator" => trim($input['commentator'] ?? 'عصام الشوالي'),
+            "stadium" => trim($input['stadium'] ?? 'الملعب الرئيسي'),
+            "isLive" => isset($input['isLive']) ? (bool)$input['isLive'] : false,
+            "liveMinute" => trim($input['liveMinute'] ?? ''),
+            "scoreHome" => isset($input['scoreHome']) && $input['scoreHome'] !== '' ? intval($input['scoreHome']) : null,
+            "scoreAway" => isset($input['scoreAway']) && $input['scoreAway'] !== '' ? intval($input['scoreAway']) : null,
+            "servers" => isset($input['servers']) && is_array($input['servers']) ? $input['servers'] : []
+        ];
+        if (empty($newHero['servers']) && !empty($input['streamUrl'])) {
+            $newHero['servers'][] = [
+                'id' => 's1',
+                'name' => 'سيرفر البث الرئيسي HD',
+                'url' => trim($input['streamUrl']),
+                'quality' => '1080p FHD'
+            ];
+        }
+        $exists = false;
+        foreach ($heroBanners as &$h) {
+            if ($h['id'] === $hId) {
+                $h = $newHero;
+                $exists = true;
+                break;
+            }
+        }
+        if (!$exists) {
+            $heroBanners[] = $newHero;
+        }
+        saveJsonData($heroBannersFile, $heroBanners);
+        echo json_encode(["status" => true, "message" => "تم حفظ بوستر الهيرو بنجاح"]);
+        exit;
+    }
+
+    // 14. حذف بوستر هيرو
+    if ($postAction === 'delete_hero_banner') {
+        $hId = trim($input['id'] ?? '');
+        $heroBanners = getJsonData($heroBannersFile);
+        $heroBanners = array_values(array_filter($heroBanners, function($h) use ($hId) { return $h['id'] !== $hId; }));
+        saveJsonData($heroBannersFile, $heroBanners);
+        echo json_encode(["status" => true, "message" => "تم حذف بوستر الهيرو"]);
+        exit;
+    }
+
+    // 15. حفظ أفضل مباريات الأسبوع (Save Featured Weekly)
+    if ($postAction === 'save_featured_weekly') {
+        $featuredWeekly = getJsonData($featuredWeeklyFile);
+        $fId = trim($input['id'] ?? ('feat_' . time()));
+        $newFeat = [
+            "id" => $fId,
+            "title" => trim($input['title'] ?? 'مباراة الأسبوع المميزة'),
+            "tournament" => trim($input['tournament'] ?? 'الدوري الإسباني'),
+            "tournamentLogo" => trim($input['tournamentLogo'] ?? ''),
+            "homeTeam" => trim($input['homeTeam'] ?? 'الفريق 1'),
+            "homeLogo" => trim($input['homeLogo'] ?? ''),
+            "awayTeam" => trim($input['awayTeam'] ?? 'الفريق 2'),
+            "awayLogo" => trim($input['awayLogo'] ?? ''),
+            "kickoffTime" => trim($input['kickoffTime'] ?? '21:00'),
+            "kickoffDate" => trim($input['kickoffDate'] ?? 'السبت'),
+            "channelName" => trim($input['channelName'] ?? 'beIN SPORTS 1 HD'),
+            "commentator" => trim($input['commentator'] ?? 'تعليق عربي'),
+            "stadium" => trim($input['stadium'] ?? 'الملعب الرئيسي'),
+            "isLive" => isset($input['isLive']) ? (bool)$input['isLive'] : false,
+            "liveMinute" => trim($input['liveMinute'] ?? ''),
+            "scoreHome" => isset($input['scoreHome']) && $input['scoreHome'] !== '' ? intval($input['scoreHome']) : null,
+            "scoreAway" => isset($input['scoreAway']) && $input['scoreAway'] !== '' ? intval($input['scoreAway']) : null,
+            "servers" => isset($input['servers']) && is_array($input['servers']) ? $input['servers'] : []
+        ];
+        if (empty($newFeat['servers']) && !empty($input['streamUrl'])) {
+            $newFeat['servers'][] = [
+                'id' => 's1',
+                'name' => 'سيرفر البث HD',
+                'url' => trim($input['streamUrl']),
+                'quality' => 'HD'
+            ];
+        }
+        $exists = false;
+        foreach ($featuredWeekly as &$f) {
+            if ($f['id'] === $fId) {
+                $f = $newFeat;
+                $exists = true;
+                break;
+            }
+        }
+        if (!$exists) {
+            $featuredWeekly[] = $newFeat;
+        }
+        saveJsonData($featuredWeeklyFile, $featuredWeekly);
+        echo json_encode(["status" => true, "message" => "تم حفظ مباراة الأسبوع بنجاح"]);
+        exit;
+    }
+
+    // 16. حذف مباراة الأسبوع
+    if ($postAction === 'delete_featured_weekly') {
+        $fId = trim($input['id'] ?? '');
+        $featuredWeekly = getJsonData($featuredWeeklyFile);
+        $featuredWeekly = array_values(array_filter($featuredWeekly, function($f) use ($fId) { return $f['id'] !== $fId; }));
+        saveJsonData($featuredWeeklyFile, $featuredWeekly);
+        echo json_encode(["status" => true, "message" => "تم حذف مباراة الأسبوع"]);
+        exit;
+    }
 }
 
 // -------------------------------------------------------------------------
@@ -479,6 +655,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if ($action === 'channels') {
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode(["status" => true, "channels" => getJsonData($channelsFile)], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// 2. البوسترات والهيرو API
+if ($action === 'hero_banners' || $action === 'hero') {
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(["status" => true, "hero_banners" => getJsonData($heroBannersFile)], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// 2.2 أفضل مباريات الأسبوع API
+if ($action === 'featured_weekly' || $action === 'featured') {
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(["status" => true, "featured_weekly" => getJsonData($featuredWeeklyFile)], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -616,6 +806,10 @@ if ($isJsonRequest) {
         "date" => $targetDate,
         "count" => count($enrichedMatches),
         "data" => $enrichedMatches,
+        "hero_banners" => getJsonData($heroBannersFile),
+        "featured_weekly" => getJsonData($featuredWeeklyFile),
+        "slider" => getJsonData($sliderFile),
+        "channels" => getJsonData($channelsFile),
         "announcement" => getJsonData($announcementFile)
     ], JSON_UNESCAPED_UNICODE);
     exit;
@@ -627,6 +821,8 @@ if ($isJsonRequest) {
 $currentAnnounce = getJsonData($announcementFile);
 $currentChannels = getJsonData($channelsFile);
 $currentSlider = getJsonData($sliderFile);
+$currentHero = getJsonData($heroBannersFile);
+$currentFeatured = getJsonData($featuredWeeklyFile);
 ?>
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -673,9 +869,9 @@ $currentSlider = getJsonData($sliderFile);
         .brand-title p { font-size: 12px; color: var(--text-muted); }
         
         /* Navigation Tabs */
-        .main-tabs { display: flex; gap: 8px; background: #0c0f18; padding: 6px; border-radius: 14px; border: 1px solid var(--card-border); }
+        .main-tabs { display: flex; gap: 6px; background: #0c0f18; padding: 6px; border-radius: 14px; border: 1px solid var(--card-border); flex-wrap: wrap; }
         .main-tab-btn {
-            background: transparent; border: none; color: var(--text-muted); padding: 8px 18px; border-radius: 10px; font-size: 13.5px; font-weight: 700; cursor: pointer; transition: 0.2s;
+            background: transparent; border: none; color: var(--text-muted); padding: 8px 14px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.2s;
         }
         .main-tab-btn.active { background: var(--gold); color: #000; }
 
@@ -755,10 +951,12 @@ $currentSlider = getJsonData($sliderFile);
 
     <div class="main-tabs">
         <button class="main-tab-btn active" onclick="switchMainTab('matches')">⚽ المباريات والبث</button>
+        <button class="main-tab-btn" onclick="switchMainTab('hero')">🌟 بوستر الهيرو والواجهة</button>
+        <button class="main-tab-btn" onclick="switchMainTab('featured')">⭐ أفضل مباريات الأسبوع</button>
         <button class="main-tab-btn" onclick="switchMainTab('channels')">📺 القنوات المباشرة</button>
-        <button class="main-tab-btn" onclick="switchMainTab('slider')">🖼️ البوسترات والسلايدر</button>
-        <button class="main-tab-btn" onclick="switchMainTab('notifications')">🔔 الإشعارات والتنبيهات</button>
-        <button class="main-tab-btn" onclick="switchMainTab('player')">▶️ مشغل الفيديو</button>
+        <button class="main-tab-btn" onclick="switchMainTab('slider')">🖼️ السلايدر</button>
+        <button class="main-tab-btn" onclick="switchMainTab('notifications')">🔔 الإشعارات</button>
+        <button class="main-tab-btn" onclick="switchMainTab('player')">▶️ مشغل التجربة</button>
     </div>
 
     <div>
@@ -860,7 +1058,112 @@ $currentSlider = getJsonData($sliderFile);
         </div>
     </div>
 
-    <!-- 2. TAB: LIVE CHANNELS -->
+    <!-- 2. TAB: HERO BANNER (البوستر الرئيسي والهيرو) -->
+    <div id="tab-hero" class="tab-content">
+        <div class="card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <h2 style="font-size: 18px; color: var(--gold); font-weight: 900;">🌟 إدارة بوستر الواجهة الرئيسية (الهيرو الكبير)</h2>
+                <p style="font-size: 12.5px; color: var(--text-muted);">تحكم يدوي كامل في صورة البوستر، الفرق، الأعلام، السيرفرات، والنتيجة بدون الاعتماد على البطاقات العادية</p>
+            </div>
+            <button class="btn" onclick="openHeroModal()">➕ إنشاء وتخصيص بوستر هيرو جديد</button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 18px;">
+            <?php foreach ($currentHero as $h): ?>
+            <div class="match-card" style="padding: 0; overflow: hidden; border: 1px solid rgba(255, 184, 0, 0.4);">
+                <div style="position: relative; height: 160px; background: #000;">
+                    <img src="<?= htmlspecialchars($h['bannerUrl'] ?? '') ?>" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.8;" onerror="this.src='https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800'">
+                    <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(10,12,20,0.95) 100%);"></div>
+                    <div style="position: absolute; top: 12px; right: 12px; display: flex; gap: 6px;">
+                        <?php if (!empty($h['isLive'])): ?>
+                            <span class="live-tag">مباشر <?= htmlspecialchars($h['liveMinute'] ?? '') ?></span>
+                        <?php else: ?>
+                            <span class="stream-tag"><?= htmlspecialchars($h['kickoffTime'] ?? '22:00') ?></span>
+                        <?php endif; ?>
+                    </div>
+                    <div style="position: absolute; bottom: 10px; right: 14px; left: 14px; display: flex; justify-content: space-between; align-items: flex-end;">
+                        <div>
+                            <h3 style="color: #fff; font-size: 16px; font-weight: 900;"><?= htmlspecialchars($h['title']) ?></h3>
+                            <p style="color: var(--gold); font-size: 11.5px;"><?= htmlspecialchars($h['subtitle'] ?? '') ?></p>
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <img src="<?= htmlspecialchars($h['homeLogo'] ?? '') ?>" style="width: 32px; height: 32px; object-fit: contain;">
+                            <span style="font-weight: 900; color: #fff; font-size: 11px;">ضد</span>
+                            <img src="<?= htmlspecialchars($h['awayLogo'] ?? '') ?>" style="width: 32px; height: 32px; object-fit: contain;">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="padding: 14px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-muted); margin-bottom: 10px;">
+                        <span>📺 <?= htmlspecialchars($h['channelName'] ?? 'beIN SPORTS') ?></span>
+                        <span>🎙️ <?= htmlspecialchars($h['commentator'] ?? 'عصام الشوالي') ?></span>
+                        <span>⚡ سيرفرات (<?= count($h['servers'] ?? []) ?>)</span>
+                    </div>
+
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn btn-blue" style="padding: 5px 12px; font-size: 12px;" onclick="openHeroModal(<?= htmlspecialchars(json_encode($h)) ?>)">✏️ تعديل البوستر</button>
+                        <?php if (!empty($h['servers'])): ?>
+                            <button class="btn btn-outline" style="padding: 5px 12px; font-size: 12px;" onclick="playInTestPlayer('<?= addslashes($h['servers'][0]['url']) ?>', '<?= addslashes($h['title']) ?>')">▶️ تشغيل</button>
+                        <?php endif; ?>
+                        <button class="btn btn-red" style="padding: 5px 12px; font-size: 12px;" onclick="deleteHeroBanner('<?= $h['id'] ?>')">🗑️ حذف</button>
+                    </div>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+
+    <!-- 3. TAB: FEATURED WEEKLY (أفضل مباريات الأسبوع) -->
+    <div id="tab-featured" class="tab-content">
+        <div class="card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <h2 style="font-size: 18px; color: var(--gold); font-weight: 900;">⭐ إدارة أفضل مباريات الأسبوع المميزة</h2>
+                <p style="font-size: 12.5px; color: var(--text-muted);">حدد وخصص قائمة مباريات الأسبوع الكبرى التي تظهر في شريط الواجهة بالترتيب المفضل لديك</p>
+            </div>
+            <button class="btn" onclick="openFeaturedModal()">➕ إضافة مباراة أسبوعية جديدة</button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px;">
+            <?php foreach ($currentFeatured as $f): ?>
+            <div class="match-card" style="border-left: 4px solid var(--gold);">
+                <div class="match-header">
+                    <span><?= htmlspecialchars($f['tournament'] ?? 'بطولة') ?></span>
+                    <div>
+                        <span class="stream-tag"><?= htmlspecialchars($f['kickoffDate'] ?? 'السبت') ?> • <?= htmlspecialchars($f['kickoffTime'] ?? '21:00') ?></span>
+                    </div>
+                </div>
+
+                <div class="teams-row">
+                    <div class="team-box">
+                        <img src="<?= htmlspecialchars($f['homeLogo'] ?? '') ?>" class="team-logo" onerror="this.src='https://cdn-icons-png.flaticon.com/512/53/53283.png'">
+                        <span class="team-name"><?= htmlspecialchars($f['homeTeam'] ?? 'الفريق 1') ?></span>
+                    </div>
+                    <div class="score-box">VS</div>
+                    <div class="team-box">
+                        <img src="<?= htmlspecialchars($f['awayLogo'] ?? '') ?>" class="team-logo" onerror="this.src='https://cdn-icons-png.flaticon.com/512/53/53283.png'">
+                        <span class="team-name"><?= htmlspecialchars($f['awayTeam'] ?? 'الفريق 2') ?></span>
+                    </div>
+                </div>
+
+                <div style="font-size: 11.5px; color: var(--text-muted); display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span>📺 <?= htmlspecialchars($f['channelName'] ?? 'beIN SPORTS') ?></span>
+                    <span>🎙️ <?= htmlspecialchars($f['commentator'] ?? 'تعليق عربي') ?></span>
+                </div>
+
+                <div class="match-actions">
+                    <button class="btn btn-blue" onclick="openFeaturedModal(<?= htmlspecialchars(json_encode($f)) ?>)">✏️ تعديل</button>
+                    <?php if (!empty($f['servers'])): ?>
+                        <button class="btn btn-outline" onclick="playInTestPlayer('<?= addslashes($f['servers'][0]['url']) ?>', '<?= addslashes($f['title']) ?>')">▶️ تشغيل</button>
+                    <?php endif; ?>
+                    <button class="btn btn-red" onclick="deleteFeaturedMatch('<?= $f['id'] ?>')">🗑️ حذف</button>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+
+    <!-- 4. TAB: LIVE CHANNELS -->
     <div id="tab-channels" class="tab-content">
         <div class="card" style="display: flex; justify-content: space-between; align-items: center;">
             <div>
@@ -1209,6 +1512,189 @@ $currentSlider = getJsonData($sliderFile);
     </div>
 </div>
 
+<!-- Hero Poster Modal -->
+<div class="modal" id="heroModal">
+    <div class="modal-content" style="max-width: 680px;">
+        <h3 style="color: var(--gold); margin-bottom: 14px;">🌟 إنشاء وتخصيص بوستر الهيرو والواجهة الرئيسية</h3>
+        <form onsubmit="saveHeroForm(event)">
+            <input type="hidden" id="hero_id">
+            
+            <div class="form-group">
+                <label>عنوان البوستر (مثال: ريال مدريد ضد برشلونة • كلاسيكو الأرض 🔥)</label>
+                <input type="text" id="hero_title" class="form-control" placeholder="ريال مدريد ضد برشلونة" required>
+            </div>
+
+            <div class="form-group">
+                <label>الوصف والحدث (مثال: دوري أبطال أوروبا • قمة الحسم والنهائي)</label>
+                <input type="text" id="hero_subtitle" class="form-control" placeholder="دوري أبطال أوروبا • نصف النهائي">
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex: 1;">
+                    <label>الفريق الأول (المضيف)</label>
+                    <div style="display: flex; gap: 6px;">
+                        <input type="text" id="hero_home_team" class="form-control" placeholder="ريال مدريد" required>
+                        <button type="button" class="btn btn-blue" style="padding: 6px 10px; font-size: 11px;" onclick="openLogoPicker('hero_home_team', 'hero_home_logo')">🎨 مكتبة الشعارات</button>
+                    </div>
+                    <input type="url" id="hero_home_logo" class="form-control" placeholder="رابط الشعار..." style="direction: ltr; margin-top: 4px; font-size: 11px;">
+                </div>
+
+                <div class="form-group" style="flex: 1;">
+                    <label>الفريق الثاني (الضيف)</label>
+                    <div style="display: flex; gap: 6px;">
+                        <input type="text" id="hero_away_team" class="form-control" placeholder="برشلونة" required>
+                        <button type="button" class="btn btn-blue" style="padding: 6px 10px; font-size: 11px;" onclick="openLogoPicker('hero_away_team', 'hero_away_logo')">🎨 مكتبة الشعارات</button>
+                    </div>
+                    <input type="url" id="hero_away_logo" class="form-control" placeholder="رابط الشعار..." style="direction: ltr; margin-top: 4px; font-size: 11px;">
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex: 1;">
+                    <label>وقت الانطلاق</label>
+                    <input type="text" id="hero_time" class="form-control" value="22:00" required>
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>التاريخ / اليوم</label>
+                    <input type="text" id="hero_date" class="form-control" value="اليوم" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>رابط صورة خلفية البوستر (استاد / بطولة عالية الدقة)</label>
+                <input type="url" id="hero_banner_url" class="form-control" value="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1200&auto=format&fit=crop" style="direction: ltr;" required>
+                <div style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-outline" style="padding: 2px 8px; font-size: 11px;" onclick="document.getElementById('hero_banner_url').value='https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1200&auto=format&fit=crop'">🏟️ استاد لندني</button>
+                    <button type="button" class="btn btn-outline" style="padding: 2px 8px; font-size: 11px;" onclick="document.getElementById('hero_banner_url').value='https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1200&auto=format&fit=crop'">✨ ملعب أبطال أوروبا</button>
+                    <button type="button" class="btn btn-outline" style="padding: 2px 8px; font-size: 11px;" onclick="document.getElementById('hero_banner_url').value='https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=1200&auto=format&fit=crop'">🔥 كلاسيكو حماسي</button>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex: 1;">
+                    <label>حالة البث المباشر</label>
+                    <select id="hero_is_live" class="form-control">
+                        <option value="0">لم تبدأ (عرض العداد والتوقيت)</option>
+                        <option value="1">مباشر الآن 🟢</option>
+                    </select>
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>الدقيقة الحية (مثال: '75 أو الشوط 2)</label>
+                    <input type="text" id="hero_live_minute" class="form-control" placeholder="'75">
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex: 1;">
+                    <label>القناة الناقلة</label>
+                    <input type="text" id="hero_channel" class="form-control" value="beIN SPORTS 1 HD">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>المعلق الرياضي</label>
+                    <input type="text" id="hero_commentator" class="form-control" value="عصام الشوالي">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>رابط سيرفر البث المباشر المباشر (HLS m3u8)</label>
+                <input type="url" id="hero_stream_url" class="form-control" placeholder="https://domain.com/live/stream.m3u8" style="direction: ltr;">
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+                <button type="submit" class="btn">🚀 حفظ ونشر بوستر الهيرو للتطبيق</button>
+                <button type="button" class="btn btn-outline" onclick="closeModal('heroModal')">إلغاء</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Featured Weekly Modal -->
+<div class="modal" id="featuredModal">
+    <div class="modal-content" style="max-width: 600px;">
+        <h3 style="color: var(--gold); margin-bottom: 14px;">⭐ إضافة / تعديل مباراة أسبوعية مميزة</h3>
+        <form onsubmit="saveFeaturedForm(event)">
+            <input type="hidden" id="feat_id">
+            
+            <div class="form-group">
+                <label>اسم البطولة (مثال: الدوري الإنجليزي الممتاز)</label>
+                <input type="text" id="feat_tournament" class="form-control" value="الدوري الإنجليزي الممتاز" required>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex: 1;">
+                    <label>الفريق 1</label>
+                    <div style="display: flex; gap: 6px;">
+                        <input type="text" id="feat_home_team" class="form-control" placeholder="ليفربول" required>
+                        <button type="button" class="btn btn-blue" style="padding: 6px 10px; font-size: 11px;" onclick="openLogoPicker('feat_home_team', 'feat_home_logo')">🎨</button>
+                    </div>
+                    <input type="url" id="feat_home_logo" class="form-control" placeholder="شعار..." style="direction: ltr; margin-top: 4px; font-size: 11px;">
+                </div>
+
+                <div class="form-group" style="flex: 1;">
+                    <label>الفريق 2</label>
+                    <div style="display: flex; gap: 6px;">
+                        <input type="text" id="feat_away_team" class="form-control" placeholder="مانشستر سيتي" required>
+                        <button type="button" class="btn btn-blue" style="padding: 6px 10px; font-size: 11px;" onclick="openLogoPicker('feat_away_team', 'feat_away_logo')">🎨</button>
+                    </div>
+                    <input type="url" id="feat_away_logo" class="form-control" placeholder="شعار..." style="direction: ltr; margin-top: 4px; font-size: 11px;">
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex: 1;">
+                    <label>اليوم (السبت، الأحد، اليوم...)</label>
+                    <input type="text" id="feat_date" class="form-control" value="السبت" required>
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>الوقت</label>
+                    <input type="text" id="feat_time" class="form-control" value="22:00" required>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex: 1;">
+                    <label>القناة الناقلة</label>
+                    <input type="text" id="feat_channel" class="form-control" value="beIN SPORTS 1 HD">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>المعلق</label>
+                    <input type="text" id="feat_commentator" class="form-control" value="حفيظ دراجي">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>رابط سيرفر البث (HLS m3u8)</label>
+                <input type="url" id="feat_stream_url" class="form-control" placeholder="https://domain.com/live/stream.m3u8" style="direction: ltr;">
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+                <button type="submit" class="btn">💾 حفظ في مباريات الأسبوع</button>
+                <button type="button" class="btn btn-outline" onclick="closeModal('featuredModal')">إلغاء</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Universal 1-Click Logo & Flag Picker Modal (مكتبة الشعارات والأعلام الذكية) -->
+<div class="modal" id="logoPickerModal">
+    <div class="modal-content" style="max-width: 720px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h3 style="color: var(--gold);">🎨 مكتبة الشعارات والأعلام الجاهزة (ضغطة واحدة لاختيار الفريق)</h3>
+            <button class="btn btn-outline" style="padding: 4px 10px;" onclick="closeModal('logoPickerModal')">✖</button>
+        </div>
+
+        <div style="display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 4px;">
+            <button type="button" class="btn" style="padding: 4px 12px; font-size: 12px;" onclick="filterLogoTab('europe')">🏆 أندية أوروبا الكبرى</button>
+            <button type="button" class="btn btn-outline" style="padding: 4px 12px; font-size: 12px;" onclick="filterLogoTab('arab')">🇸🇦 الأندية العربية</button>
+            <button type="button" class="btn btn-outline" style="padding: 4px 12px; font-size: 12px;" onclick="filterLogoTab('flags')">🌍 المنتخبات والأعلام</button>
+        </div>
+
+        <div id="logoGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 10px; max-height: 420px; overflow-y: auto; padding: 4px;">
+            <!-- Rendered by JS -->
+        </div>
+    </div>
+</div>
+
 <script>
 let hlsInstance = null;
 
@@ -1435,15 +1921,220 @@ function playManualUrl() {
         hlsInstance = null;
     }
 
-    if (Hls.isSupported() && url.includes('.m3u8')) {
-        hlsInstance = new Hls();
-        hlsInstance.loadSource(url);
-        hlsInstance.attachMedia(video);
-        hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+// -------------------------------------------------------------
+// Hero Banners & Featured Weekly & Logo Library JS
+// -------------------------------------------------------------
+const LOGO_CATALOG = {
+    europe: [
+        { name: "ريال مدريد", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/512px-Real_Madrid_CF.svg.png" },
+        { name: "برشلونة", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/512px-FC_Barcelona_%28crest%29.svg.png" },
+        { name: "ليفربول", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/0/0c/Liverpool_FC.svg/512px-Liverpool_FC.svg.png" },
+        { name: "مانشستر سيتي", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/e/eb/Manchester_City_FC_badge.svg/512px-Manchester_City_FC_badge.svg.png" },
+        { name: "أرسنال", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/5/53/Arsenal_FC.svg/512px-Arsenal_FC.svg.png" },
+        { name: "مانشستر يونايتد", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/7/7a/Manchester_United_FC_crest.svg/512px-Manchester_United_FC_crest.svg.png" },
+        { name: "بايرن ميونخ", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/FC_Bayern_M%C3%BCnchen_logo_%282017%29.svg/512px-FC_Bayern_M%C3%BCnchen_logo_%282017%29.svg.png" },
+        { name: "باريس سان جيرمان", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/a/a7/Paris_Saint-Germain_F.C..svg/512px-Paris_Saint-Germain_F.C..svg.png" },
+        { name: "إنتر ميلان", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/FC_Internazionale_Milano_2021.svg/512px-FC_Internazionale_Milano_2021.svg.png" },
+        { name: "يوفنتوس", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Juventus_FC_2017_logo.svg/512px-Juventus_FC_2017_logo.svg.png" },
+        { name: "ميلان", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Logo_of_AC_Milan.svg/512px-Logo_of_AC_Milan.svg.png" },
+        { name: "تشيلسي", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/c/cc/Chelsea_FC.svg/512px-Chelsea_FC.svg.png" },
+        { name: "أتلتيكو مدريد", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/f/f4/Atletico_Madrid_2017_logo.svg/512px-Atletico_Madrid_2017_logo.svg.png" },
+        { name: "بوروسيا دورتموند", logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Borussia_Dortmund_logo.svg/512px-Borussia_Dortmund_logo.svg.png" },
+        { name: "باير ليفركوزن", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/5/59/Bayer_04_Leverkusen_logo.svg/512px-Bayer_04_Leverkusen_logo.svg.png" }
+    ],
+    arab: [
+        { name: "الهلال", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/f/f9/Al_Hilal_SFC_logo.svg/512px-Al_Hilal_SFC_logo.svg.png" },
+        { name: "النصر", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/e/e0/Al-Nassr_FC_logo.svg/512px-Al-Nassr_FC_logo.svg.png" },
+        { name: "الاتحاد", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/5/51/Al-Ittihad_Club_logo.svg/512px-Al-Ittihad_Club_logo.svg.png" },
+        { name: "الأهلي السعودي", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/6/69/Al-Ahli_Saudi_FC_logo.svg/512px-Al-Ahli_Saudi_FC_logo.svg.png" },
+        { name: "الأهلي المصري", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/8/8c/Al_Ahly_SC_logo.svg/512px-Al_Ahly_SC_logo.svg.png" },
+        { name: "الزمالك", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/0/04/ZamalekSC.png/512px-ZamalekSC.png" },
+        { name: "الترجي التونسي", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/2/2f/Esp%C3%A9rance_Sportive_de_Tunis.png/512px-Esp%C3%A9rance_Sportive_de_Tunis.png" },
+        { name: "الوداد الرياضي", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/3/36/Wydad_Athletic_Club_logo.svg/512px-Wydad_Athletic_Club_logo.svg.png" },
+        { name: "الرجاء البيضاوي", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/e/e3/Raja_Club_Athletic_logo.svg/512px-Raja_Club_Athletic_logo.svg.png" },
+        { name: "الشرطة العراقي", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/b/b3/Al-Shorta_SC_logo.svg/512px-Al-Shorta_SC_logo.svg.png" },
+        { name: "القوة الجوية", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/5/5f/Al-Quwa_Al-Jawiya_logo.png/512px-Al-Quwa_Al-Jawiya_logo.png" },
+        { name: "الزوراء", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/a/ad/Al-Zawraa_SC_logo.png/512px-Al-Zawraa_SC_logo.png" },
+        { name: "العين الإماراتي", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/0/08/Al_Ain_FC_logo.svg/512px-Al_Ain_FC_logo.svg.png" },
+        { name: "السد القطري", logo: "https://upload.wikimedia.org/wikipedia/en/thumb/c/cd/Al_Sadd_SC_logo.svg/512px-Al_Sadd_SC_logo.svg.png" }
+    ],
+    flags: [
+        { name: "العراق", logo: "https://flagcdn.com/w80/iq.png" },
+        { name: "السعودية", logo: "https://flagcdn.com/w80/sa.png" },
+        { name: "مصر", logo: "https://flagcdn.com/w80/eg.png" },
+        { name: "المغرب", logo: "https://flagcdn.com/w80/ma.png" },
+        { name: "الجزائر", logo: "https://flagcdn.com/w80/dz.png" },
+        { name: "تونس", logo: "https://flagcdn.com/w80/tn.png" },
+        { name: "الأردن", logo: "https://flagcdn.com/w80/jo.png" },
+        { name: "الإمارات", logo: "https://flagcdn.com/w80/ae.png" },
+        { name: "قطر", logo: "https://flagcdn.com/w80/qa.png" },
+        { name: "إسبانيا", logo: "https://flagcdn.com/w80/es.png" },
+        { name: "فرنسا", logo: "https://flagcdn.com/w80/fr.png" },
+        { name: "ألمانيا", logo: "https://flagcdn.com/w80/de.png" },
+        { name: "إنجلترا", logo: "https://flagcdn.com/w80/gb-eng.png" },
+        { name: "البرازيل", logo: "https://flagcdn.com/w80/br.png" },
+        { name: "الأرجنتين", logo: "https://flagcdn.com/w80/ar.png" },
+        { name: "البرتغال", logo: "https://flagcdn.com/w80/pt.png" },
+        { name: "إيطاليا", logo: "https://flagcdn.com/w80/it.png" }
+    ]
+};
+
+let activeTargetNameInput = '';
+let activeTargetLogoInput = '';
+
+function openLogoPicker(nameInputId, logoInputId) {
+    activeTargetNameInput = nameInputId;
+    activeTargetLogoInput = logoInputId;
+    filterLogoTab('europe');
+    openModal('logoPickerModal');
+}
+
+function filterLogoTab(category) {
+    const list = LOGO_CATALOG[category] || [];
+    let html = '';
+    list.forEach(item => {
+        html += `<div style="background: #0c0f18; border: 1px solid var(--card-border); border-radius: 12px; padding: 10px 6px; text-align: center; cursor: pointer; transition: 0.2s;" onclick="selectLogoItem('${addslashes(item.name)}', '${addslashes(item.logo)}')">
+            <img src="${item.logo}" style="width: 44px; height: 44px; object-fit: contain; margin-bottom: 6px;">
+            <div style="font-size: 11.5px; font-weight: 700; color: #fff;">${item.name}</div>
+        </div>`;
+    });
+    document.getElementById('logoGrid').innerHTML = html;
+}
+
+function selectLogoItem(name, logo) {
+    if (activeTargetNameInput) document.getElementById(activeTargetNameInput).value = name;
+    if (activeTargetLogoInput) document.getElementById(activeTargetLogoInput).value = logo;
+    closeModal('logoPickerModal');
+}
+
+function openHeroModal(heroData = null) {
+    if (heroData) {
+        document.getElementById('hero_id').value = heroData.id || '';
+        document.getElementById('hero_title').value = heroData.title || '';
+        document.getElementById('hero_subtitle').value = heroData.subtitle || '';
+        document.getElementById('hero_home_team').value = heroData.homeTeam || '';
+        document.getElementById('hero_home_logo').value = heroData.homeLogo || '';
+        document.getElementById('hero_away_team').value = heroData.awayTeam || '';
+        document.getElementById('hero_away_logo').value = heroData.awayLogo || '';
+        document.getElementById('hero_time').value = heroData.kickoffTime || '22:00';
+        document.getElementById('hero_date').value = heroData.kickoffDate || 'اليوم';
+        document.getElementById('hero_banner_url').value = heroData.bannerUrl || '';
+        document.getElementById('hero_is_live').value = heroData.isLive ? '1' : '0';
+        document.getElementById('hero_live_minute').value = heroData.liveMinute || '';
+        document.getElementById('hero_channel').value = heroData.channelName || 'beIN SPORTS 1 HD';
+        document.getElementById('hero_commentator').value = heroData.commentator || 'عصام الشوالي';
+        document.getElementById('hero_stream_url').value = (heroData.servers && heroData.servers[0]) ? heroData.servers[0].url : '';
     } else {
-        video.src = url;
-        video.play();
+        document.getElementById('hero_id').value = 'hero_' + Date.now();
+        document.getElementById('hero_title').value = '';
+        document.getElementById('hero_subtitle').value = '';
+        document.getElementById('hero_home_team').value = '';
+        document.getElementById('hero_home_logo').value = '';
+        document.getElementById('hero_away_team').value = '';
+        document.getElementById('hero_away_logo').value = '';
+        document.getElementById('hero_time').value = '22:00';
+        document.getElementById('hero_date').value = 'اليوم';
+        document.getElementById('hero_banner_url').value = 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1200&auto=format&fit=crop';
+        document.getElementById('hero_is_live').value = '0';
+        document.getElementById('hero_live_minute').value = '';
+        document.getElementById('hero_channel').value = 'beIN SPORTS 1 HD';
+        document.getElementById('hero_commentator').value = 'عصام الشوالي';
+        document.getElementById('hero_stream_url').value = '';
     }
+    openModal('heroModal');
+}
+
+async function saveHeroForm(e) {
+    e.preventDefault();
+    const streamUrl = document.getElementById('hero_stream_url').value.trim();
+    const payload = {
+        action: 'save_hero_banner',
+        id: document.getElementById('hero_id').value,
+        title: document.getElementById('hero_title').value,
+        subtitle: document.getElementById('hero_subtitle').value,
+        homeTeam: document.getElementById('hero_home_team').value,
+        homeLogo: document.getElementById('hero_home_logo').value,
+        awayTeam: document.getElementById('hero_away_team').value,
+        awayLogo: document.getElementById('hero_away_logo').value,
+        kickoffTime: document.getElementById('hero_time').value,
+        kickoffDate: document.getElementById('hero_date').value,
+        bannerUrl: document.getElementById('hero_banner_url').value,
+        isLive: document.getElementById('hero_is_live').value === '1',
+        liveMinute: document.getElementById('hero_live_minute').value,
+        channelName: document.getElementById('hero_channel').value,
+        commentator: document.getElementById('hero_commentator').value,
+        streamUrl: streamUrl,
+        servers: streamUrl ? [{ id: 's1', name: 'سيرفر رئيسي 4K', url: streamUrl, quality: '4K UHD' }] : []
+    };
+    const res = await fetch('', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+    const data = await res.json();
+    alert(data.message);
+    if (data.status) location.reload();
+}
+
+async function deleteHeroBanner(id) {
+    if (!confirm('حذف هذا البوستر نهائياً؟')) return;
+    const res = await fetch('', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: 'delete_hero_banner', id: id }) });
+    location.reload();
+}
+
+function openFeaturedModal(featData = null) {
+    if (featData) {
+        document.getElementById('feat_id').value = featData.id || '';
+        document.getElementById('feat_tournament').value = featData.tournament || '';
+        document.getElementById('feat_home_team').value = featData.homeTeam || '';
+        document.getElementById('feat_home_logo').value = featData.homeLogo || '';
+        document.getElementById('feat_away_team').value = featData.awayTeam || '';
+        document.getElementById('feat_away_logo').value = featData.awayLogo || '';
+        document.getElementById('feat_date').value = featData.kickoffDate || 'السبت';
+        document.getElementById('feat_time').value = featData.kickoffTime || '22:00';
+        document.getElementById('feat_channel').value = featData.channelName || 'beIN SPORTS 1 HD';
+        document.getElementById('feat_commentator').value = featData.commentator || 'حفيظ دراجي';
+        document.getElementById('feat_stream_url').value = (featData.servers && featData.servers[0]) ? featData.servers[0].url : '';
+    } else {
+        document.getElementById('feat_id').value = 'feat_' + Date.now();
+        document.getElementById('feat_tournament').value = 'الدوري الإنجليزي الممتاز';
+        document.getElementById('feat_home_team').value = '';
+        document.getElementById('feat_home_logo').value = '';
+        document.getElementById('feat_away_team').value = '';
+        document.getElementById('feat_away_logo').value = '';
+        document.getElementById('feat_date').value = 'السبت';
+        document.getElementById('feat_time').value = '22:00';
+        document.getElementById('feat_channel').value = 'beIN SPORTS 1 HD';
+        document.getElementById('feat_commentator').value = 'حفيظ دراجي';
+        document.getElementById('feat_stream_url').value = '';
+    }
+    openModal('featuredModal');
+}
+
+async function saveFeaturedForm(e) {
+    e.preventDefault();
+    const streamUrl = document.getElementById('feat_stream_url').value.trim();
+    const payload = {
+        action: 'save_featured_weekly',
+        id: document.getElementById('feat_id').value,
+        tournament: document.getElementById('feat_tournament').value,
+        homeTeam: document.getElementById('feat_home_team').value,
+        homeLogo: document.getElementById('feat_home_logo').value,
+        awayTeam: document.getElementById('feat_away_team').value,
+        awayLogo: document.getElementById('feat_away_logo').value,
+        kickoffDate: document.getElementById('feat_date').value,
+        kickoffTime: document.getElementById('feat_time').value,
+        channelName: document.getElementById('feat_channel').value,
+        commentator: document.getElementById('feat_commentator').value,
+        streamUrl: streamUrl,
+        servers: streamUrl ? [{ id: 's1', name: 'سيرفر الأسبوع HD', url: streamUrl, quality: 'HD' }] : []
+    };
+    const res = await fetch('', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+    const data = await res.json();
+    alert(data.message);
+    if (data.status) location.reload();
+}
+
+async function deleteFeaturedMatch(id) {
+    if (!confirm('حذف هذه المباراة من مباريات الأسبوع؟')) return;
+    const res = await fetch('', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: 'delete_featured_weekly', id: id }) });
+    location.reload();
 }
 </script>
 

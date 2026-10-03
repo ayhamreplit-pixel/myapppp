@@ -209,9 +209,16 @@ fun TodHomeScreen(
               // =====================================================================
               // TAB 1: TOD HOME FEED (Multi-Poster Hero Carousel + Live Rails + Fixtures + beIN Channels)
               // =====================================================================
-              val heroMatches = remember(sportsMatches) {
-                val withPoster = sportsMatches.filter { !it.bannerUrl.isNullOrBlank() }
-                if (withPoster.isNotEmpty()) withPoster else sportsMatches.take(5)
+              val serverHeroBanners by sportsBackendRepo.heroBanners.collectAsState()
+              val serverFeaturedWeekly by sportsBackendRepo.featuredWeekly.collectAsState()
+
+              val heroMatches = remember(serverHeroBanners, sportsMatches) {
+                if (serverHeroBanners.isNotEmpty()) {
+                  serverHeroBanners
+                } else {
+                  val withPoster = sportsMatches.filter { !it.bannerUrl.isNullOrBlank() }
+                  if (withPoster.isNotEmpty()) withPoster else sportsMatches.take(3)
+                }
               }
 
               val allList = effectiveChannels.ifEmpty { sportsBackendRepo.sportsChannels.value }
@@ -229,7 +236,13 @@ fun TodHomeScreen(
               // Categorized Match Lists (Screenshots 1, 2, 3, 4)
               val liveMatches = remember(sportsMatches) { sportsMatches.filter { it.isLive } }
               val upcomingMatches = remember(sportsMatches) { sportsMatches.filter { !it.isLive && !it.isEnded } }
-              val featuredMatches = remember(sportsMatches) { sportsMatches.filter { it.isEnded } }
+              val featuredMatches = remember(serverFeaturedWeekly, sportsMatches) {
+                if (serverFeaturedWeekly.isNotEmpty()) {
+                  serverFeaturedWeekly
+                } else {
+                  sportsMatches.filter { it.isLive || it.servers.isNotEmpty() }.take(6).ifEmpty { sportsMatches.take(6) }
+                }
+              }
               val sportsNews by sportsBackendRepo.news.collectAsState()
               val announcementConfig by sportsBackendRepo.announcement.collectAsState()
 

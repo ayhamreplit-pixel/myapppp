@@ -83,6 +83,12 @@ class SportsBackendRepository(private val context: Context) {
   private val _sportsChannels = MutableStateFlow<List<XtreamChannel>>(emptyList())
   val sportsChannels: StateFlow<List<XtreamChannel>> = _sportsChannels.asStateFlow()
 
+  private val _heroBanners = MutableStateFlow<List<SportsMatch>>(emptyList())
+  val heroBanners: StateFlow<List<SportsMatch>> = _heroBanners.asStateFlow()
+
+  private val _featuredWeekly = MutableStateFlow<List<SportsMatch>>(emptyList())
+  val featuredWeekly: StateFlow<List<SportsMatch>> = _featuredWeekly.asStateFlow()
+
   private val _isSyncing = MutableStateFlow(false)
   val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
 
@@ -224,6 +230,30 @@ class SportsBackendRepository(private val context: Context) {
           if (response.isSuccessful) {
             val bodyStr = response.body?.string() ?: ""
             if (bodyStr.isNotBlank() && (bodyStr.contains("\"data\"") || bodyStr.contains("\"matches\"") || bodyStr.startsWith("["))) {
+              if (bodyStr.trim().startsWith("{")) {
+                try {
+                  val rootObj = JSONObject(bodyStr)
+                  val heroArr = rootObj.optJSONArray("hero_banners")
+                  if (heroArr != null && heroArr.length() > 0) {
+                    val hList = parseStandardMatchesArray(heroArr, config.secretKey)
+                    if (hList.isNotEmpty()) {
+                      _heroBanners.value = hList
+                      prefs.edit().putString("cached_hero_banners", heroArr.toString()).apply()
+                    }
+                  }
+                  val featArr = rootObj.optJSONArray("featured_weekly")
+                  if (featArr != null && featArr.length() > 0) {
+                    val fList = parseStandardMatchesArray(featArr, config.secretKey)
+                    if (fList.isNotEmpty()) {
+                      _featuredWeekly.value = fList
+                      prefs.edit().putString("cached_featured_weekly", featArr.toString()).apply()
+                    }
+                  }
+                } catch (e: Exception) {
+                  Log.d("SportsBackendRepo", "Hero / Featured parse error: ${e.message}")
+                }
+              }
+
               val parsedMatches = parseMatchesJson(bodyStr, config.secretKey)
               if (parsedMatches.isNotEmpty()) {
                 val combined = mutableListOf<SportsMatch>()
@@ -767,10 +797,19 @@ class SportsBackendRepository(private val context: Context) {
         val scoreTime = item.optNullableString("score_time")
 
         val liveMinute = when {
-          isLive && !scoreTime.isNullOrBlank() -> if (scoreTime.startsWith("'")) scoreTime else "'$scoreTime"
-          isLive && statusVal == 2 -> "'الشوط 1"
-          isLive && statusVal == 3 -> "'الشوط 2"
-          isLive -> "'مباشر"
+          !isLive -> null
+          !scoreTime.isNullOrBlank() && !scoreTime.trim().startsWith("[") && !scoreTime.trim().startsWith("{") && !scoreTime.contains(",") && !scoreTime.contains("•") -> {
+            val clean = scoreTime.replace("'", "").trim()
+            val isCleanNum = clean.matches(Regex("^[0-9]{1,3}(\\+[0-9]{1,2})?$"))
+            if (isCleanNum) "'$clean"
+            else if (clean.startsWith("الشوط") || clean.contains("استراحة") || clean.contains("إضافي") || clean.contains("ترجيح")) clean
+            else null
+          }
+          statusVal == 2 -> "الشوط 1"
+          statusVal == 3 -> "الشوط 2"
+          statusVal == 5 -> "استراحة"
+          statusVal == 6 -> "وقت إضافي"
+          statusVal == 7 -> "ركلات ترجيح"
           else -> null
         }
 
@@ -901,6 +940,27 @@ class SportsBackendRepository(private val context: Context) {
           }
         }
 
+        // Plain string comma / bullet goal timestamps fallback (e.g. "26', 58'")
+        if (hGoals.isBlank() && aGoals.isBlank() && !scoreTime.isNullOrBlank() && (scoreTime.contains(",") || scoreTime.contains("•") || scoreTime.contains("'"))) {
+          val cleanTokens = scoreTime.split(Regex("[,•]+"))
+            .map { it.replace("'", "").replace("\"", "").replace("[", "").replace("]", "").replace("{", "").replace("}", "").trim() }
+            .filter { it.isNotBlank() && !it.contains(":") && it.matches(Regex("^[0-9]{1,3}.*")) }
+          if (cleanTokens.isNotEmpty()) {
+            val hScore = finalScoreHome ?: 0
+            val aScore = finalScoreAway ?: 0
+            if (hScore > 0 && aScore == 0) {
+              hGoals = cleanTokens.joinToString(" • ") { if (it.startsWith("'")) it else "'$it" }
+            } else if (aScore > 0 && hScore == 0) {
+              aGoals = cleanTokens.joinToString(" • ") { if (it.startsWith("'")) it else "'$it" }
+            } else if (hScore > 0 && aScore > 0) {
+              val homePortion = cleanTokens.take(hScore)
+              val awayPortion = cleanTokens.drop(hScore).take(aScore)
+              if (homePortion.isNotEmpty()) hGoals = homePortion.joinToString(" • ") { if (it.startsWith("'")) it else "'$it" }
+              if (awayPortion.isNotEmpty()) aGoals = awayPortion.joinToString(" • ") { if (it.startsWith("'")) it else "'$it" }
+            }
+          }
+        }
+
         val match = SportsMatch(
           id = "ys_$matchId",
           title = "$homeTitle ضد $awayTitle",
@@ -952,7 +1012,14 @@ class SportsBackendRepository(private val context: Context) {
         val awayLogo = item.optString("awayLogo", item.optString("away_logo", item.optString("awayTeamLogo", "")))
         val awayFlag = item.optString("awayFlag", item.optString("away_flag", "⚽"))
 
-        val liveMin = item.optNullableString("liveMinute") ?: item.optNullableString("minute")
+        val rawLiveMin = item.optNullableString("liveMinute") ?: item.optNullableString("minute")
+        val liveMin = rawLiveMin?.trim()?.let { raw ->
+          when {
+            raw.isBlank() || raw.startsWith("[") || raw.startsWith("{") -> null
+            raw.startsWith("مباشر") -> raw.replace("مباشر", "").trim().takeIf { it.isNotBlank() }
+            else -> raw
+          }
+        }
         val scoreH = item.optNullableInt("scoreHome") ?: item.optNullableInt("home_score")
         val scoreA = item.optNullableInt("scoreAway") ?: item.optNullableInt("away_score")
         val countdown = item.optNullableString("countdownText") ?: item.optNullableString("countdown")
@@ -1812,6 +1879,23 @@ class SportsBackendRepository(private val context: Context) {
     } catch (ignored: Exception) {}
 
     _matches.value = defaultList
+
+    val cachedHero = prefs.getString("cached_hero_banners", null)
+    if (!cachedHero.isNullOrBlank()) {
+      try {
+        val arr = JSONArray(cachedHero)
+        val list = parseStandardMatchesArray(arr, "")
+        if (list.isNotEmpty()) _heroBanners.value = list
+      } catch (e: Exception) {}
+    }
+    val cachedFeat = prefs.getString("cached_featured_weekly", null)
+    if (!cachedFeat.isNullOrBlank()) {
+      try {
+        val arr = JSONArray(cachedFeat)
+        val list = parseStandardMatchesArray(arr, "")
+        if (list.isNotEmpty()) _featuredWeekly.value = list
+      } catch (e: Exception) {}
+    }
 
     // Initialize Competitions (Screenshots 10, 16, 18, 20)
     _competitions.value = listOf(
