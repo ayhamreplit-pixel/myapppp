@@ -1,6 +1,6 @@
 {
-  "name": "TOD Sports",
-  "description": "TOD Sports Live Streaming and Matches Hub with AlwaysData cloud backend integration, AES-256 decryption, and device telemetry.",
+  "name": "HERO Cast",
+  "description": "HERO Cast & TOD Sports Live Streaming and Matches Hub with real-time server control panel, match stream toggling, dynamic notifications, and multi-server feeds.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

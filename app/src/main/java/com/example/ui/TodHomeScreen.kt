@@ -132,6 +132,7 @@ fun TodHomeScreen(
   var selectedMatchStatusFilter by remember { mutableStateOf("ALL") }
   var isGroupingByTournament by remember { mutableStateOf(true) }
   var matchForServerSelection by remember { mutableStateOf<SportsMatch?>(null) }
+  var noStreamMatchAlert by remember { mutableStateOf<SportsMatch?>(null) }
 
   val coroutineScope = rememberCoroutineScope()
   val isSyncing by sportsBackendRepo.isSyncing.collectAsState()
@@ -151,10 +152,22 @@ fun TodHomeScreen(
   val competitions by sportsBackendRepo.competitions.collectAsState()
   val sportsShows by sportsBackendRepo.shows.collectAsState()
   val builtInChannels by sportsBackendRepo.sportsChannels.collectAsState()
+  val announcementConfig by sportsBackendRepo.announcement.collectAsState()
 
   // Effective Channels list (combines server backend channels and playlist channels)
   val effectiveChannels = remember(allChannels, builtInChannels) {
     (builtInChannels + allChannels).distinctBy { it.streamId.ifBlank { it.name } }
+  }
+
+  // Unified stream play action with stream active check
+  val onUnifiedPlayMatch: (SportsMatch) -> Unit = { match ->
+    if (!match.hasPlayableStream) {
+      noStreamMatchAlert = match
+    } else if (match.servers.size > 1) {
+      matchForServerSelection = match
+    } else {
+      onPlayMatchDirectly(match)
+    }
   }
 
   // Filter live and upcoming matches
@@ -224,10 +237,74 @@ fun TodHomeScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 100.dp)
               ) {
-                // 0. Top Breaking Announcement Bar
+                // 0. Live Server Push Notification & Announcement (Clickable & Dynamic)
                 if (announcementConfig.isEnabled && announcementConfig.message.isNotBlank()) {
-                  item(key = "announcement_bar") {
-                    TodMarqueeAnnouncementBar(config = announcementConfig)
+                  item(key = "server_push_announcement") {
+                    Box(
+                      modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(
+                          Brush.horizontalGradient(
+                            listOf(Color(0xFF221A08), Color(0xFF141926), Color(0xFF0F1118))
+                          )
+                        )
+                        .border(1.dp, TodGold.copy(alpha = 0.6f), RoundedCornerShape(14.dp))
+                        .clickable {
+                          when (announcementConfig.targetType) {
+                            "match" -> {
+                              val target = sportsMatches.firstOrNull { it.id == announcementConfig.targetId || it.id == "ys_${announcementConfig.targetId}" }
+                              if (target != null) onUnifiedPlayMatch(target)
+                            }
+                            "channel" -> {
+                              val ch = effectiveChannels.firstOrNull { it.streamId == announcementConfig.targetId || it.name.contains(announcementConfig.targetId, ignoreCase = true) }
+                              if (ch != null) onPlayChannel(ch, effectiveChannels, "قنوات البث")
+                            }
+                            "news" -> {
+                              activeTopSection = TodTopSection.NEWS
+                            }
+                          }
+                        }
+                        .padding(horizontal = 12.dp, vertical = 9.dp)
+                    ) {
+                      Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                      ) {
+                        Box(
+                          modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(TodGold)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                          Text(
+                            text = announcementConfig.title.ifBlank { "⚡ تنبيه مباشر" },
+                            color = Color.Black,
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Black,
+                            fontFamily = ThmanyahFontFamily
+                          )
+                        }
+                        Text(
+                          text = announcementConfig.message,
+                          color = Color.White,
+                          fontSize = 12.5.sp,
+                          fontWeight = FontWeight.Medium,
+                          fontFamily = ThmanyahFontFamily,
+                          maxLines = 2,
+                          overflow = TextOverflow.Ellipsis,
+                          modifier = Modifier.weight(1f)
+                        )
+                        Icon(
+                          Icons.Default.PlayArrow,
+                          contentDescription = null,
+                          tint = TodGold,
+                          modifier = Modifier.size(16.dp)
+                        )
+                      }
+                    }
                     Spacer(modifier = Modifier.height(4.dp))
                   }
                 }
@@ -237,7 +314,7 @@ fun TodHomeScreen(
                   item(key = "hero_carousel") {
                     TodHeroBannerCarousel(
                       matches = heroMatches,
-                      onPlayMatch = onPlayMatchDirectly,
+                      onPlayMatch = onUnifiedPlayMatch,
                       onOpenDetails = onOpenMatchDetail
                     )
                     Spacer(modifier = Modifier.height(10.dp))
@@ -250,19 +327,8 @@ fun TodHomeScreen(
                     TodLiveSportsRail(
                       matches = liveMatches,
                       title = "البث المباشر - رياضات متعددة",
-                      onPlayMatch = onPlayMatchDirectly,
+                      onPlayMatch = onUnifiedPlayMatch,
                       onOpenDetails = onOpenMatchDetail
-                    )
-                    Spacer(modifier = Modifier.height(14.dp))
-                  }
-                }
-
-                // 3. آخر الأخبار الرياضية الحية (Yallakora Live News Feed)
-                if (sportsNews.isNotEmpty()) {
-                  item(key = "sports_news_feed_rail") {
-                    TodSportsNewsRail(
-                      news = sportsNews,
-                      onViewAllClick = { activeTopSection = TodTopSection.NEWS }
                     )
                     Spacer(modifier = Modifier.height(14.dp))
                   }
@@ -273,7 +339,7 @@ fun TodHomeScreen(
                     TodLiveSportsRail(
                       matches = upcomingMatches,
                       title = "الرياضة القادمة",
-                      onPlayMatch = onPlayMatchDirectly,
+                      onPlayMatch = onUnifiedPlayMatch,
                       onOpenDetails = onOpenMatchDetail
                     )
                     Spacer(modifier = Modifier.height(14.dp))
@@ -285,7 +351,7 @@ fun TodHomeScreen(
                     TodLiveSportsRail(
                       matches = featuredMatches,
                       title = "أفضل مباريات كرة القدم مباشرةً هذا الأسبوع",
-                      onPlayMatch = onPlayMatchDirectly,
+                      onPlayMatch = onUnifiedPlayMatch,
                       onOpenDetails = onOpenMatchDetail
                     )
                     Spacer(modifier = Modifier.height(14.dp))
@@ -397,7 +463,7 @@ fun TodHomeScreen(
                     .background(if (liveMatches.isNotEmpty()) Color(0xFF30D158) else Color(0x60FFFFFF))
                 )
                 Text(
-                  text = if (isSyncing) "جاري تحديث النتائج..." else "مباريات $selectedDate (${sportsMatches.size})",
+                  text = if (isSyncing) "جاري تحديث النتائج..." else "مباريات $selectedDate",
                   color = if (isSyncing) TodGold else Color(0xCCFFFFFF),
                   fontSize = 12.sp,
                   fontFamily = ThmanyahFontFamily,
@@ -485,10 +551,10 @@ fun TodHomeScreen(
 
             // Status Filter Row (الكل، مباشر، قادمة، منتهية)
             val statusOptions = listOf(
-              "ALL" to "الكل (${sportsMatches.size})",
-              "LIVE" to "مباشر الآن (${sportsMatches.count { it.isLive }})",
-              "UPCOMING" to "القادمة (${sportsMatches.count { !it.isLive && !it.isEnded }})",
-              "ENDED" to "المنتهية (${sportsMatches.count { it.isEnded }})"
+              "ALL" to "الكل",
+              "LIVE" to "مباشر الآن",
+              "UPCOMING" to "القادمة",
+              "ENDED" to "المنتهية"
             )
             Row(
               modifier = Modifier
@@ -517,9 +583,13 @@ fun TodHomeScreen(
               }
             }
 
-            // Tournament Filter Chips
+            // Tournament Filter Chips (Intelligent canonical tournament names)
             val tournaments = remember(sportsMatches) {
-              listOf("الكل") + sportsMatches.map { it.tournament }.distinct()
+              val styles = sportsMatches.map { match ->
+                getTournamentCardStyle(match.tournament, match.homeTeam.name, match.awayTeam.name)
+              }.distinctBy { it.displayName }
+               .sortedBy { it.priority }
+              listOf("الكل") + styles.map { it.displayName }
             }
             Row(
               modifier = Modifier
@@ -552,7 +622,14 @@ fun TodHomeScreen(
             }
 
             val filteredMatches = remember(sportsMatches, selectedTournamentFilter, selectedMatchStatusFilter) {
-              var list = if (selectedTournamentFilter == null) sportsMatches else sportsMatches.filter { it.tournament == selectedTournamentFilter }
+              var list = if (selectedTournamentFilter == null) {
+                sportsMatches
+              } else {
+                sportsMatches.filter { match ->
+                  val style = getTournamentCardStyle(match.tournament, match.homeTeam.name, match.awayTeam.name)
+                  style.displayName == selectedTournamentFilter
+                }
+              }
               when (selectedMatchStatusFilter) {
                 "LIVE" -> list.filter { it.isLive }
                 "UPCOMING" -> list.filter { !it.isLive && !it.isEnded }
@@ -561,11 +638,39 @@ fun TodHomeScreen(
               }
             }
 
-            val groupedMatches = remember(filteredMatches, isGroupingByTournament) {
+            // Intelligent Canonical Tournament Grouping:
+            // 1. Groups matches under their authentic canonical category (دوري أبطال أوروبا, دوري الأمم الأوروبية, المباريات الودية, إلخ)
+            // 2. Sorts sections with top priority tournaments first
+            // 3. Sorts matches within each section: LIVE first, then UPCOMING by kickoff time, then ENDED
+            val groupedTournamentSections = remember(filteredMatches, isGroupingByTournament) {
               if (isGroupingByTournament) {
-                filteredMatches.groupBy { it.tournament }
+                filteredMatches
+                  .groupBy { match ->
+                    getTournamentCardStyle(match.tournament, match.homeTeam.name, match.awayTeam.name)
+                  }
+                  .toList()
+                  .sortedWith(
+                    compareBy<Pair<TournamentCardStyle, List<SportsMatch>>> { it.first.priority }
+                      .thenBy { it.first.displayName }
+                  )
+                  .map { (style, matchesInGroup) ->
+                    val sortedMatches = matchesInGroup.sortedWith(
+                      compareByDescending<SportsMatch> { it.isLive }
+                        .thenBy { it.isEnded }
+                        .thenBy { it.kickoffTime }
+                    )
+                    style to sortedMatches
+                  }
               } else {
-                mapOf("all" to filteredMatches)
+                val genericStyle = TournamentCardStyle(
+                  tournamentKey = "all",
+                  displayName = "جميع المباريات",
+                  bgGradient = listOf(Color(0xFF1B1E32), Color(0xFF111322), Color(0xFF090A14)),
+                  accentColor = TodGold,
+                  secondaryColor = Color(0xFF64D2FF),
+                  logoUrl = ""
+                )
+                listOf(genericStyle to filteredMatches)
               }
             }
 
@@ -637,24 +742,19 @@ fun TodHomeScreen(
                   }
                 }
               } else if (isGroupingByTournament && selectedTournamentFilter == null) {
-                groupedMatches.forEach { (tourName, matchesInTour) ->
-                  item(key = "hdr_$tourName") {
+                groupedTournamentSections.forEach { (style, matchesInTour) ->
+                  item(key = "hdr_${style.displayName}") {
                     TodTournamentSectionHeader(
-                      tournamentName = tourName,
-                      tournamentLogo = matchesInTour.firstOrNull()?.tournamentLogo ?: "",
-                      count = matchesInTour.size
+                      tournamentName = style.displayName,
+                      tournamentLogo = style.logoUrl.ifBlank { matchesInTour.firstOrNull()?.tournamentLogo ?: "" },
+                      accentColor = style.accentColor,
+                      matchCount = matchesInTour.size
                     )
                   }
-                  itemsIndexed(matchesInTour, key = { idx, match -> "${match.id}_${tourName}_$idx" }) { _, match ->
+                  itemsIndexed(matchesInTour, key = { idx, match -> "${match.id}_${style.tournamentKey}_$idx" }) { _, match ->
                     TodMatchScheduleCard(
                       match = match,
-                      onPlayMatch = { m ->
-                        if (m.servers.size > 1) {
-                          matchForServerSelection = m
-                        } else {
-                          onPlayMatchDirectly(m)
-                        }
-                      },
+                      onPlayMatch = onUnifiedPlayMatch,
                       onOpenDetails = onOpenMatchDetail
                     )
                   }
@@ -663,13 +763,7 @@ fun TodHomeScreen(
                 itemsIndexed(filteredMatches, key = { idx, match -> "${match.id}_$idx" }) { _, match ->
                   TodMatchScheduleCard(
                     match = match,
-                    onPlayMatch = { m ->
-                      if (m.servers.size > 1) {
-                        matchForServerSelection = m
-                      } else {
-                        onPlayMatchDirectly(m)
-                      }
-                    },
+                    onPlayMatch = onUnifiedPlayMatch,
                     onOpenDetails = onOpenMatchDetail
                   )
                 }
@@ -904,7 +998,7 @@ fun TodHomeScreen(
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                      text = "${comp.matchesCount} مباراة هذا الموسم",
+                      text = "تغطية البث والنتائج المباشرة",
                       color = Color(0xAAFFFFFF),
                       fontSize = 11.sp,
                       fontFamily = ThmanyahFontFamily
@@ -1087,6 +1181,18 @@ fun TodHomeScreen(
           }
         )
       }
+
+      // No Stream Available Alert Dialog
+      if (noStreamMatchAlert != null) {
+        val alertMatch = noStreamMatchAlert!!
+        TodNoStreamAvailableDialog(
+          match = alertMatch,
+          onDismiss = { noStreamMatchAlert = null },
+          onOpenDetails = {
+            onOpenMatchDetail(alertMatch)
+          }
+        )
+      }
     }
   }
 }
@@ -1100,20 +1206,29 @@ fun TodHomeScreen(
 fun TodTournamentSectionHeader(
   tournamentName: String,
   tournamentLogo: String,
-  count: Int,
+  accentColor: Color = Color(0xFF64D2FF),
+  matchCount: Int = 0,
   modifier: Modifier = Modifier
 ) {
   Row(
     modifier = modifier
       .fillMaxWidth()
-      .padding(horizontal = 4.dp, vertical = 6.dp),
+      .padding(horizontal = 4.dp, vertical = 8.dp),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.SpaceBetween
   ) {
     Row(
       verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(8.dp)
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
+      modifier = Modifier.weight(1f, fill = false)
     ) {
+      Box(
+        modifier = Modifier
+          .width(3.5.dp)
+          .height(18.dp)
+          .clip(RoundedCornerShape(2.dp))
+          .background(accentColor)
+      )
       if (tournamentLogo.isNotBlank()) {
         SubcomposeAsyncImage(
           model = tournamentLogo,
@@ -1125,10 +1240,10 @@ fun TodTournamentSectionHeader(
               modifier = Modifier
                 .size(24.dp)
                 .clip(CircleShape)
-                .background(Color(0x250A84FF)),
+                .background(accentColor.copy(alpha = 0.2f)),
               contentAlignment = Alignment.Center
             ) {
-              Icon(Icons.Default.SportsSoccer, contentDescription = null, tint = Color(0xFF64D2FF), modifier = Modifier.size(14.dp))
+              Icon(Icons.Default.SportsSoccer, contentDescription = null, tint = accentColor, modifier = Modifier.size(14.dp))
             }
           }
         )
@@ -1137,35 +1252,39 @@ fun TodTournamentSectionHeader(
           modifier = Modifier
             .size(24.dp)
             .clip(CircleShape)
-            .background(Color(0x250A84FF)),
+            .background(accentColor.copy(alpha = 0.2f)),
           contentAlignment = Alignment.Center
         ) {
-          Icon(Icons.Default.SportsSoccer, contentDescription = null, tint = Color(0xFF64D2FF), modifier = Modifier.size(14.dp))
+          Icon(Icons.Default.SportsSoccer, contentDescription = null, tint = accentColor, modifier = Modifier.size(14.dp))
         }
       }
       Text(
         text = tournamentName,
         color = Color.White,
         fontWeight = FontWeight.Bold,
-        fontSize = 13.5.sp,
-        fontFamily = ThmanyahFontFamily
+        fontSize = 14.sp,
+        fontFamily = ThmanyahFontFamily,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
       )
     }
 
-    Box(
-      modifier = Modifier
-        .clip(RoundedCornerShape(8.dp))
-        .background(Color(0x200A84FF))
-        .border(0.75.dp, Color(0x400A84FF), RoundedCornerShape(8.dp))
-        .padding(horizontal = 8.dp, vertical = 2.5.dp)
-    ) {
-      Text(
-        text = "$count مباريات",
-        color = Color(0xFF64D2FF),
-        fontSize = 10.5.sp,
-        fontWeight = FontWeight.Medium,
-        fontFamily = ThmanyahFontFamily
-      )
+    if (matchCount > 0) {
+      Box(
+        modifier = Modifier
+          .clip(RoundedCornerShape(8.dp))
+          .background(Color(0x18FFFFFF))
+          .border(0.5.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+          .padding(horizontal = 8.dp, vertical = 2.5.dp)
+      ) {
+        Text(
+          text = "$matchCount ${if (matchCount == 1) "مباراة" else if (matchCount == 2) "مباراتان" else "مباريات"}",
+          color = accentColor,
+          fontSize = 10.5.sp,
+          fontWeight = FontWeight.Bold,
+          fontFamily = ThmanyahFontFamily
+        )
+      }
     }
   }
 }

@@ -64,9 +64,12 @@ class SportsBackendRepository(private val context: Context) {
 
   private val _announcement = MutableStateFlow(
     AnnouncementConfig(
-      isEnabled = true,
-      title = "إعلان هام",
-      message = "مرحباً بكم في HERO Cast • بث مباشر متواصل لجميع مباريات اليوم والدوريات الكبرى • شاهد بدون تقطيع"
+      isEnabled = false,
+      id = "",
+      title = "",
+      message = "",
+      targetType = "none",
+      targetId = ""
     )
   )
   val announcement: StateFlow<AnnouncementConfig> = _announcement.asStateFlow()
@@ -94,6 +97,7 @@ class SportsBackendRepository(private val context: Context) {
     kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
       // Immediate fetch on launch
       try {
+        fetchAnnouncement()
         fetchYallakoraNews()
         fetchSliderBanners()
         syncFromAlwaysData("today")
@@ -105,6 +109,7 @@ class SportsBackendRepository(private val context: Context) {
         kotlinx.coroutines.delay(20000)
         try {
           syncFromAlwaysData(_currentDateParam.value)
+          fetchAnnouncement()
           fetchYallakoraNews()
           val activeProf = getActiveProfile()
           sendSessionHeartbeat(activeProf.name, "")
@@ -499,6 +504,54 @@ class SportsBackendRepository(private val context: Context) {
   }
 
   /**
+   * Fetches real-time push announcement configured from the /m7 control panel
+   */
+  suspend fun fetchAnnouncement(): AnnouncementConfig = withContext(Dispatchers.IO) {
+    val config = getAlwaysDataConfig()
+    val baseUrl = config.serverUrl.trim().removeSuffix("/")
+    val candidateUrls = listOf(
+      "$baseUrl/api.php?action=announcement",
+      "$baseUrl/announcement.json"
+    )
+
+    for (url in candidateUrls) {
+      try {
+        val request = Request.Builder()
+          .url(url)
+          .header("User-Agent", "TOD-Android/4.8")
+          .build()
+        SmartStreamResolver.okHttpClient.newCall(request).execute().use { resp ->
+          if (resp.isSuccessful) {
+            val body = resp.body?.string() ?: ""
+            if (body.isNotBlank()) {
+              val root = JSONObject(body)
+              val announceObj = root.optJSONObject("announcement") ?: root
+              val isEnabled = announceObj.optBoolean("enabled", false)
+              val title = announceObj.optString("title", "")
+              val message = announceObj.optString("message", "")
+              val targetType = announceObj.optString("target_type", "none")
+              val targetId = announceObj.optString("target_id", "")
+              val notif = AnnouncementConfig(
+                isEnabled = isEnabled,
+                id = announceObj.optString("id", "notif_live"),
+                title = title,
+                message = message,
+                targetType = targetType,
+                targetId = targetId
+              )
+              _announcement.value = notif
+              return@withContext notif
+            }
+          }
+        }
+      } catch (e: Exception) {
+        Log.d("SportsBackendRepo", "Announcement fetch error: ${e.message}")
+      }
+    }
+    _announcement.value
+  }
+
+  /**
    * Fetches promotional slider banners from API / CDN / Server
    */
   suspend fun fetchSliderBanners(): List<String> = withContext(Dispatchers.IO) {
@@ -682,7 +735,7 @@ class SportsBackendRepository(private val context: Context) {
         val rawChampImg = champObj?.optString("image", "") ?: ""
         val champLogo = when {
           rawChampImg.startsWith("http") -> rawChampImg
-          rawChampImg.isNotBlank() -> "https://img.ysscores.com/championships/$rawChampImg"
+          rawChampImg.isNotBlank() -> "https://imgs.ysscores.com/championship/64/$rawChampImg"
           else -> ""
         }
 
@@ -691,7 +744,7 @@ class SportsBackendRepository(private val context: Context) {
         val rawHomeImg = homeObj?.optString("image", "") ?: ""
         val homeLogo = when {
           rawHomeImg.startsWith("http") -> rawHomeImg
-          rawHomeImg.isNotBlank() -> "https://img.ysscores.com/teams/$rawHomeImg"
+          rawHomeImg.isNotBlank() -> "https://imgs.ysscores.com/teams/128/$rawHomeImg"
           else -> ""
         }
 
@@ -700,7 +753,7 @@ class SportsBackendRepository(private val context: Context) {
         val rawAwayImg = awayObj?.optString("image", "") ?: ""
         val awayLogo = when {
           rawAwayImg.startsWith("http") -> rawAwayImg
-          rawAwayImg.isNotBlank() -> "https://img.ysscores.com/teams/$rawAwayImg"
+          rawAwayImg.isNotBlank() -> "https://imgs.ysscores.com/teams/128/$rawAwayImg"
           else -> ""
         }
 
@@ -767,6 +820,87 @@ class SportsBackendRepository(private val context: Context) {
           } else directStreamRaw
         } else serversList.firstOrNull()?.streamUrl ?: ""
 
+        val isStreamActive = item.optBoolean("is_stream_active", item.optInt("stream_active", 0) == 1) || serversList.isNotEmpty() || directStream.isNotBlank()
+
+        val finalScoreHome = if (isLive || isEnded || homeScores != null) homeScores else null
+        val finalScoreAway = if (isLive || isEnded || awayScores != null) awayScores else null
+
+        // Goal scorers & minute details extraction
+        var hGoals = item.optString("home_goals", item.optString("home_scorers", "")).trim()
+        var aGoals = item.optString("away_goals", item.optString("away_scorers", "")).trim()
+
+        if (hGoals.isBlank() && aGoals.isBlank()) {
+          val eventsArr = item.optJSONArray("events") ?: item.optJSONArray("goals")
+          if (eventsArr != null && eventsArr.length() > 0) {
+            val hList = mutableListOf<String>()
+            val aList = mutableListOf<String>()
+            for (evIdx in 0 until eventsArr.length()) {
+              val ev = eventsArr.optJSONObject(evIdx) ?: continue
+              val evType = ev.optString("type", "").lowercase()
+              if (evType.contains("goal") || evType.contains("score") || ev.has("minute")) {
+                val min = ev.optString("minute", ev.optString("time", "")).replace("'", "")
+                val player = ev.optString("player", ev.optString("player_name", "")).trim()
+                val isHome = ev.optInt("team", 1) == 1 || ev.optString("team", "").contains("home", ignoreCase = true)
+                val entry = if (player.isNotBlank()) "$player '$min" else "'$min"
+                if (isHome) hList.add(entry) else aList.add(entry)
+              }
+            }
+            if (hList.isNotEmpty()) hGoals = hList.joinToString(" • ")
+            if (aList.isNotEmpty()) aGoals = aList.joinToString(" • ")
+          }
+        }
+
+        // Real goal minutes parsed from YSScores score_time JSON array: e.g. [{"1":26},{"1":57},{"4":84}]
+        if (hGoals.isBlank() && aGoals.isBlank() && !scoreTime.isNullOrBlank()) {
+          try {
+            val trimmedScoreTime = scoreTime.trim()
+            if (trimmedScoreTime.startsWith("[")) {
+              val scoreArr = JSONArray(trimmedScoreTime)
+              val parsedMinuteEvents = mutableListOf<Pair<Int, String>>()
+              for (sIdx in 0 until scoreArr.length()) {
+                val goalObj = scoreArr.optJSONObject(sIdx) ?: continue
+                val itKeys = goalObj.keys()
+                while (itKeys.hasNext()) {
+                  val k = itKeys.next()
+                  val min = goalObj.optInt(k, 0)
+                  if (min > 0) {
+                    val suffix = when (k) {
+                      "4" -> " (ر.ج)" // ضربة جزاء
+                      "5" -> " (هـ.ذ)" // هدف ذاتي
+                      else -> ""
+                    }
+                    parsedMinuteEvents.add(Pair(min, suffix))
+                  }
+                }
+              }
+              // Sort chronologically
+              parsedMinuteEvents.sortBy { it.first }
+
+              val hScore = finalScoreHome ?: 0
+              val aScore = finalScoreAway ?: 0
+              if (parsedMinuteEvents.isNotEmpty()) {
+                if (hScore > 0 && aScore == 0) {
+                  hGoals = parsedMinuteEvents.joinToString(" • ") { "'${it.first}${it.second}" }
+                } else if (aScore > 0 && hScore == 0) {
+                  aGoals = parsedMinuteEvents.joinToString(" • ") { "'${it.first}${it.second}" }
+                } else if (hScore > 0 && aScore > 0) {
+                  // Distribute chronologically to home and away based on scores
+                  val homePortion = parsedMinuteEvents.take(hScore)
+                  val awayPortion = parsedMinuteEvents.drop(hScore).take(aScore)
+                  if (homePortion.isNotEmpty()) {
+                    hGoals = homePortion.joinToString(" • ") { "'${it.first}${it.second}" }
+                  }
+                  if (awayPortion.isNotEmpty()) {
+                    aGoals = awayPortion.joinToString(" • ") { "'${it.first}${it.second}" }
+                  }
+                }
+              }
+            }
+          } catch (e: Exception) {
+            Log.d("SportsBackendRepo", "Failed to parse score_time: ${e.message}")
+          }
+        }
+
         val match = SportsMatch(
           id = "ys_$matchId",
           title = "$homeTitle ضد $awayTitle",
@@ -784,9 +918,12 @@ class SportsBackendRepository(private val context: Context) {
           servers = serversList,
           isLive = isLive,
           isEnded = isEnded,
+          isStreamActive = isStreamActive,
           liveMinute = liveMinute,
-          scoreHome = if (isLive || isEnded || homeScores != null) homeScores else null,
-          scoreAway = if (isLive || isEnded || awayScores != null) awayScores else null,
+          scoreHome = finalScoreHome,
+          scoreAway = finalScoreAway,
+          homeGoalDetails = hGoals.ifBlank { null },
+          awayGoalDetails = aGoals.ifBlank { null },
           bannerUrl = item.optString("bannerUrl", "")
         )
         list.add(match)
@@ -843,6 +980,11 @@ class SportsBackendRepository(private val context: Context) {
           }
         }
 
+        val isStreamActive = item.optBoolean("is_stream_active", item.optInt("stream_active", 0) == 1) || decryptedStream.isNotBlank() || serversList.isNotEmpty()
+
+        val hGoals = item.optString("homeGoalDetails", item.optString("home_goals", "")).ifBlank { null }
+        val aGoals = item.optString("awayGoalDetails", item.optString("away_goals", "")).ifBlank { null }
+
         val match = SportsMatch(
           id = item.optString("id", "m_$i"),
           title = item.optString("title", "$homeTeamName ضد $awayTeamName"),
@@ -860,9 +1002,12 @@ class SportsBackendRepository(private val context: Context) {
           servers = serversList,
           isLive = item.optBoolean("isLive", item.optBoolean("is_live", false)),
           isEnded = item.optBoolean("isEnded", item.optBoolean("is_ended", false)),
+          isStreamActive = isStreamActive,
           liveMinute = liveMin,
           scoreHome = scoreH,
           scoreAway = scoreA,
+          homeGoalDetails = hGoals,
+          awayGoalDetails = aGoals,
           countdownText = countdown,
           bannerUrl = item.optString("bannerUrl", item.optString("poster", ""))
         )

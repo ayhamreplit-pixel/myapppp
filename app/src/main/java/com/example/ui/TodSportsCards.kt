@@ -57,6 +57,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import com.example.ui.theme.DarkTextTertiary
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -129,8 +130,126 @@ val TodSpecularBorder = Brush.linearGradient(
   )
 )
 
+fun getCountryFlagUrl(teamName: String): String? {
+  val norm = normalizeArabic(teamName)
+  return when {
+    norm.contains("المانيا") || norm.contains("germany") -> "https://flagcdn.com/w80/de.png"
+    norm.contains("صربيا") || norm.contains("serbia") -> "https://flagcdn.com/w80/rs.png"
+    norm.contains("اسبانيا") || norm.contains("spain") -> "https://flagcdn.com/w80/es.png"
+    norm.contains("فرنسا") || norm.contains("france") -> "https://flagcdn.com/w80/fr.png"
+    norm.contains("ايطاليا") || norm.contains("italy") -> "https://flagcdn.com/w80/it.png"
+    norm.contains("انجلترا") || norm.contains("england") -> "https://flagcdn.com/w80/gb-eng.png"
+    norm.contains("البرتغال") || norm.contains("portugal") -> "https://flagcdn.com/w80/pt.png"
+    norm.contains("هولندا") || norm.contains("netherlands") -> "https://flagcdn.com/w80/nl.png"
+    norm.contains("بلجيكا") || norm.contains("belgium") -> "https://flagcdn.com/w80/be.png"
+    norm.contains("كرواتيا") || norm.contains("croatia") -> "https://flagcdn.com/w80/hr.png"
+    norm.contains("الدنمارك") || norm.contains("denmark") -> "https://flagcdn.com/w80/dk.png"
+    norm.contains("النرويج") || norm.contains("norway") -> "https://flagcdn.com/w80/no.png"
+    norm.contains("السويد") || norm.contains("sweden") -> "https://flagcdn.com/w80/se.png"
+    norm.contains("سويسرا") || norm.contains("switzerland") -> "https://flagcdn.com/w80/ch.png"
+    norm.contains("ويلز") || norm.contains("wales") -> "https://flagcdn.com/w80/gb-wls.png"
+    norm.contains("اسكتلندا") || norm.contains("scotland") -> "https://flagcdn.com/w80/gb-sct.png"
+    norm.contains("بولندا") || norm.contains("poland") -> "https://flagcdn.com/w80/pl.png"
+    norm.contains("اوكرانيا") || norm.contains("ukraine") -> "https://flagcdn.com/w80/ua.png"
+    norm.contains("تركيا") || norm.contains("turkey") -> "https://flagcdn.com/w80/tr.png"
+    norm.contains("اليونان") || norm.contains("greece") -> "https://flagcdn.com/w80/gr.png"
+    norm.contains("التشيك") || norm.contains("czech") -> "https://flagcdn.com/w80/cz.png"
+    norm.contains("النمسا") || norm.contains("austria") -> "https://flagcdn.com/w80/at.png"
+    norm.contains("المجر") || norm.contains("hungary") -> "https://flagcdn.com/w80/hu.png"
+    norm.contains("سلوفاكيا") || norm.contains("slovakia") -> "https://flagcdn.com/w80/sk.png"
+    norm.contains("سلوفينيا") || norm.contains("slovenia") -> "https://flagcdn.com/w80/si.png"
+    norm.contains("رومانيا") || norm.contains("romania") -> "https://flagcdn.com/w80/ro.png"
+    norm.contains("جورجيا") || norm.contains("georgia") -> "https://flagcdn.com/w80/ge.png"
+    norm.contains("البانيا") || norm.contains("albania") -> "https://flagcdn.com/w80/al.png"
+    norm.contains("ايرلندا") || norm.contains("ireland") -> "https://flagcdn.com/w80/ie.png"
+    norm.contains("البرازيل") || norm.contains("brazil") -> "https://flagcdn.com/w80/br.png"
+    norm.contains("الارجنتين") || norm.contains("argentina") -> "https://flagcdn.com/w80/ar.png"
+    norm.contains("اوروغواي") || norm.contains("uruguay") -> "https://flagcdn.com/w80/uy.png"
+    norm.contains("كولومبيا") || norm.contains("colombia") -> "https://flagcdn.com/w80/co.png"
+    norm.contains("تشيلي") || norm.contains("chile") -> "https://flagcdn.com/w80/cl.png"
+    norm.contains("السعوديه") || norm.contains("saudi") -> "https://flagcdn.com/w80/sa.png"
+    norm.contains("مصر") || norm.contains("egypt") -> "https://flagcdn.com/w80/eg.png"
+    norm.contains("المغرب") || norm.contains("morocco") -> "https://flagcdn.com/w80/ma.png"
+    norm.contains("الجزائر") || norm.contains("algeria") -> "https://flagcdn.com/w80/dz.png"
+    norm.contains("تونس") || norm.contains("tunisia") -> "https://flagcdn.com/w80/tn.png"
+    norm.contains("العراق") || norm.contains("iraq") -> "https://flagcdn.com/w80/iq.png"
+    norm.contains("قطر") || norm.contains("qatar") -> "https://flagcdn.com/w80/qa.png"
+    norm.contains("الامارات") || norm.contains("uae") -> "https://flagcdn.com/w80/ae.png"
+    norm.contains("الكويت") || norm.contains("kuwait") -> "https://flagcdn.com/w80/kw.png"
+    norm.contains("البحرين") || norm.contains("bahrain") -> "https://flagcdn.com/w80/bh.png"
+    norm.contains("عمان") || norm.contains("oman") -> "https://flagcdn.com/w80/om.png"
+    norm.contains("الاردن") || norm.contains("jordan") -> "https://flagcdn.com/w80/jo.png"
+    norm.contains("سوريا") || norm.contains("syria") -> "https://flagcdn.com/w80/sy.png"
+    norm.contains("لبنان") || norm.contains("lebanon") -> "https://flagcdn.com/w80/lb.png"
+    norm.contains("فلسطين") || norm.contains("palestine") -> "https://flagcdn.com/w80/ps.png"
+    norm.contains("اليمن") || norm.contains("yemen") -> "https://flagcdn.com/w80/ye.png"
+    norm.contains("ليبيا") || norm.contains("libya") -> "https://flagcdn.com/w80/ly.png"
+    norm.contains("السودان") || norm.contains("sudan") -> "https://flagcdn.com/w80/sd.png"
+    norm.contains("موريتانيا") || norm.contains("mauritania") -> "https://flagcdn.com/w80/mr.png"
+    norm.contains("اليابان") || norm.contains("japan") -> "https://flagcdn.com/w80/jp.png"
+    norm.contains("كوريا") || norm.contains("korea") -> "https://flagcdn.com/w80/kr.png"
+    norm.contains("استراليا") || norm.contains("australia") -> "https://flagcdn.com/w80/au.png"
+    norm.contains("ايران") || norm.contains("iran") -> "https://flagcdn.com/w80/ir.png"
+    norm.contains("السنغال") || norm.contains("senegal") -> "https://flagcdn.com/w80/sn.png"
+    norm.contains("نيجيريا") || norm.contains("nigeria") -> "https://flagcdn.com/w80/ng.png"
+    norm.contains("الكاميرون") || norm.contains("cameroon") -> "https://flagcdn.com/w80/cm.png"
+    norm.contains("غانا") || norm.contains("ghana") -> "https://flagcdn.com/w80/gh.png"
+    norm.contains("كوت ديفوار") || norm.contains("ivory") -> "https://flagcdn.com/w80/ci.png"
+    norm.contains("مالي") || norm.contains("mali") -> "https://flagcdn.com/w80/ml.png"
+    norm.contains("جنوب افريقيا") || norm.contains("south africa") -> "https://flagcdn.com/w80/za.png"
+    norm.contains("كينيا") || norm.contains("kenya") -> "https://flagcdn.com/w80/ke.png"
+    norm.contains("غينيا") || norm.contains("guinea") -> "https://flagcdn.com/w80/gn.png"
+    norm.contains("الكونغو") || norm.contains("congo") -> "https://flagcdn.com/w80/cd.png"
+    norm.contains("الغابون") || norm.contains("gabon") -> "https://flagcdn.com/w80/ga.png"
+    norm.contains("امريكا") || norm.contains("usa") -> "https://flagcdn.com/w80/us.png"
+    norm.contains("المكسيك") || norm.contains("mexico") -> "https://flagcdn.com/w80/mx.png"
+    norm.contains("كندا") || norm.contains("canada") -> "https://flagcdn.com/w80/ca.png"
+    norm.contains("اندورا") || norm.contains("andorra") -> "https://flagcdn.com/w80/ad.png"
+    norm.contains("ليتوانيا") || norm.contains("lithuania") -> "https://flagcdn.com/w80/lt.png"
+    else -> null
+  }
+}
+
+fun getKnownClubLogoUrl(teamName: String): String? {
+  val norm = normalizeArabic(teamName)
+  return when {
+    norm.contains("ريال مدريد") -> "https://upload.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/512px-Real_Madrid_CF.svg.png"
+    norm.contains("برشلونه") -> "https://upload.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/512px-FC_Barcelona_%28crest%29.svg.png"
+    norm.contains("اتلتيكو مدريد") -> "https://upload.wikimedia.org/wikipedia/en/thumb/f/f4/Atletico_Madrid_2017_logo.svg/512px-Atletico_Madrid_2017_logo.svg.png"
+    norm.contains("مانشستر سيتي") -> "https://upload.wikimedia.org/wikipedia/en/thumb/e/eb/Manchester_City_FC_badge.svg/512px-Manchester_City_FC_badge.svg.png"
+    norm.contains("مانشستر يونايتد") -> "https://upload.wikimedia.org/wikipedia/en/thumb/7/7a/Manchester_United_FC_crest.svg/512px-Manchester_United_FC_crest.svg.png"
+    norm.contains("ليفربول") -> "https://upload.wikimedia.org/wikipedia/en/thumb/0/0c/Liverpool_FC.svg/512px-Liverpool_FC.svg.png"
+    norm.contains("ارسنال") -> "https://upload.wikimedia.org/wikipedia/en/thumb/5/53/Arsenal_FC.svg/512px-Arsenal_FC.svg.png"
+    norm.contains("تشيلسي") -> "https://upload.wikimedia.org/wikipedia/en/thumb/c/cc/Chelsea_FC.svg/512px-Chelsea_FC.svg.png"
+    norm.contains("توتنهام") -> "https://upload.wikimedia.org/wikipedia/en/thumb/b/b4/Tottenham_Hotspur.svg/512px-Tottenham_Hotspur.svg.png"
+    norm.contains("بايرن ميونخ") -> "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/FC_Bayern_M%C3%BCnchen_logo_%282017%29.svg/512px-FC_Bayern_M%C3%BCnchen_logo_%282017%29.svg.png"
+    norm.contains("بوروسيا دورتموند") || norm.contains("دورتموند") -> "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Borussia_Dortmund_logo.svg/512px-Borussia_Dortmund_logo.svg.png"
+    norm.contains("باير ليفركوزن") || norm.contains("ليفركوزن") -> "https://upload.wikimedia.org/wikipedia/en/thumb/5/59/Bayer_04_Leverkusen_logo.svg/512px-Bayer_04_Leverkusen_logo.svg.png"
+    norm.contains("باريس سان جيرمان") -> "https://upload.wikimedia.org/wikipedia/en/thumb/a/a7/Paris_Saint-Germain_F.C..svg/512px-Paris_Saint-Germain_F.C..svg.png"
+    norm.contains("يوفنتوس") -> "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bc/Juventus_FC_2017_icon_%28black%29.svg/512px-Juventus_FC_2017_icon_%28black%29.svg.png"
+    norm.contains("انتر ميلان") || norm.contains("انتر") -> "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/FC_Internazionale_Milano_2021.svg/512px-FC_Internazionale_Milano_2021.svg.png"
+    norm.contains("اي سي ميلان") || norm.contains("ميلان") -> "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Logo_of_AC_Milan.svg/512px-Logo_of_AC_Milan.svg.png"
+    norm.contains("نابولي") -> "https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/SSC_Napoli_2024_%28deep_blue_navy%29.svg/512px-SSC_Napoli_2024_%28deep_blue_navy%29.svg.png"
+    norm.contains("الهلال") -> "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Al_Hilal_SFC_Logo_%282022%29.svg/512px-Al_Hilal_SFC_Logo_%282022%29.svg.png"
+    norm.contains("النصر") -> "https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Al-Nassr_FC_logo.svg/512px-Al-Nassr_FC_logo.svg.png"
+    norm.contains("الاتحاد") -> "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Al-Ittihad_Club_logo.svg/512px-Al-Ittihad_Club_logo.svg.png"
+    norm.contains("الاهلي السعودي") -> "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/Al-Ahli_Saudi_FC_logo.svg/512px-Al-Ahli_Saudi_FC_logo.svg.png"
+    norm.contains("الاهلي") || norm.contains("الاهلي المصري") -> "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Al_Ahly_SC_logo.svg/512px-Al_Ahly_SC_logo.svg.png"
+    norm.contains("الزمالك") -> "https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/ZamalekSC.png/512px-ZamalekSC.png"
+    norm.contains("بيراميدز") -> "https://upload.wikimedia.org/wikipedia/en/thumb/3/30/Pyramids_FC_logo.png/512px-Pyramids_FC_logo.png"
+    norm.contains("الوداد") -> "https://upload.wikimedia.org/wikipedia/en/thumb/c/cf/Wydad_Athletic_Club_logo.svg/512px-Wydad_Athletic_Club_logo.svg.png"
+    norm.contains("الرجاء") -> "https://upload.wikimedia.org/wikipedia/en/thumb/e/e0/Raja_Club_Athletic_logo.svg/512px-Raja_Club_Athletic_logo.svg.png"
+    norm.contains("الزوراء") -> "https://upload.wikimedia.org/wikipedia/en/thumb/4/49/Al-Zawraa_SC_logo.png/512px-Al-Zawraa_SC_logo.png"
+    norm.contains("القوه الجويه") -> "https://upload.wikimedia.org/wikipedia/en/thumb/3/3a/Al-Quwa_Al-Jawiya_logo.png/512px-Al-Quwa_Al-Jawiya_logo.png"
+    norm.contains("الشرطه") -> "https://upload.wikimedia.org/wikipedia/en/thumb/9/9c/Al-Shorta_SC_logo.png/512px-Al-Shorta_SC_logo.png"
+    norm.contains("السد") -> "https://upload.wikimedia.org/wikipedia/en/thumb/9/91/Al_Sadd_SC_logo.svg/512px-Al_Sadd_SC_logo.svg.png"
+    norm.contains("العين") -> "https://upload.wikimedia.org/wikipedia/en/thumb/7/77/Al_Ain_FC_logo.svg/512px-Al_Ain_FC_logo.svg.png"
+    else -> null
+  }
+}
+
 /**
- * High-resolution Team Crest Component (Pure transparent crests - NO circle underneath per user instruction)
+ * High-resolution Team Crest Component with robust CDN flag & club logo fallbacks
  */
 @Composable
 fun TodTeamCrest(
@@ -139,57 +258,125 @@ fun TodTeamCrest(
   borderGlowColor: Color = Color(0xFF64D2FF),
   modifier: Modifier = Modifier
 ) {
+  val context = LocalContext.current
+  val flagUrl = remember(team.name) { getCountryFlagUrl(team.name) }
+  val clubUrl = remember(team.name) { getKnownClubLogoUrl(team.name) }
+  val cleanedLogo = remember(team.logoUrl) {
+    var u = team.logoUrl.trim()
+    if (u.contains("img.ysscores.com/teams/")) {
+      u = u.replace("https://img.ysscores.com/teams/", "https://imgs.ysscores.com/teams/128/")
+           .replace("http://img.ysscores.com/teams/", "https://imgs.ysscores.com/teams/128/")
+    } else if (u.contains("imgs.ysscores.com/teams/") && !u.contains("/128/") && !u.contains("/64/")) {
+      u = u.replace("imgs.ysscores.com/teams/", "imgs.ysscores.com/teams/128/")
+    }
+    if (u.contains("null") || u.isBlank()) "" else u
+  }
+
+  // If country flag is known, prioritize the official flagcdn URL!
+  // If known club, prioritize official Wikimedia vector!
+  val primaryModel = remember(cleanedLogo, flagUrl, clubUrl) {
+    when {
+      !flagUrl.isNullOrBlank() -> flagUrl
+      !clubUrl.isNullOrBlank() -> clubUrl
+      cleanedLogo.isNotBlank() -> cleanedLogo
+      else -> ""
+    }
+  }
+
+  val imageRequest = remember(primaryModel) {
+    if (primaryModel.isNotBlank()) {
+      coil.request.ImageRequest.Builder(context)
+        .data(primaryModel)
+        .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+        .addHeader("Referer", "https://www.ysscores.com/")
+        .crossfade(true)
+        .build()
+    } else null
+  }
+
   Box(
     modifier = modifier.size(size),
     contentAlignment = Alignment.Center
   ) {
-    when {
-      team.name.contains("ألمانيا") || team.code == "GER" -> {
-        Image(
-          painter = painterResource(id = R.drawable.ic_crest_germany),
-          contentDescription = team.name,
-          modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)),
-          contentScale = ContentScale.Fit
-        )
-      }
-      team.name.contains("صربيا") || team.code == "SRB" -> {
-        Image(
-          painter = painterResource(id = R.drawable.ic_crest_serbia),
-          contentDescription = team.name,
-          modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)),
-          contentScale = ContentScale.Fit
-        )
-      }
-      team.name.contains("غينيا") || team.code == "GUI" -> {
-        Image(
-          painter = painterResource(id = R.drawable.ic_crest_guinea),
-          contentDescription = team.name,
-          modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)),
-          contentScale = ContentScale.Fit
-        )
-      }
-      team.name.contains("كينيا") || team.code == "KEN" -> {
-        Image(
-          painter = painterResource(id = R.drawable.ic_crest_kenya),
-          contentDescription = team.name,
-          modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)),
-          contentScale = ContentScale.Fit
-        )
-      }
-      !team.logoUrl.isNullOrBlank() -> {
-        AsyncImage(
-          model = team.logoUrl,
-          contentDescription = team.name,
-          modifier = Modifier.fillMaxSize(),
-          contentScale = ContentScale.Fit
-        )
-      }
-      else -> {
-        // Clean transparent crest display (Zero circles underneath)
+    if (imageRequest != null) {
+      SubcomposeAsyncImage(
+        model = imageRequest,
+        contentDescription = team.name,
+        modifier = Modifier.fillMaxSize(),
+        contentScale = ContentScale.Fit,
+        loading = {
+          Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(strokeWidth = 1.dp, color = Color(0x60FFFFFF), modifier = Modifier.size(12.dp))
+          }
+        },
+        error = {
+          val fallbackTarget = when {
+            primaryModel != cleanedLogo && cleanedLogo.isNotBlank() -> cleanedLogo
+            primaryModel != flagUrl && !flagUrl.isNullOrBlank() -> flagUrl
+            primaryModel != clubUrl && !clubUrl.isNullOrBlank() -> clubUrl
+            else -> ""
+          }
+          if (fallbackTarget.isNotBlank()) {
+            val fallbackRequest = remember(fallbackTarget) {
+              coil.request.ImageRequest.Builder(context)
+                .data(fallbackTarget)
+                .addHeader("User-Agent", "Mozilla/5.0")
+                .crossfade(true)
+                .build()
+            }
+            SubcomposeAsyncImage(
+              model = fallbackRequest,
+              contentDescription = team.name,
+              modifier = Modifier.fillMaxSize(),
+              contentScale = ContentScale.Fit,
+              error = {
+                Box(
+                  modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+                    .background(Color(0x25FFFFFF)),
+                  contentAlignment = Alignment.Center
+                ) {
+                  Text(
+                    text = team.flagEmoji.ifBlank { team.name.take(2) },
+                    fontSize = (size.value * 0.50f).sp,
+                    textAlign = TextAlign.Center,
+                    color = Color.White
+                  )
+                }
+              }
+            )
+          } else {
+            Box(
+              modifier = Modifier
+                .fillMaxSize()
+                .clip(CircleShape)
+                .background(Color(0x25FFFFFF)),
+              contentAlignment = Alignment.Center
+            ) {
+              Text(
+                text = team.flagEmoji.ifBlank { team.name.take(2) },
+                fontSize = (size.value * 0.50f).sp,
+                textAlign = TextAlign.Center,
+                color = Color.White
+              )
+            }
+          }
+        }
+      )
+    } else {
+      Box(
+        modifier = Modifier
+          .fillMaxSize()
+          .clip(CircleShape)
+          .background(Color(0x25FFFFFF)),
+        contentAlignment = Alignment.Center
+      ) {
         Text(
-          text = team.flagEmoji,
-          fontSize = (size.value * 0.72f).sp,
-          textAlign = TextAlign.Center
+          text = team.flagEmoji.ifBlank { team.name.take(2) },
+          fontSize = (size.value * 0.50f).sp,
+          textAlign = TextAlign.Center,
+          color = Color.White
         )
       }
     }
@@ -1348,9 +1535,25 @@ fun TodChannelsGroupRail(
  */
 enum class TournamentWatermark {
   NONE,
-  GEOMETRIC_CIRCLES, // Overlapping circular grid pattern (Screenshot 161624, 220513)
+  GEOMETRIC_CIRCLES, // Overlapping circular grid pattern (Screenshots 161624, 220513)
   UCL_STARS,         // Ambient UCL starball curves (Screenshot 162954, 161604)
   FRIENDLIES_LINES   // International Friendlies ambient field glow (Screenshot 161624)
+}
+
+/**
+ * Normalizes Arabic string for robust tournament matching
+ */
+fun normalizeArabic(text: String): String {
+  var s = text.lowercase()
+    .replace('أ', 'ا')
+    .replace('إ', 'ا')
+    .replace('آ', 'ا')
+    .replace('ة', 'ه')
+    .replace('ى', 'ي')
+    .replace("ـ", "")
+  val diacritics = Regex("[\u064B-\u065F\u0670]")
+  s = diacritics.replace(s, "")
+  return s.trim()
 }
 
 /**
@@ -1364,197 +1567,407 @@ data class TournamentCardStyle(
   val accentColor: Color,
   val secondaryColor: Color,
   val logoUrl: String,
-  val watermark: TournamentWatermark = TournamentWatermark.GEOMETRIC_CIRCLES
+  val watermark: TournamentWatermark = TournamentWatermark.GEOMETRIC_CIRCLES,
+  val priority: Int = 10
 )
 
-fun getTournamentCardStyle(tournamentName: String): TournamentCardStyle {
-  val name = tournamentName.lowercase()
+fun getTournamentCardStyle(
+  tournamentName: String,
+  homeTeam: String = "",
+  awayTeam: String = ""
+): TournamentCardStyle {
+  val norm = normalizeArabic(tournamentName)
+  val normCombined = normalizeArabic("$tournamentName $homeTeam $awayTeam")
+
   return when {
-    // 1. UEFA Champions League (Screenshots 1 & 3): Deep Royal Navy Blue & Starball
-    name.contains("أبطال أوروبا") || name.contains("champions league") || name.contains("ucl") -> {
+    // 1. دوري أبطال أوروبا (UEFA Champions League) - أزرق ملكي داكن مع توهج النجوم
+    norm.contains("ابطال اوروبا") || norm.contains("champions league") || norm.contains("ucl") ||
+    norm.contains("دوري الابطال") || norm.contains("شامبيونز") -> {
       TournamentCardStyle(
         tournamentKey = "ucl",
         displayName = "دوري أبطال أوروبا",
         bgGradient = listOf(
-          Color(0xFF041138),
-          Color(0xFF09205E),
-          Color(0xFF030A20)
+          Color(0xFF030D2E),
+          Color(0xFF071B54),
+          Color(0xFF020718)
         ),
         accentColor = Color(0xFF00D4FF),
-        secondaryColor = Color(0xFF0077B6),
+        secondaryColor = Color(0xFF1D4ED8),
         logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/UEFA_Champions_League_logo_2.svg/512px-UEFA_Champions_League_logo_2.svg.png",
-        watermark = TournamentWatermark.UCL_STARS
+        watermark = TournamentWatermark.UCL_STARS,
+        priority = 1
       )
     }
 
-    // 2. International Friendlies / مباريات ودية (Screenshot 4): Deep Rich Emerald Green
-    name.contains("ودية") || name.contains("وديات") || name.contains("friendly") || name.contains("friendlies") -> {
-      TournamentCardStyle(
-        tournamentKey = "friendlies",
-        displayName = "مباريات ودية دولية",
-        bgGradient = listOf(
-          Color(0xFF063618),
-          Color(0xFF0B4E26),
-          Color(0xFF042611)
-        ),
-        accentColor = Color(0xFF30D158),
-        secondaryColor = Color(0xFF34C759),
-        logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/FIFA_logo_without_slogan.svg/512px-FIFA_logo_without_slogan.svg.png",
-        watermark = TournamentWatermark.FRIENDLIES_LINES
-      )
-    }
-
-    // 3. UEFA Nations League / Euro / World Cup (Screenshot 2): Deep Slate Navy with Circular Watermark
-    name.contains("أمم") || name.contains("nations") || name.contains("euro") || name.contains("يورو") ||
-        name.contains("كأس العالم") || name.contains("world cup") || name.contains("فيفا") || name.contains("دولي") -> {
+    // 2. دوري الأمم الأوروبية (UEFA Nations League) - أزرق ياقوتي مع كحلي وسماوي
+    norm.contains("امم اوروبا") || norm.contains("دوري الامم") || norm.contains("nations league") ||
+    norm.contains("الامم الاوروبيه") || (norm.contains("امم") && !norm.contains("افريقيا") && !norm.contains("اسيا")) -> {
       TournamentCardStyle(
         tournamentKey = "nations",
         displayName = "دوري الأمم الأوروبية",
         bgGradient = listOf(
-          Color(0xFF101726),
-          Color(0xFF17243B),
-          Color(0xFF0A0F1A)
+          Color(0xFF0A1832),
+          Color(0xFF132A54),
+          Color(0xFF050E1E)
         ),
         accentColor = Color(0xFF38BDF8),
-        secondaryColor = Color(0xFF64D2FF),
+        secondaryColor = Color(0xFF90E0EF),
         logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/0/03/UEFA_Nations_League_logo.svg/512px-UEFA_Nations_League_logo.svg.png",
-        watermark = TournamentWatermark.GEOMETRIC_CIRCLES
+        watermark = TournamentWatermark.GEOMETRIC_CIRCLES,
+        priority = 2
       )
     }
 
-    // 4. Premier League: Regal Deep Purple & Neon Mint
-    name.contains("إنجليزي") || name.contains("premier") || name.contains("بريمير") -> {
+    // 3. المباريات الودية (International & Club Friendlies) - أخضر عشبي داكن مميز للملعب
+    norm.contains("ودي") || norm.contains("وديات") || norm.contains("وديه") ||
+    norm.contains("friendly") || norm.contains("friendlies") -> {
+      TournamentCardStyle(
+        tournamentKey = "friendlies",
+        displayName = "المباريات الودية",
+        bgGradient = listOf(
+          Color(0xFF022B16),
+          Color(0xFF054524),
+          Color(0xFF01180C)
+        ),
+        accentColor = Color(0xFF00E676),
+        secondaryColor = Color(0xFF34D399),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/FIFA_logo_without_slogan.svg/512px-FIFA_logo_without_slogan.svg.png",
+        watermark = TournamentWatermark.FRIENDLIES_LINES,
+        priority = 14
+      )
+    }
+
+    // 4. تصفيات كأس العالم والبطولات الدولية (World Cup & Qualifiers) - خمري فيفا فاخر مع ذهبي
+    norm.contains("كاس العالم") || norm.contains("world cup") || norm.contains("تصفيات") ||
+    norm.contains("انتركونتيننتال") -> {
+      TournamentCardStyle(
+        tournamentKey = "worldcup",
+        displayName = "تصفيات كأس العالم",
+        bgGradient = listOf(
+          Color(0xFF1E0713),
+          Color(0xFF360C22),
+          Color(0xFF11030B)
+        ),
+        accentColor = Color(0xFFFFD700),
+        secondaryColor = Color(0xFFE11D48),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/FIFA_logo_without_slogan.svg/512px-FIFA_logo_without_slogan.svg.png",
+        watermark = TournamentWatermark.GEOMETRIC_CIRCLES,
+        priority = 2
+      )
+    }
+
+    // 5. الدوري الإنجليزي الممتاز (Premier League) - بنفسجي ملكي عميق مع أخضر نيون
+    norm.contains("انجليزي") || norm.contains("premier") || norm.contains("بريميرليج") ||
+    norm.contains("بريمير") || norm.contains("epl") || norm.contains("كاراباو") || norm.contains("كاس الاتحاد الانجليزي") -> {
       TournamentCardStyle(
         tournamentKey = "pl",
         displayName = "الدوري الإنجليزي الممتاز",
         bgGradient = listOf(
-          Color(0xFF2C003D),
-          Color(0xFF42005A),
-          Color(0xFF1B0027)
+          Color(0xFF220038),
+          Color(0xFF3B005F),
+          Color(0xFF12001F)
         ),
         accentColor = Color(0xFF00FF85),
-        secondaryColor = Color(0xFFE90052),
+        secondaryColor = Color(0xFFFF005A),
         logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/f/f2/Premier_League_Logo.svg/512px-Premier_League_Logo.svg.png",
-        watermark = TournamentWatermark.GEOMETRIC_CIRCLES
+        watermark = TournamentWatermark.GEOMETRIC_CIRCLES,
+        priority = 3
       )
     }
 
-    // 5. La Liga: Deep Spanish Burgundy & Crimson Red
-    name.contains("إسباني") || name.contains("لا ليغا") || name.contains("laliga") || name.contains("اسباني") -> {
+    // 6. الدوري الإسباني (LaLiga) - عنابي إسباني ناري مع أحمر قرمزي
+    norm.contains("اسباني") || norm.contains("ليغا") || norm.contains("laliga") ||
+    norm.contains("كاس الملك") || norm.contains("السوبر الاسباني") -> {
       TournamentCardStyle(
         tournamentKey = "laliga",
-        displayName = "الدوري الإسباني",
+        displayName = "الدوري الإسباني (LaLiga)",
         bgGradient = listOf(
-          Color(0xFF2E050F),
-          Color(0xFF440917),
-          Color(0xFF1C0209)
+          Color(0xFF2E020A),
+          Color(0xFF4A0512),
+          Color(0xFF1A0105)
         ),
-        accentColor = Color(0xFFFF2E50),
+        accentColor = Color(0xFFFF2A4B),
         secondaryColor = Color(0xFFFF6B6B),
         logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/LaLiga_logo_2023.svg/512px-LaLiga_logo_2023.svg.png",
-        watermark = TournamentWatermark.GEOMETRIC_CIRCLES
+        watermark = TournamentWatermark.GEOMETRIC_CIRCLES,
+        priority = 3
       )
     }
 
-    // 6. Serie A: Deep Ocean Sapphire Blue
-    name.contains("إيطالي") || name.contains("serie") || name.contains("كالتشيو") -> {
+    // 7. الدوري الإيطالي (Serie A) - أزرق لازوردي إيطالي عميق
+    norm.contains("ايطالي") || norm.contains("serie") || norm.contains("كالتشيو") || norm.contains("كاس ايطاليا") -> {
       TournamentCardStyle(
         tournamentKey = "seriea",
-        displayName = "الدوري الإيطالي",
+        displayName = "الدوري الإيطالي (Serie A)",
         bgGradient = listOf(
-          Color(0xFF031A3A),
-          Color(0xFF063063),
-          Color(0xFF021228)
+          Color(0xFF021B38),
+          Color(0xFF052C59),
+          Color(0xFF011022)
         ),
-        accentColor = Color(0xFF008CFF),
+        accentColor = Color(0xFF0091FF),
         secondaryColor = Color(0xFF64D2FF),
         logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Serie_A_logo_2019.svg/512px-Serie_A_logo_2019.svg.png",
-        watermark = TournamentWatermark.GEOMETRIC_CIRCLES
+        watermark = TournamentWatermark.GEOMETRIC_CIRCLES,
+        priority = 3
       )
     }
 
-    // 7. Saudi Pro League: Deep Royal Malachite & Gold
-    name.contains("روشن") || name.contains("سعودي") -> {
+    // 8. الدوري الألماني (Bundesliga) - كربوني داكن مع أحمر بوندسليغا ناري
+    norm.contains("الماني") || norm.contains("bundesliga") || norm.contains("بوندسليغا") || norm.contains("كاس المانيا") -> {
+      TournamentCardStyle(
+        tournamentKey = "bundesliga",
+        displayName = "الدوري الألماني (Bundesliga)",
+        bgGradient = listOf(
+          Color(0xFF220505),
+          Color(0xFF3B0B0B),
+          Color(0xFF140202)
+        ),
+        accentColor = Color(0xFFE30613),
+        secondaryColor = Color(0xFFFF5252),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/d/df/Bundesliga_logo_%282017%29.svg/512px-Bundesliga_logo_%282017%29.svg.png",
+        watermark = TournamentWatermark.GEOMETRIC_CIRCLES,
+        priority = 4
+      )
+    }
+
+    // 9. الدوري الفرنسي (Ligue 1) - كحلي فرنسي داكن مع ليموني نيون
+    norm.contains("فرنسي") || norm.contains("ligue 1") || norm.contains("ليغ 1") || norm.contains("كاس فرنسا") -> {
+      TournamentCardStyle(
+        tournamentKey = "ligue1",
+        displayName = "الدوري الفرنسي (Ligue 1)",
+        bgGradient = listOf(
+          Color(0xFF09162E),
+          Color(0xFF0F2347),
+          Color(0xFF050E1E)
+        ),
+        accentColor = Color(0xFFCCFF00),
+        secondaryColor = Color(0xFF38BDF8),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Ligue1_logo_2024.svg/512px-Ligue1_logo_2024.svg.png",
+        watermark = TournamentWatermark.GEOMETRIC_CIRCLES,
+        priority = 4
+      )
+    }
+
+    // 10. دوري أبطال آسيا للنخبة (AFC Champions League Elite) - كحلي فاخر مع ذهبي مشع
+    norm.contains("ابطال اسيا") || norm.contains("النخبه") || norm.contains("afc") ||
+    (norm.contains("اسيا") && !norm.contains("تصفيات")) -> {
+      TournamentCardStyle(
+        tournamentKey = "afc",
+        displayName = "دوري أبطال آسيا للنخبة",
+        bgGradient = listOf(
+          Color(0xFF1E1702),
+          Color(0xFF362804),
+          Color(0xFF120E01)
+        ),
+        accentColor = Color(0xFFFFD700),
+        secondaryColor = Color(0xFFF59E0B),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/d/d4/AFC_Champions_League_Elite_logo.svg/512px-AFC_Champions_League_Elite_logo.svg.png",
+        watermark = TournamentWatermark.GEOMETRIC_CIRCLES,
+        priority = 3
+      )
+    }
+
+    // 11. دوري روشن السعودي (Saudi Pro League) - أخضر ملكي غامق مع ذهبي
+    norm.contains("روشن") || norm.contains("سعودي") || norm.contains("saudi") ||
+    norm.contains("كاس الملك سلمان") || norm.contains("كاس خادم الحرمين") -> {
       TournamentCardStyle(
         tournamentKey = "spl",
         displayName = "دوري روشن السعودي",
         bgGradient = listOf(
-          Color(0xFF04271D),
-          Color(0xFF073C2D),
-          Color(0xFF021812)
+          Color(0xFF032612),
+          Color(0xFF063B1C),
+          Color(0xFF01160A)
         ),
-        accentColor = Color(0xFF00E676),
-        secondaryColor = Color(0xFFF59E0B),
+        accentColor = Color(0xFF22C55E),
+        secondaryColor = Color(0xFFEAB308),
         logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Saudi_Pro_League_logo.svg/512px-Saudi_Pro_League_logo.svg.png",
-        watermark = TournamentWatermark.GEOMETRIC_CIRCLES
+        watermark = TournamentWatermark.GEOMETRIC_CIRCLES,
+        priority = 3
       )
     }
 
-    // 8. AFC Champions League: Deep Charcoal Gold
-    name.contains("آسيا") || name.contains("afc") -> {
-      TournamentCardStyle(
-        tournamentKey = "afc",
-        displayName = "دوري أبطال آسيا",
-        bgGradient = listOf(
-          Color(0xFF1D180D),
-          Color(0xFF2E2715),
-          Color(0xFF120F08)
-        ),
-        accentColor = Color(0xFFFFB800),
-        secondaryColor = Color(0xFFF59E0B),
-        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/d/d4/AFC_Champions_League_Elite_logo.svg/512px-AFC_Champions_League_Elite_logo.svg.png",
-        watermark = TournamentWatermark.GEOMETRIC_CIRCLES
-      )
-    }
-
-    // 9. CAF / تصفيات أمم أفريقيا: Deep Savannah Earth
-    name.contains("أفريقيا") || name.contains("caf") || name.contains("افريقيا") -> {
+    // 12. دوري أبطال إفريقيا والبطولات الأفريقية (CAF Champions League) - برونزي إفريقي مع ذهبي
+    norm.contains("ابطال افريقيا") || norm.contains("افريقيا") || norm.contains("caf") || norm.contains("الكونفيدراليه") || norm.contains("الكونفدراليه") -> {
       TournamentCardStyle(
         tournamentKey = "caf",
-        displayName = "تصفيات أمم أفريقيا",
+        displayName = "دوري أبطال إفريقيا",
         bgGradient = listOf(
-          Color(0xFF1C2609),
-          Color(0xFF2B3B0D),
-          Color(0xFF101704)
+          Color(0xFF221102),
+          Color(0xFF3B1E05),
+          Color(0xFF140A01)
         ),
-        accentColor = Color(0xFFFFC72C),
-        secondaryColor = Color(0xFF22C55E),
-        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/0/07/Confederation_of_African_Football_logo.svg/512px-Confederation_of_African_Football_logo.svg.png",
-        watermark = TournamentWatermark.GEOMETRIC_CIRCLES
+        accentColor = Color(0xFFFFB300),
+        secondaryColor = Color(0xFFD97706),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/8/87/CAF_Champions_League_logo.svg/512px-CAF_Champions_League_logo.svg.png",
+        watermark = TournamentWatermark.GEOMETRIC_CIRCLES,
+        priority = 4
       )
     }
 
-    // 10. Padel, Tennis & Multi-Sports (Screenshot 4): Deep Carbon Slate
-    name.contains("بادل") || name.contains("تنس") || name.contains("padel") || name.contains("tennis") || name.contains("رياضات") -> {
+    // 13. الدوري المصري الممتاز (Egyptian Premier League)
+    norm.contains("مصري") || norm.contains("كاس مصر") || norm.contains("الدوري المصري") -> {
+      TournamentCardStyle(
+        tournamentKey = "egypt",
+        displayName = "الدوري المصري الممتاز",
+        bgGradient = listOf(
+          Color(0xFF26050B),
+          Color(0xFF3F0B14),
+          Color(0xFF160205)
+        ),
+        accentColor = Color(0xFFEF4444),
+        secondaryColor = Color(0xFFF59E0B),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/4/47/Egyptian_Premier_League_logo.png/512px-Egyptian_Premier_League_logo.png",
+        watermark = TournamentWatermark.GEOMETRIC_CIRCLES,
+        priority = 4
+      )
+    }
+
+    // 14. دوري نجوم العراق (Iraqi Stars League)
+    norm.contains("عراق") || norm.contains("نجوم العراق") -> {
+      TournamentCardStyle(
+        tournamentKey = "iraq",
+        displayName = "دوري نجوم العراق",
+        bgGradient = listOf(
+          Color(0xFF032014),
+          Color(0xFF063320),
+          Color(0xFF01130B)
+        ),
+        accentColor = Color(0xFF10B981),
+        secondaryColor = Color(0xFFFBBF24),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/4/4b/Iraq_Stars_League_logo.png/512px-Iraq_Stars_League_logo.png",
+        watermark = TournamentWatermark.GEOMETRIC_CIRCLES,
+        priority = 4
+      )
+    }
+
+    // 15. دوري نجوم قطر ودوري أدنوك الإماراتي (Gulf Leagues)
+    norm.contains("قطر") || norm.contains("نجوم قطر") || norm.contains("امارات") || norm.contains("ادنوك") || norm.contains("كويتي") -> {
+      val isQatar = norm.contains("قطر")
+      TournamentCardStyle(
+        tournamentKey = if (isQatar) "qatar" else "uae",
+        displayName = if (isQatar) "دوري نجوم قطر" else "دوري أدنوك الإماراتي",
+        bgGradient = listOf(
+          Color(0xFF260513),
+          Color(0xFF400A22),
+          Color(0xFF18030B)
+        ),
+        accentColor = Color(0xFF8A1538),
+        secondaryColor = Color(0xFFFFB800),
+        logoUrl = if (isQatar) "https://upload.wikimedia.org/wikipedia/en/thumb/6/67/Qatar_Stars_League_logo.svg/512px-Qatar_Stars_League_logo.svg.png" else "https://upload.wikimedia.org/wikipedia/en/thumb/a/a2/UAE_Pro_League_logo.svg/512px-UAE_Pro_League_logo.svg.png",
+        watermark = TournamentWatermark.GEOMETRIC_CIRCLES,
+        priority = 5
+      )
+    }
+
+    // 16. رياضات متنوعة وبادل وتنس
+    norm.contains("بادل") || norm.contains("تنس") || norm.contains("padel") || norm.contains("tennis") ||
+    norm.contains("سله") || norm.contains("يد") -> {
       TournamentCardStyle(
         tournamentKey = "padel",
         displayName = "بث مباشر - رياضات متنوعة",
         bgGradient = listOf(
-          Color(0xFF14171E),
-          Color(0xFF1E232E),
-          Color(0xFF0F1116)
+          Color(0xFF11141B),
+          Color(0xFF1A1F29),
+          Color(0xFF0A0C11)
         ),
-        accentColor = Color(0xFFE50914),
-        secondaryColor = Color(0xFF8E8E93),
+        accentColor = Color(0xFFCCFF00),
+        secondaryColor = Color(0xFF38BDF8),
         logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/ATP_Tour_logo.svg/512px-ATP_Tour_logo.svg.png",
-        watermark = TournamentWatermark.GEOMETRIC_CIRCLES
+        watermark = TournamentWatermark.GEOMETRIC_CIRCLES,
+        priority = 6
       )
     }
 
-    // 11. Universal / General Default
+    // 17. Fallback heuristics if tournamentName is generic:
+    normCombined.contains("ليفربول") || normCombined.contains("ارسنال") || normCombined.contains("مانشستر") ||
+    normCombined.contains("تشيلسي") || normCombined.contains("توتنهام") || normCombined.contains("استون فيلا") -> {
+      TournamentCardStyle(
+        tournamentKey = "pl",
+        displayName = "الدوري الإنجليزي الممتاز",
+        bgGradient = listOf(Color(0xFF220038), Color(0xFF3B005F), Color(0xFF12001F)),
+        accentColor = Color(0xFF00FF85),
+        secondaryColor = Color(0xFFFF005A),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/f/f2/Premier_League_Logo.svg/512px-Premier_League_Logo.svg.png",
+        priority = 3
+      )
+    }
+
+    normCombined.contains("ريال مدريد") || normCombined.contains("برشلونه") || normCombined.contains("اتلتيكو مدريد") -> {
+      TournamentCardStyle(
+        tournamentKey = "laliga",
+        displayName = "الدوري الإسباني (LaLiga)",
+        bgGradient = listOf(Color(0xFF2E020A), Color(0xFF4A0512), Color(0xFF1A0105)),
+        accentColor = Color(0xFFFF2A4B),
+        secondaryColor = Color(0xFFFF6B6B),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/LaLiga_logo_2023.svg/512px-LaLiga_logo_2023.svg.png",
+        priority = 3
+      )
+    }
+
+    normCombined.contains("يوفنتوس") || normCombined.contains("انتر ميلان") || normCombined.contains("اي سي ميلان") ||
+    normCombined.contains("نابولي") || normCombined.contains("روما") -> {
+      TournamentCardStyle(
+        tournamentKey = "seriea",
+        displayName = "الدوري الإيطالي (Serie A)",
+        bgGradient = listOf(Color(0xFF021B38), Color(0xFF052C59), Color(0xFF011022)),
+        accentColor = Color(0xFF0091FF),
+        secondaryColor = Color(0xFF64D2FF),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Serie_A_logo_2019.svg/512px-Serie_A_logo_2019.svg.png",
+        priority = 3
+      )
+    }
+
+    normCombined.contains("الهلال") || normCombined.contains("النصر") || normCombined.contains("الاتحاد") || normCombined.contains("الاهلي السعودي") -> {
+      TournamentCardStyle(
+        tournamentKey = "spl",
+        displayName = "دوري روشن السعودي",
+        bgGradient = listOf(Color(0xFF032612), Color(0xFF063B1C), Color(0xFF01160A)),
+        accentColor = Color(0xFF22C55E),
+        secondaryColor = Color(0xFFEAB308),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/6/69/Roshn_Saudi_League_logo.svg/512px-Roshn_Saudi_League_logo.svg.png",
+        priority = 3
+      )
+    }
+
+    normCombined.contains("الاهلي المصري") || normCombined.contains("الزمالك") || normCombined.contains("بيراميدز") -> {
+      TournamentCardStyle(
+        tournamentKey = "egypt",
+        displayName = "الدوري المصري الممتاز",
+        bgGradient = listOf(Color(0xFF26050B), Color(0xFF3F0B14), Color(0xFF160205)),
+        accentColor = Color(0xFFEF4444),
+        secondaryColor = Color(0xFFF59E0B),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/4/47/Egyptian_Premier_League_logo.png/512px-Egyptian_Premier_League_logo.png",
+        priority = 4
+      )
+    }
+
+    normCombined.contains("الزوراء") || normCombined.contains("القوه الجويه") || normCombined.contains("الشرطه") -> {
+      TournamentCardStyle(
+        tournamentKey = "iraq",
+        displayName = "دوري نجوم العراق",
+        bgGradient = listOf(Color(0xFF032014), Color(0xFF063320), Color(0xFF01130B)),
+        accentColor = Color(0xFF10B981),
+        secondaryColor = Color(0xFFFBBF24),
+        logoUrl = "https://upload.wikimedia.org/wikipedia/en/thumb/4/4b/Iraq_Stars_League_logo.png/512px-Iraq_Stars_League_logo.png",
+        priority = 4
+      )
+    }
+
+    // 18. Universal Modern Style
     else -> {
       TournamentCardStyle(
         tournamentKey = "general",
-        displayName = tournamentName,
+        displayName = tournamentName.ifBlank { "مباراة اليوم" },
         bgGradient = listOf(
-          Color(0xFF0C142A),
-          Color(0xFF142244),
-          Color(0xFF080D1D)
+          Color(0xFF0B1428),
+          Color(0xFF132242),
+          Color(0xFF070C1A)
         ),
         accentColor = Color(0xFF64D2FF),
         secondaryColor = Color(0xFF0A84FF),
         logoUrl = "",
-        watermark = TournamentWatermark.GEOMETRIC_CIRCLES
+        watermark = TournamentWatermark.GEOMETRIC_CIRCLES,
+        priority = 10
       )
     }
   }
@@ -1576,10 +1989,12 @@ fun TodTeamBadgeOrFlag(
     "إسبانيا", "فرنسا", "إيطاليا", "إنجلترا", "البرازيل", "الأرجنتين",
     "السعودية", "مصر", "المغرب", "العراق", "الجزائر", "تونس", "قطر",
     "الإمارات", "غينيا", "كينيا", "كرواتيا", "هولندا", "بلجيكا",
-    "النرويج", "ويلز", "الكاميرون", "الكونغو", "الغابون"
+    "النرويج", "ويلز", "الكاميرون", "الكونغو", "الغابون", "التشيك",
+    "النمسا", "المجر", "سلوفاكيا", "سلوفينيا", "رومانيا", "جورجيا"
   )
-  val isCountry = knownCountries.any { team.name.contains(it) } ||
-      team.code in listOf("GER", "SRB", "LTU", "AND", "POR", "DEN", "ESP", "FRA", "ITA", "ENG", "BRA", "ARG", "KSA", "EGY", "MAR", "IRQ", "ALG", "TUN", "QAT", "UAE", "GUI", "KEN", "NOR", "WAL", "CMR", "CGO", "GAB")
+  val isCountry = getCountryFlagUrl(team.name) != null ||
+      knownCountries.any { team.name.contains(it) } ||
+      team.code in listOf("GER", "SRB", "LTU", "AND", "POR", "DEN", "ESP", "FRA", "ITA", "ENG", "BRA", "ARG", "KSA", "EGY", "MAR", "IRQ", "ALG", "TUN", "QAT", "UAE", "GUI", "KEN", "NOR", "WAL", "CMR", "CGO", "GAB", "CZE", "AUT", "HUN", "SVK", "SVN", "ROU", "GEO")
 
   if (isCountry) {
     Box(
@@ -1594,6 +2009,80 @@ fun TodTeamBadgeOrFlag(
     }
   } else {
     TodTeamCrest(team = team, size = size, modifier = modifier)
+  }
+}
+
+/**
+ * Elegant Goal Minutes Display badge
+ * Formats goal minutes into micro-pills with golden football icon and minute pills
+ */
+@Composable
+fun TodGoalMinutesDisplay(
+  goalDetails: String,
+  accentColor: Color = Color(0xFFFFD54F),
+  modifier: Modifier = Modifier
+) {
+  val trimmed = goalDetails.trim()
+  if (trimmed.isBlank()) return
+
+  val tokens = remember(trimmed) {
+    trimmed.split(Regex("[•,]+"))
+      .map { it.trim() }
+      .filter { it.isNotBlank() }
+  }
+
+  if (tokens.isEmpty()) return
+
+  Row(
+    modifier = modifier.padding(top = 2.5.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(4.dp)
+  ) {
+    Box(
+      modifier = Modifier
+        .size(13.dp)
+        .clip(CircleShape)
+        .background(Color(0x40000000)),
+      contentAlignment = Alignment.Center
+    ) {
+      Text(text = "⚽", fontSize = 8.5.sp)
+    }
+
+    tokens.take(3).forEach { token ->
+      Box(
+        modifier = Modifier
+          .clip(RoundedCornerShape(5.dp))
+          .background(Color(0x45000000))
+          .border(0.6.dp, Color(0x70FFD700), RoundedCornerShape(5.dp))
+          .padding(horizontal = 5.dp, vertical = 1.dp)
+      ) {
+        Text(
+          text = token,
+          color = Color(0xFFFFE082),
+          fontSize = 9.5.sp,
+          fontWeight = FontWeight.Bold,
+          fontFamily = ThmanyahFontFamily,
+          maxLines = 1
+        )
+      }
+    }
+    if (tokens.size > 3) {
+      Box(
+        modifier = Modifier
+          .clip(RoundedCornerShape(5.dp))
+          .background(Color(0x35000000))
+          .border(0.6.dp, Color(0x35FFD700), RoundedCornerShape(5.dp))
+          .padding(horizontal = 4.dp, vertical = 1.dp)
+      ) {
+        Text(
+          text = "+${tokens.size - 3}",
+          color = Color(0xFFFFD54F),
+          fontSize = 9.sp,
+          fontWeight = FontWeight.Bold,
+          fontFamily = ThmanyahFontFamily
+        )
+      }
+    }
   }
 }
 
@@ -1614,7 +2103,7 @@ fun TodTournamentMatchCard(
   modifier: Modifier = Modifier,
   isCompactWidth: Boolean = true
 ) {
-  val tournamentStyle = getTournamentCardStyle(match.tournament)
+  val tournamentStyle = getTournamentCardStyle(match.tournament, match.homeTeam.name, match.awayTeam.name)
 
   val cardBackground = Brush.verticalGradient(
     listOf(
@@ -1627,8 +2116,8 @@ fun TodTournamentMatchCard(
   CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
     Box(
       modifier = modifier
-        .then(if (isCompactWidth) Modifier.width(280.dp).height(162.dp) else Modifier.fillMaxWidth().height(162.dp))
-        .iosBounceClick(scaleDown = 0.97f, onClick = { if (match.isLive) onPlayClick() else onClick() })
+        .then(if (isCompactWidth) Modifier.width(282.dp).height(188.dp) else Modifier.fillMaxWidth().height(188.dp))
+        .iosBounceClick(scaleDown = 0.97f, onClick = { onPlayClick() })
         .clip(RoundedCornerShape(16.dp))
         .background(cardBackground)
         .border(0.75.dp, Color(0x35FFFFFF), RoundedCornerShape(16.dp))
@@ -1752,22 +2241,30 @@ fun TodTournamentMatchCard(
               }
             }
 
-            // Left side (END in RTL): Tournament Logo
-            val logoUrl = if (match.tournamentLogo.isNotBlank()) match.tournamentLogo else tournamentStyle.logoUrl
+            // Left side (END in RTL): Tournament Logo with solid fallback
+            val logoUrl = tournamentStyle.logoUrl.ifBlank { match.tournamentLogo }
             if (logoUrl.isNotBlank()) {
-              AsyncImage(
+              SubcomposeAsyncImage(
                 model = logoUrl,
                 contentDescription = match.tournament,
                 modifier = Modifier
-                  .size(26.dp)
+                  .size(28.dp)
                   .padding(1.dp),
-                contentScale = ContentScale.Fit
+                contentScale = ContentScale.Fit,
+                error = {
+                  Icon(
+                    Icons.Default.SportsSoccer,
+                    contentDescription = null,
+                    tint = tournamentStyle.accentColor,
+                    modifier = Modifier.size(22.dp)
+                  )
+                }
               )
             } else {
               Icon(
                 Icons.Default.SportsSoccer,
                 contentDescription = null,
-                tint = Color.White,
+                tint = tournamentStyle.accentColor,
                 modifier = Modifier.size(22.dp)
               )
             }
@@ -1777,7 +2274,7 @@ fun TodTournamentMatchCard(
         // Divider 1
         Box(modifier = Modifier.fillMaxWidth().height(0.6.dp).background(Color(0x18FFFFFF)))
 
-        // Band 2: Team 1 Row (Right: Crest + Team Name, Left: Score)
+        // Band 2: Team 1 Row (Right: Crest/Flag + Team Name + Goal minute, Left: Score)
         Box(
           modifier = Modifier
             .fillMaxWidth()
@@ -1790,21 +2287,30 @@ fun TodTournamentMatchCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
           ) {
-            // Right side (START in RTL): Team Crest/Flag + Team Name
+            // Right side (START in RTL): Team Crest/Flag + Team Name + Goals
             Row(
               verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.spacedBy(10.dp)
+              horizontalArrangement = Arrangement.spacedBy(10.dp),
+              modifier = Modifier.weight(1f, fill = false)
             ) {
               TodTeamBadgeOrFlag(team = match.homeTeam)
-              Text(
-                text = match.homeTeam.name,
-                color = Color.White,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                fontFamily = ThmanyahFontFamily,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-              )
+              Column(verticalArrangement = Arrangement.Center) {
+                Text(
+                  text = match.homeTeam.name,
+                  color = Color.White,
+                  fontSize = 14.5.sp,
+                  fontWeight = FontWeight.Bold,
+                  fontFamily = ThmanyahFontFamily,
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis
+                )
+                if (!match.homeGoalDetails.isNullOrBlank() && (match.scoreHome ?: 0) > 0) {
+                  TodGoalMinutesDisplay(
+                    goalDetails = match.homeGoalDetails,
+                    accentColor = tournamentStyle.accentColor
+                  )
+                }
+              }
             }
 
             // Left side (END in RTL): Score number (bold white if live or ended, otherwise blank)
@@ -1825,7 +2331,7 @@ fun TodTournamentMatchCard(
         // Divider 2
         Box(modifier = Modifier.fillMaxWidth().height(0.6.dp).background(Color(0x18FFFFFF)))
 
-        // Band 3: Team 2 Row (Right: Crest + Team Name, Left: Score)
+        // Band 3: Team 2 Row (Right: Crest/Flag + Team Name + Goal minute, Left: Score)
         Box(
           modifier = Modifier
             .fillMaxWidth()
@@ -1838,21 +2344,30 @@ fun TodTournamentMatchCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
           ) {
-            // Right side (START in RTL): Team Crest/Flag + Team Name
+            // Right side (START in RTL): Team Crest/Flag + Team Name + Goals
             Row(
               verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.spacedBy(10.dp)
+              horizontalArrangement = Arrangement.spacedBy(10.dp),
+              modifier = Modifier.weight(1f, fill = false)
             ) {
               TodTeamBadgeOrFlag(team = match.awayTeam)
-              Text(
-                text = match.awayTeam.name,
-                color = Color.White,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                fontFamily = ThmanyahFontFamily,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-              )
+              Column(verticalArrangement = Arrangement.Center) {
+                Text(
+                  text = match.awayTeam.name,
+                  color = Color.White,
+                  fontSize = 14.5.sp,
+                  fontWeight = FontWeight.Bold,
+                  fontFamily = ThmanyahFontFamily,
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis
+                )
+                if (!match.awayGoalDetails.isNullOrBlank() && (match.scoreAway ?: 0) > 0) {
+                  TodGoalMinutesDisplay(
+                    goalDetails = match.awayGoalDetails,
+                    accentColor = tournamentStyle.accentColor
+                  )
+                }
+              }
             }
 
             // Left side (END in RTL): Score number (bold white if live or ended, otherwise blank)
@@ -1903,12 +2418,6 @@ fun TodLiveSportsRail(
         fontFamily = ThmanyahFontFamily,
         fontWeight = FontWeight.Black
       )
-      Text(
-        text = "${matches.size} مباريات",
-        color = Color(0x99FFFFFF),
-        fontSize = 12.sp,
-        fontFamily = ThmanyahFontFamily
-      )
     }
 
     Spacer(modifier = Modifier.height(8.dp))
@@ -1924,6 +2433,129 @@ fun TodLiveSportsRail(
           onPlayClick = { onPlayMatch(match) },
           isCompactWidth = true
         )
+      }
+    }
+  }
+}
+
+/**
+ * Clean Alert Dialog when user tries to watch a match with no streaming servers yet
+ */
+@Composable
+fun TodNoStreamAvailableDialog(
+  match: SportsMatch,
+  onDismiss: () -> Unit,
+  onOpenDetails: (() -> Unit)? = null
+) {
+  androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .clip(RoundedCornerShape(24.dp))
+        .background(
+          Brush.verticalGradient(
+            listOf(Color(0xFF14192A), Color(0xFF0C101A))
+          )
+        )
+        .border(1.dp, Color(0x40FFB800), RoundedCornerShape(24.dp))
+        .padding(22.dp)
+    ) {
+      Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+      ) {
+        Box(
+          modifier = Modifier
+            .size(54.dp)
+            .clip(CircleShape)
+            .background(Color(0x20FFB800)),
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(Icons.Default.Tv, contentDescription = null, tint = com.example.ui.theme.TodGold, modifier = Modifier.size(28.dp))
+        }
+
+        Text(
+          text = "البث المباشر غير متوفر حالياً",
+          color = Color.White,
+          fontSize = 17.sp,
+          fontWeight = FontWeight.Black,
+          fontFamily = ThmanyahFontFamily,
+          textAlign = TextAlign.Center
+        )
+
+        Text(
+          text = "${match.homeTeam.name} ضد ${match.awayTeam.name}",
+          color = com.example.ui.theme.TodGold,
+          fontSize = 14.5.sp,
+          fontWeight = FontWeight.Bold,
+          fontFamily = ThmanyahFontFamily,
+          textAlign = TextAlign.Center
+        )
+
+        Text(
+          text = "عزيزي المشاهد، ليس لدينا بث مباشر لهذه المباراة حالياً.\nلم يتم تفعيل أو ربط سيرفرات البث من لوحة التحكم، وسيتم إتاحتها فور توفرها ⚽",
+          color = Color(0xCCFFFFFF),
+          fontSize = 12.5.sp,
+          fontFamily = ThmanyahFontFamily,
+          textAlign = TextAlign.Center,
+          lineHeight = 19.sp
+        )
+
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0x18FFFFFF))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Text(
+            text = "⏰ ${match.kickoffTime}",
+            color = Color.White,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = ThmanyahFontFamily
+          )
+          Text(
+            text = "🏆 ${match.tournament.take(22)}",
+            color = Color(0xBBFFFFFF),
+            fontSize = 11.5.sp,
+            fontFamily = ThmanyahFontFamily,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+          )
+        }
+
+        if (onOpenDetails != null) {
+          androidx.compose.material3.Button(
+            onClick = {
+              onDismiss()
+              onOpenDetails()
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+              containerColor = Color(0x28FFFFFF),
+              contentColor = Color.White
+            ),
+            shape = RoundedCornerShape(12.dp)
+          ) {
+            Text("عرض تفاصيل وإحصائيات اللقاء 📋", fontWeight = FontWeight.Bold, fontFamily = ThmanyahFontFamily, fontSize = 12.5.sp)
+          }
+        }
+
+        androidx.compose.material3.Button(
+          onClick = onDismiss,
+          modifier = Modifier.fillMaxWidth(),
+          colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+            containerColor = com.example.ui.theme.TodGold,
+            contentColor = Color.Black
+          ),
+          shape = RoundedCornerShape(12.dp)
+        ) {
+          Text("حسناً، فهمت", fontWeight = FontWeight.Black, fontFamily = ThmanyahFontFamily)
+        }
       }
     }
   }

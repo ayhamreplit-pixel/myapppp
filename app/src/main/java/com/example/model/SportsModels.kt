@@ -98,9 +98,12 @@ data class SportsMatch(
   val servers: List<MatchStreamServer> = emptyList(),
   val isLive: Boolean = false,
   val isEnded: Boolean = false,
+  val isStreamActive: Boolean = false,
   val liveMinute: String? = null, // e.g. "34'" or "الشوط الثاني"
   val scoreHome: Int? = null,
   val scoreAway: Int? = null,
+  val homeGoalDetails: String? = null, // e.g. "فينيسيوس 24' • بيلينغهام 72'"
+  val awayGoalDetails: String? = null, // e.g. "دي بروين 45'"
   val countdownText: String? = null, // e.g. "01 أيام : 05 ساعات : 28 دقائق"
   val bannerUrl: String? = null, // Hero image / player cutouts
   val stats: MatchStats? = null,
@@ -108,7 +111,9 @@ data class SportsMatch(
   val standings: List<StandingRow> = emptyList(),
   val h2h: List<H2hMatch> = emptyList(),
   val isFavorite: Boolean = false
-)
+) {
+  val hasPlayableStream: Boolean get() = isStreamActive && (streamUrl.isNotBlank() || servers.any { it.streamUrl.isNotBlank() })
+}
 
 /**
  * Tournament / Competition Card
@@ -161,12 +166,16 @@ data class SportsNewsItem(
 )
 
 /**
- * Top Announcement / Breaking Ticker
+ * Server Live Notification & Push Announcement
  */
 data class AnnouncementConfig(
-  val isEnabled: Boolean = true,
-  val title: String = "إعلان هام",
-  val message: String = "مرحباً بكم في HERO Cast • تغطية حية لجميع المباريات والبطولات العالمية وسيرفرات البث المباشر"
+  val isEnabled: Boolean = false,
+  val id: String = "",
+  val title: String = "",
+  val message: String = "",
+  val targetType: String = "none", // "match", "channel", "news", "url", "none"
+  val targetId: String = "",
+  val actionUrl: String = ""
 )
 
 /**
