@@ -11,8 +11,12 @@ data class XtreamChannel(
   val name: String,
   val iconUrl: String? = null,
   val categoryId: String? = null,
-  val playUrl: String
-)
+  val playUrl: String = ""
+) {
+  val streamUrl: String get() = playUrl
+  val category: String get() = categoryId ?: "قنوات عامة"
+  val logoUrl: String get() = iconUrl ?: ""
+}
 
 data class XtreamAccountInfo(
   val username: String,

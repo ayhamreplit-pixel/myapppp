@@ -1,11 +1,23 @@
-# Enable CORS for Mobile App and Web
-<IfModule mod_headers.c>
-    Header set Access-Control-Allow-Origin "*"
-    Header set Access-Control-Allow-Methods "GET, POST, OPTIONS, PUT, DELETE"
-    Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, X-Device-ID, X-Device-Token"
+# M7 Server Security & Routing Rules
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /m7/
+
+    # Block direct access to core and data directories
+    RewriteRule ^(core|config|data)/ - [F,L,NC]
+    RewriteRule ^.*\.json$ - [F,L,NC]
+
+    # Clean API Routes
+    RewriteRule ^api/matches/?$ api.php?action=matches [QSA,L]
+    RewriteRule ^api/channels/?$ api.php?action=channels [QSA,L]
+    RewriteRule ^api/hero/?$ api.php?action=hero [QSA,L]
+    RewriteRule ^api/featured/?$ api.php?action=featured [QSA,L]
+    RewriteRule ^api/announcement/?$ api.php?action=announcement [QSA,L]
 </IfModule>
 
-# Handle Options Method
-RewriteEngine On
-RewriteCond %{REQUEST_METHOD} OPTIONS
-RewriteRule ^(.*)$ $1 [R=200,L]
+# Security Headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>

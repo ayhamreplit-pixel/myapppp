@@ -111,6 +111,7 @@ import com.example.ui.theme.IosSystemPurple
 import com.example.ui.theme.IosSystemRed
 import com.example.ui.theme.IosSystemTeal
 import com.example.ui.theme.ThmanyahFontFamily
+import com.example.ui.theme.TodGold
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -364,7 +365,7 @@ fun TodMoreScreen(
 
           IosListRow(
             title = "عنوان السيرفر السحابي",
-            subtitle = "سيرفر البث الرياضي المشفر (التحكم خارجي)",
+            subtitle = "سيرفر البث الرياضي المشفر (التحكم خارجي من لوحة m7)",
             value = "ayham.alwaysdata.net",
             valueColor = Color(0xFF64D2FF),
             iconBadge = {

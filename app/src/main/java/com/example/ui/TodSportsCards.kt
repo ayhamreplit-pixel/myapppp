@@ -98,10 +98,14 @@ import com.example.model.SportsMatch
 import com.example.model.SportsShow
 import com.example.model.SportsTeam
 import com.example.model.XtreamChannel
+import com.example.model.formatYsscoresTeamLogo
+import com.example.model.formatYsscoresChampionshipLogo
 import com.example.ui.theme.AppFontFamily
 import com.example.ui.theme.DarkTextSecondary
+import com.example.ui.theme.LocalAppTheme
 import com.example.ui.theme.ThmanyahFontFamily
 import com.example.ui.theme.TodGold
+import androidx.compose.material.icons.filled.EmojiEvents
 
 /**
  * Luxury Dark Gradients matching the original app design.
@@ -261,24 +265,20 @@ fun TodTeamCrest(
   val context = LocalContext.current
   val flagUrl = remember(team.name) { getCountryFlagUrl(team.name) }
   val clubUrl = remember(team.name) { getKnownClubLogoUrl(team.name) }
-  val cleanedLogo = remember(team.logoUrl) {
-    var u = team.logoUrl.trim()
-    if (u.contains("img.ysscores.com/teams/")) {
-      u = u.replace("https://img.ysscores.com/teams/", "https://imgs.ysscores.com/teams/128/")
-           .replace("http://img.ysscores.com/teams/", "https://imgs.ysscores.com/teams/128/")
-    } else if (u.contains("imgs.ysscores.com/teams/") && !u.contains("/128/") && !u.contains("/64/")) {
-      u = u.replace("imgs.ysscores.com/teams/", "imgs.ysscores.com/teams/128/")
-    }
-    if (u.contains("null") || u.isBlank()) "" else u
+  val resolvedLogo = remember(team.logoUrl) { formatYsscoresTeamLogo(team.logoUrl) }
+
+  val isActualNationalTeam = remember(team.name) {
+    team.name.startsWith("منتخب") ||
+    team.name in listOf("ألمانيا", "صربيا", "ليتوانيا", "أندورا", "البرتغال", "الدنمارك", "إسبانيا", "فرنسا", "إيطاليا", "إنجلترا", "البرازيل", "الأرجنتين", "السعودية", "مصر", "المغرب", "العراق", "الجزائر", "تونس", "قطر", "الإمارات", "كرواتيا", "هولندا", "بلجيكا", "فنلندا", "ألبانيا", "روسيا البيضاء", "سان مارينو", "إستونيا", "لوكسمبورغ", "أيسلندا", "بلغاريا", "مقدونيا الشمالية", "إسكتلندا", "سويسرا", "سلوفينيا", "التشيك")
   }
 
-  // If country flag is known, prioritize the official flagcdn URL!
-  // If known club, prioritize official Wikimedia vector!
-  val primaryModel = remember(cleanedLogo, flagUrl, clubUrl) {
+  // Prioritize official CDN logo first, then country flag if national team, then known club vector, then flag!
+  val primaryModel = remember(resolvedLogo, flagUrl, clubUrl, isActualNationalTeam) {
     when {
-      !flagUrl.isNullOrBlank() -> flagUrl
+      resolvedLogo.isNotBlank() -> resolvedLogo
+      isActualNationalTeam && !flagUrl.isNullOrBlank() -> flagUrl
       !clubUrl.isNullOrBlank() -> clubUrl
-      cleanedLogo.isNotBlank() -> cleanedLogo
+      !flagUrl.isNullOrBlank() -> flagUrl
       else -> ""
     }
   }
@@ -287,8 +287,8 @@ fun TodTeamCrest(
     if (primaryModel.isNotBlank()) {
       coil.request.ImageRequest.Builder(context)
         .data(primaryModel)
-        .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
-        .addHeader("Referer", "https://www.ysscores.com/")
+        .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .addHeader("Referer", "https://ysscores.com/")
         .crossfade(true)
         .build()
     } else null
@@ -311,7 +311,7 @@ fun TodTeamCrest(
         },
         error = {
           val fallbackTarget = when {
-            primaryModel != cleanedLogo && cleanedLogo.isNotBlank() -> cleanedLogo
+            primaryModel != resolvedLogo && resolvedLogo.isNotBlank() -> resolvedLogo
             primaryModel != flagUrl && !flagUrl.isNullOrBlank() -> flagUrl
             primaryModel != clubUrl && !clubUrl.isNullOrBlank() -> clubUrl
             else -> ""
@@ -2003,30 +2003,7 @@ fun TodTeamBadgeOrFlag(
   size: Dp = 28.dp,
   modifier: Modifier = Modifier
 ) {
-  val knownCountries = listOf(
-    "ألمانيا", "صربيا", "ليتوانيا", "أندورا", "البرتغال", "الدنمارك",
-    "إسبانيا", "فرنسا", "إيطاليا", "إنجلترا", "البرازيل", "الأرجنتين",
-    "السعودية", "مصر", "المغرب", "العراق", "الجزائر", "تونس", "قطر",
-    "الإمارات", "غينيا", "كينيا", "كرواتيا", "هولندا", "بلجيكا",
-    "النرويج", "ويلز", "الكاميرون", "الكونغو", "الغابون", "التشيك",
-    "النمسا", "المجر", "سلوفاكيا", "سلوفينيا", "رومانيا", "جورجيا"
-  )
-  val isCountry = getCountryFlagUrl(team.name) != null ||
-      knownCountries.any { team.name.contains(it) } ||
-      team.code in listOf("GER", "SRB", "LTU", "AND", "POR", "DEN", "ESP", "FRA", "ITA", "ENG", "BRA", "ARG", "KSA", "EGY", "MAR", "IRQ", "ALG", "TUN", "QAT", "UAE", "GUI", "KEN", "NOR", "WAL", "CMR", "CGO", "GAB", "CZE", "AUT", "HUN", "SVK", "SVN", "ROU", "GEO")
-
-  if (isCountry) {
-    Box(
-      modifier = modifier
-        .size(width = 34.dp, height = 24.dp)
-        .clip(RoundedCornerShape(4.dp)),
-      contentAlignment = Alignment.Center
-    ) {
-      TodTeamCrest(team = team, size = 24.dp)
-    }
-  } else {
-    TodTeamCrest(team = team, size = size, modifier = modifier)
-  }
+  TodTeamCrest(team = team, size = size, modifier = modifier)
 }
 
 /**
@@ -2125,13 +2102,23 @@ fun TodTournamentMatchCard(
   modifier: Modifier = Modifier,
   isCompactWidth: Boolean = true
 ) {
+  val appTheme = LocalAppTheme.current
   val tournamentStyle = getTournamentCardStyle(match.tournament, match.homeTeam.name, match.awayTeam.name)
 
+  // Sleek Obsidian Glass background with subtle theme & tournament aura
   val cardBackground = Brush.verticalGradient(
     listOf(
-      tournamentStyle.bgGradient[0],
-      tournamentStyle.bgGradient[1],
-      tournamentStyle.bgGradient[2]
+      Color(0xFF141926),
+      Color(0xFF0F131D),
+      Color(0xFF0A0C14)
+    )
+  )
+
+  val borderBrush = Brush.linearGradient(
+    listOf(
+      appTheme.primaryColor.copy(alpha = 0.55f),
+      tournamentStyle.accentColor.copy(alpha = 0.35f),
+      Color(0x18FFFFFF)
     )
   )
 
@@ -2142,57 +2129,17 @@ fun TodTournamentMatchCard(
         .iosBounceClick(scaleDown = 0.97f, onClick = { onPlayClick() })
         .clip(RoundedCornerShape(16.dp))
         .background(cardBackground)
-        .border(0.6.dp, tournamentStyle.accentColor.copy(alpha = 0.25f), RoundedCornerShape(16.dp))
+        .border(0.8.dp, borderBrush, RoundedCornerShape(16.dp))
     ) {
-      // 1. Authentic Watermark Background Texture
-      when (tournamentStyle.watermark) {
-        TournamentWatermark.GEOMETRIC_CIRCLES -> {
-          Canvas(modifier = Modifier.fillMaxSize()) {
-            val step = 28.dp.toPx()
-            val radius = 13.dp.toPx()
-            val col = Color(0x0EFFFFFF)
-            val col2 = Color(0x05FFFFFF)
-            for (x in -radius.toInt()..(size.width.toInt() + radius.toInt()) step step.toInt()) {
-              for (y in -radius.toInt()..(size.height.toInt() + radius.toInt()) step step.toInt()) {
-                drawCircle(
-                  color = col,
-                  radius = radius,
-                  center = Offset(x.toFloat(), y.toFloat()),
-                  style = Stroke(width = 1.2.dp.toPx())
-                )
-                drawCircle(
-                  color = col2,
-                  radius = radius * 0.5f,
-                  center = Offset(x.toFloat(), y.toFloat())
-                )
-              }
-            }
-          }
-        }
-        TournamentWatermark.UCL_STARS -> {
-          Canvas(modifier = Modifier.fillMaxSize()) {
-            drawCircle(
-              color = Color(0x1000D4FF),
-              radius = size.width * 0.55f,
-              center = Offset(size.width * 0.85f, size.height * 0.15f)
-            )
-            drawCircle(
-              color = Color(0x08FFFFFF),
-              radius = size.width * 0.35f,
-              center = Offset(size.width * 0.15f, size.height * 0.85f)
-            )
-          }
-        }
-        TournamentWatermark.FRIENDLIES_LINES -> {
-          Canvas(modifier = Modifier.fillMaxSize()) {
-            drawCircle(
-              color = Color(0x1230D158),
-              radius = size.width * 0.50f,
-              center = Offset(size.width * 0.5f, size.height * 0.5f)
-            )
-          }
-        }
-        else -> {}
+      // 1. Subtle ambient glow
+      Canvas(modifier = Modifier.fillMaxSize()) {
+        drawCircle(
+          brush = Brush.radialGradient(
+            listOf(appTheme.glowColor.copy(alpha = 0.12f), Color.Transparent),
+            center = Offset(size.width * 0.85f, size.height * 0.15f),
+            radius = size.width * 0.65f
+          )
+        )
       }
 
       // 2. Card Content: 3 Stacked Horizontal Bands (Strict RTL: Right -> Left)
@@ -2252,6 +2199,29 @@ fun TodTournamentMatchCard(
                   fontFamily = ThmanyahFontFamily
                 )
               }
+            } else if (match.isEnded) {
+              Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier
+                  .clip(RoundedCornerShape(8.dp))
+                  .background(Color(0x25FFFFFF))
+                  .padding(horizontal = 8.dp, vertical = 3.dp)
+              ) {
+                Text(
+                  text = "انتهت",
+                  color = Color(0xEEFFFFFF),
+                  fontSize = 11.5.sp,
+                  fontWeight = FontWeight.Bold,
+                  fontFamily = ThmanyahFontFamily
+                )
+                Text(
+                  text = match.kickoffDate,
+                  color = Color(0x99FFFFFF),
+                  fontSize = 10.5.sp,
+                  fontFamily = ThmanyahFontFamily
+                )
+              }
             } else {
               Column(
                 horizontalAlignment = Alignment.Start,
@@ -2274,32 +2244,79 @@ fun TodTournamentMatchCard(
               }
             }
 
-            // Left side (END in RTL): Tournament Logo with solid fallback
-            val logoUrl = tournamentStyle.logoUrl.ifBlank { match.tournamentLogo }
-            if (logoUrl.isNotBlank()) {
-              SubcomposeAsyncImage(
-                model = logoUrl,
-                contentDescription = match.tournament,
-                modifier = Modifier
-                  .size(28.dp)
-                  .padding(1.dp),
-                contentScale = ContentScale.Fit,
-                error = {
-                  Icon(
-                    Icons.Default.SportsSoccer,
-                    contentDescription = null,
-                    tint = tournamentStyle.accentColor,
-                    modifier = Modifier.size(22.dp)
-                  )
+            // Left side (END in RTL): Tournament Logo & Stream Beacon
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+              if (match.servers.isNotEmpty() || match.isStreamActive) {
+                Box(
+                  modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(Color(0x3530D158))
+                    .border(0.6.dp, Color(0xFF30D158), RoundedCornerShape(6.dp))
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                  Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                  ) {
+                    Box(
+                      modifier = Modifier
+                        .size(5.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF30D158))
+                    )
+                    Text(
+                      text = "بث حي",
+                      color = Color(0xFF30D158),
+                      fontSize = 9.5.sp,
+                      fontWeight = FontWeight.Bold,
+                      fontFamily = ThmanyahFontFamily
+                    )
+                  }
                 }
-              )
-            } else {
-              Icon(
-                Icons.Default.SportsSoccer,
-                contentDescription = null,
-                tint = tournamentStyle.accentColor,
-                modifier = Modifier.size(22.dp)
-              )
+              }
+
+              val rawChamp = match.tournamentLogo.ifBlank { tournamentStyle.logoUrl }
+              val logoUrl = remember(rawChamp) { formatYsscoresChampionshipLogo(rawChamp) }
+              val context = LocalContext.current
+              val champRequest = remember(logoUrl) {
+                if (logoUrl.isNotBlank()) {
+                  coil.request.ImageRequest.Builder(context)
+                    .data(logoUrl)
+                    .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                    .addHeader("Referer", "https://ysscores.com/")
+                    .crossfade(true)
+                    .build()
+                } else null
+              }
+
+              if (champRequest != null) {
+                SubcomposeAsyncImage(
+                  model = champRequest,
+                  contentDescription = match.tournament,
+                  modifier = Modifier
+                    .size(28.dp)
+                    .padding(1.dp),
+                  contentScale = ContentScale.Fit,
+                  error = {
+                    Icon(
+                      Icons.Default.EmojiEvents,
+                      contentDescription = null,
+                      tint = appTheme.primaryColor,
+                      modifier = Modifier.size(22.dp)
+                    )
+                  }
+                )
+              } else {
+                Icon(
+                  Icons.Default.EmojiEvents,
+                  contentDescription = null,
+                  tint = appTheme.primaryColor,
+                  modifier = Modifier.size(22.dp)
+                )
+              }
             }
           }
         }

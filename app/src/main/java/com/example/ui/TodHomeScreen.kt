@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SportsSoccer
@@ -132,7 +133,6 @@ fun TodHomeScreen(
   var selectedMatchStatusFilter by remember { mutableStateOf("ALL") }
   var isGroupingByTournament by remember { mutableStateOf(true) }
   var matchForServerSelection by remember { mutableStateOf<SportsMatch?>(null) }
-  var noStreamMatchAlert by remember { mutableStateOf<SportsMatch?>(null) }
 
   val coroutineScope = rememberCoroutineScope()
   val isSyncing by sportsBackendRepo.isSyncing.collectAsState()
@@ -159,15 +159,9 @@ fun TodHomeScreen(
     (builtInChannels + allChannels).distinctBy { it.streamId.ifBlank { it.name } }
   }
 
-  // Unified stream play action with stream active check
+  // Direct match opening action: Opens details directly without popup alerts
   val onUnifiedPlayMatch: (SportsMatch) -> Unit = { match ->
-    if (!match.hasPlayableStream) {
-      noStreamMatchAlert = match
-    } else if (match.servers.size > 1) {
-      matchForServerSelection = match
-    } else {
-      onPlayMatchDirectly(match)
-    }
+    onOpenMatchDetail(match)
   }
 
   // Filter live and upcoming matches
@@ -364,6 +358,19 @@ fun TodHomeScreen(
                     TodLiveSportsRail(
                       matches = featuredMatches,
                       title = "أفضل مباريات كرة القدم مباشرةً هذا الأسبوع",
+                      onPlayMatch = onUnifiedPlayMatch,
+                      onOpenDetails = onOpenMatchDetail
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                  }
+                }
+
+                // عرض جميع مباريات اليوم المجلوبة من الـ API بالكامل
+                if (sportsMatches.isNotEmpty()) {
+                  item(key = "all_today_matches_rail") {
+                    TodLiveSportsRail(
+                      matches = sportsMatches,
+                      title = "جدول مباريات اليوم (${sportsMatches.size} مباراة)",
                       onPlayMatch = onUnifiedPlayMatch,
                       onOpenDetails = onOpenMatchDetail
                     )
@@ -1191,18 +1198,6 @@ fun TodHomeScreen(
           onSelectServer = { srv ->
             matchForServerSelection = null
             onPlayMatchDirectly(selectedMatch.copy(streamUrl = srv.streamUrl))
-          }
-        )
-      }
-
-      // No Stream Available Alert Dialog
-      if (noStreamMatchAlert != null) {
-        val alertMatch = noStreamMatchAlert!!
-        TodNoStreamAvailableDialog(
-          match = alertMatch,
-          onDismiss = { noStreamMatchAlert = null },
-          onOpenDetails = {
-            onOpenMatchDetail(alertMatch)
           }
         )
       }

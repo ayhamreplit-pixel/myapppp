@@ -1,6 +1,42 @@
 package com.example.model
 
 /**
+ * Ensures team logo image URLs from YSScores or other CDNs are complete, valid HTTPS links.
+ */
+fun formatYsscoresTeamLogo(urlOrName: String?): String {
+  if (urlOrName.isNullOrBlank() || urlOrName.equals("null", ignoreCase = true)) return ""
+  val clean = urlOrName.trim()
+  return when {
+    clean.startsWith("http://img.ysscores.com/teams/") -> clean.replace("http://img.ysscores.com/teams/", "https://imgs.ysscores.com/teams/128/")
+    clean.startsWith("https://img.ysscores.com/teams/") -> clean.replace("https://img.ysscores.com/teams/", "https://imgs.ysscores.com/teams/128/")
+    clean.contains("imgs.ysscores.com/teams/") && !clean.contains("/128/") && !clean.contains("/64/") -> clean.replace("imgs.ysscores.com/teams/", "imgs.ysscores.com/teams/128/")
+    clean.startsWith("http://") -> clean.replace("http://", "https://")
+    clean.startsWith("https://") -> clean
+    clean.endsWith(".png") || clean.endsWith(".jpg") || clean.endsWith(".webp") || clean.endsWith(".svg") -> "https://imgs.ysscores.com/teams/128/$clean"
+    clean.matches(Regex("^[0-9]+$")) -> "https://imgs.ysscores.com/teams/128/$clean.png"
+    else -> clean
+  }
+}
+
+/**
+ * Ensures championship logo image URLs from YSScores CDN are complete, valid HTTPS links.
+ */
+fun formatYsscoresChampionshipLogo(urlOrName: String?): String {
+  if (urlOrName.isNullOrBlank() || urlOrName.equals("null", ignoreCase = true)) return ""
+  val clean = urlOrName.trim()
+  return when {
+    clean.startsWith("http://img.ysscores.com/championship/") -> clean.replace("http://img.ysscores.com/championship/", "https://imgs.ysscores.com/championship/128/")
+    clean.startsWith("https://img.ysscores.com/championship/") -> clean.replace("https://img.ysscores.com/championship/", "https://imgs.ysscores.com/championship/128/")
+    clean.contains("imgs.ysscores.com/championship/") && !clean.contains("/128/") && !clean.contains("/48/") -> clean.replace("imgs.ysscores.com/championship/", "imgs.ysscores.com/championship/128/")
+    clean.startsWith("http://") -> clean.replace("http://", "https://")
+    clean.startsWith("https://") -> clean
+    clean.endsWith(".png") || clean.endsWith(".jpg") || clean.endsWith(".webp") || clean.endsWith(".svg") -> "https://imgs.ysscores.com/championship/128/$clean"
+    clean.matches(Regex("^[0-9]+$")) -> "https://imgs.ysscores.com/championship/128/$clean.png"
+    else -> clean
+  }
+}
+
+/**
  * Team information with name, flag or crest URL, and country/team code.
  */
 data class SportsTeam(
@@ -29,18 +65,26 @@ data class MatchStats(
   val yellowCardsAway: Int = 0
 )
 
+data class PlayerInfo(
+  val name: String,
+  val number: Int,
+  val position: String,
+  val imageUrl: String
+)
+
 /**
  * Lineups for both teams
  */
 data class MatchLineup(
-  val formationHome: String = "4-3-3",
-  val formationAway: String = "4-2-3-1",
+  val formationHome: String = "4-4-2",
+  val formationAway: String = "4-3-3",
   val coachHome: String = "",
+  val coachHomeImage: String = "",
   val coachAway: String = "",
-  val startersHome: List<String> = emptyList(),
-  val startersAway: List<String> = emptyList(),
-  val substitutesHome: List<String> = emptyList(),
-  val substitutesAway: List<String> = emptyList()
+  val coachAwayImage: String = "",
+  val startersHome: List<PlayerInfo> = emptyList(),
+  val startersAway: List<PlayerInfo> = emptyList(),
+  val injuredHome: List<PlayerInfo> = emptyList()
 )
 
 /**
