@@ -1,0 +1,224 @@
+[
+  {
+    "match_id": "germany_serbia_nations",
+    "championship": {
+      "title": "دوري الأمم الأوروبية",
+      "image": "https://upload.wikimedia.org/wikipedia/en/thumb/0/03/UEFA_Nations_League_logo.svg/512px-UEFA_Nations_League_logo.svg.png"
+    },
+    "home_team": {
+      "title": "ألمانيا",
+      "image": "https://upload.wikimedia.org/wikipedia/en/thumb/e/e3/DFB-Logo_2014.svg/512px-DFB-Logo_2014.svg.png"
+    },
+    "away_team": {
+      "title": "صربيا",
+      "image": "https://upload.wikimedia.org/wikipedia/en/thumb/0/07/Football_Association_of_Serbia_logo.svg/512px-Football_Association_of_Serbia_logo.svg.png"
+    },
+    "home_scores": 2,
+    "away_scores": 1,
+    "match_date": "2026-10-08",
+    "match_time": "21:45:00",
+    "status": 2,
+    "live": true,
+    "score_time": "'72",
+    "channel_name": "beIN SPORTS 2 HD",
+    "commentator": "عصام الشوالي",
+    "stadium": "أليانز أرينا",
+    "stream_active": 1,
+    "is_stream_active": true,
+    "streamUrl": "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8",
+    "bannerUrl": "https://img.tod.tv/resources/images/link/4d73fbca-8e0f-369e-9f10-01592fc6b9a9/8c0c7840-d932-5be7-abf7-2d7d3b1fb6b9/639258281885550000/0:20:720:960/750x1000/87c142b3-b9df-4df2-ac94-1e3abfb88f2b_hero-block-34-ar.webp",
+    "servers": [
+      {
+        "id": "srv_1",
+        "name": "سيرفر رئيسي 1080p FHD",
+        "url": "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8",
+        "quality": "1080p FHD"
+      }
+    ]
+  },
+  {
+    "match_id": "mancity_real_ucl",
+    "championship": {
+      "title": "دوري أبطال أوروبا",
+      "image": "https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/UEFA_Champions_League_logo_2.svg/512px-UEFA_Champions_League_logo_2.svg.png"
+    },
+    "home_team": {
+      "title": "مانشستر سيتي",
+      "image": "https://upload.wikimedia.org/wikipedia/en/thumb/e/eb/Manchester_City_FC_badge.svg/512px-Manchester_City_FC_badge.svg.png"
+    },
+    "away_team": {
+      "title": "ريال مدريد",
+      "image": "https://upload.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/512px-Real_Madrid_CF.svg.png"
+    },
+    "home_scores": 3,
+    "away_scores": 2,
+    "match_date": "2026-10-08",
+    "match_time": "22:00:00",
+    "status": 2,
+    "live": true,
+    "score_time": "'84",
+    "channel_name": "beIN SPORTS 1 HD",
+    "commentator": "حفيظ دراجي",
+    "stadium": "استاد الاتحاد",
+    "stream_active": 1,
+    "is_stream_active": true,
+    "streamUrl": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+    "bannerUrl": "android.resource://com.example/drawable/tod_hero_match_banner",
+    "servers": [
+      {
+        "id": "srv_1",
+        "name": "سيرفر رئيسي 1080p FHD",
+        "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+        "quality": "1080p FHD"
+      }
+    ]
+  },
+  {
+    "match_id": "arsenal_chelsea_pl",
+    "championship": {
+      "title": "الدوري الإنجليزي الممتاز",
+      "image": "https://upload.wikimedia.org/wikipedia/en/thumb/f/f2/Premier_League_Logo.svg/512px-Premier_League_Logo.svg.png"
+    },
+    "home_team": {
+      "title": "آرسنال",
+      "image": "https://upload.wikimedia.org/wikipedia/en/thumb/5/53/Arsenal_FC.svg/512px-Arsenal_FC.svg.png"
+    },
+    "away_team": {
+      "title": "تشيلسي",
+      "image": "https://upload.wikimedia.org/wikipedia/en/thumb/c/cc/Chelsea_FC.svg/512px-Chelsea_FC.svg.png"
+    },
+    "home_scores": null,
+    "away_scores": null,
+    "match_date": "2026-10-08",
+    "match_time": "18:30:00",
+    "status": 1,
+    "live": false,
+    "score_time": "",
+    "channel_name": "beIN SPORTS 1 HD",
+    "commentator": "حسن العيدروس",
+    "stadium": "استاد الإمارات",
+    "stream_active": 1,
+    "is_stream_active": true,
+    "streamUrl": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+    "bannerUrl": "",
+    "servers": [
+      {
+        "id": "srv_1",
+        "name": "سيرفر رئيسي 1080p FHD",
+        "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+        "quality": "1080p FHD"
+      }
+    ]
+  },
+  {
+    "match_id": "guinea_kenya_afcon",
+    "championship": {
+      "title": "تصفيات أمم أفريقيا",
+      "image": "https://upload.wikimedia.org/wikipedia/en/thumb/6/6f/CAF_logo.svg/512px-CAF_logo.svg.png"
+    },
+    "home_team": {
+      "title": "غينيا",
+      "image": "https://flagcdn.com/w80/gn.png"
+    },
+    "away_team": {
+      "title": "كينيا",
+      "image": "https://flagcdn.com/w80/ke.png"
+    },
+    "home_scores": 1,
+    "away_scores": 0,
+    "match_date": "2026-10-08",
+    "match_time": "20:00:00",
+    "status": 2,
+    "live": true,
+    "score_time": "'63",
+    "channel_name": "beIN SPORTS 3 HD",
+    "commentator": "محمد علي",
+    "stadium": "الملعب الوطني - كوناكري",
+    "stream_active": 1,
+    "is_stream_active": true,
+    "streamUrl": "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8",
+    "bannerUrl": "",
+    "servers": [
+      {
+        "id": "srv_1",
+        "name": "سيرفر رئيسي 1080p FHD",
+        "url": "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8",
+        "quality": "1080p FHD"
+      }
+    ]
+  },
+  {
+    "match_id": "roma_barca_uwcl",
+    "championship": {
+      "title": "دوري أبطال أوروبا للسيدات",
+      "image": "https://upload.wikimedia.org/wikipedia/en/thumb/b/bf/UEFA_Champions_League_logo_2.svg/512px-UEFA_Champions_League_logo_2.svg.png"
+    },
+    "home_team": {
+      "title": "برشلونة",
+      "image": "https://upload.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/512px-FC_Barcelona_%28crest%29.svg.png"
+    },
+    "away_team": {
+      "title": "روما",
+      "image": "https://upload.wikimedia.org/wikipedia/en/thumb/f/f7/AS_Roma_logo_%282017%29.svg/512px-AS_Roma_logo_%282017%29.svg.png"
+    },
+    "home_scores": 4,
+    "away_scores": 0,
+    "match_date": "2026-10-08",
+    "match_time": "19:45:00",
+    "status": 2,
+    "live": true,
+    "score_time": "60'",
+    "channel_name": "beIN SPORTS 1 HD",
+    "commentator": "عصام الشوالي",
+    "stadium": "Stadio Tre Fontane",
+    "stream_active": 1,
+    "is_stream_active": true,
+    "streamUrl": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+    "bannerUrl": "android.resource://com.example/drawable/tod_hero_match_banner",
+    "servers": [
+      {
+        "id": "srv_1",
+        "name": "سيرفر رئيسي 1080p FHD",
+        "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+        "quality": "1080p FHD"
+      }
+    ]
+  },
+  {
+    "match_id": "wales_norway_nations",
+    "championship": {
+      "title": "دوري الأمم الأوروبية",
+      "image": "https://upload.wikimedia.org/wikipedia/en/thumb/0/03/UEFA_Nations_League_logo.svg/512px-UEFA_Nations_League_logo.svg.png"
+    },
+    "home_team": {
+      "title": "ويلز",
+      "image": "https://flagcdn.com/w80/gb-wls.png"
+    },
+    "away_team": {
+      "title": "النرويج",
+      "image": "https://flagcdn.com/w80/no.png"
+    },
+    "home_scores": 2,
+    "away_scores": 1,
+    "match_date": "2026-10-08",
+    "match_time": "21:45:00",
+    "status": 2,
+    "live": true,
+    "score_time": "الشوط الثاني",
+    "channel_name": "beIN SPORTS 1 HD",
+    "commentator": "حفيظ دراجي",
+    "stadium": "استاد كارديف سيتي",
+    "stream_active": 1,
+    "is_stream_active": true,
+    "streamUrl": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+    "bannerUrl": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
+    "servers": [
+      {
+        "id": "srv_1",
+        "name": "سيرفر رئيسي 1080p FHD",
+        "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+        "quality": "1080p FHD"
+      }
+    ]
+  }
+]

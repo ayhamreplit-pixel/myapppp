@@ -112,6 +112,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.BroadcastStream
+import com.example.model.SportsMatch
 import com.example.model.StreamFormat
 import com.example.model.XtreamAccountInfo
 import com.example.model.XtreamCategory
@@ -405,6 +406,53 @@ fun TodModernHubScreen(
 
       Pair(targetStream, fullStreams)
     }
+
+  // Build match playback list containing all server options for switching inside the player drawer
+  val buildMatchPlaybackList: (SportsMatch) -> Pair<BroadcastStream, List<BroadcastStream>> = { match ->
+    val effectiveUrl = match.servers.firstOrNull()?.streamUrl
+      ?: match.streamUrl.takeIf { it.isNotBlank() }
+      ?: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+
+    val primaryStream = BroadcastStream(
+      id = match.servers.firstOrNull()?.id ?: match.id,
+      title = match.title,
+      subtitle = if (match.servers.isNotEmpty()) (match.servers.first().name + " • " + match.servers.first().quality) else "${match.tournament} • ${match.channelName}",
+      category = "سيرفرات المباراة",
+      streamUrl = effectiveUrl,
+      isLive = true,
+      logoUrl = match.tournamentLogo.ifBlank { match.homeTeam.logoUrl }
+    )
+
+    val serverStreams = if (match.servers.size > 1) {
+      match.servers.map { srv ->
+        BroadcastStream(
+          id = srv.id,
+          title = "${match.title} - ${srv.name}",
+          subtitle = srv.quality,
+          category = "سيرفرات المباراة",
+          streamUrl = srv.streamUrl,
+          isLive = true,
+          logoUrl = match.tournamentLogo.ifBlank { match.homeTeam.logoUrl }
+        )
+      }
+    } else {
+      listOf(primaryStream)
+    }
+
+    val fallbackChannels = allChannels.ifEmpty { sportsBackendRepo.sportsChannels.value }.map { ch ->
+      BroadcastStream(
+        id = ch.streamId,
+        title = ch.name,
+        subtitle = "قناة رياضية",
+        category = "القنوات المباشرة",
+        streamUrl = ch.playUrl,
+        isLive = true,
+        logoUrl = ch.iconUrl
+      )
+    }
+
+    Pair(primaryStream, serverStreams + fallbackChannels)
+  }
 
   FluidMeshBackground(
     modifier = modifier.fillMaxSize(),
@@ -877,25 +925,8 @@ fun TodModernHubScreen(
                       activeSportsMatch = match
                     },
                     onPlayMatchDirectly = { match ->
-                      val stream = BroadcastStream(
-                        id = match.id,
-                        title = match.title,
-                        subtitle = "${match.tournament} • ${match.channelName}",
-                        category = match.tournament,
-                        streamUrl = match.streamUrl.ifBlank { "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" },
-                        isLive = true
-                      )
-                      val fallbackList = allChannels.ifEmpty { sportsBackendRepo.sportsChannels.value }.map { ch ->
-                        BroadcastStream(
-                          id = ch.streamId,
-                          title = ch.name,
-                          subtitle = "قناة رياضية",
-                          category = "بث مباشر",
-                          streamUrl = ch.playUrl,
-                          isLive = true
-                        )
-                      }
-                      onPlayStream(stream, listOf(stream) + fallbackList)
+                      val (stream, streams) = buildMatchPlaybackList(match)
+                      onPlayStream(stream, streams)
                     },
                     onOpenProfile = {
                       activeNavTab = TodNavTab.MORE
@@ -918,25 +949,8 @@ fun TodModernHubScreen(
                       activeSportsMatch = match
                     },
                     onPlayMatchDirectly = { match ->
-                      val stream = BroadcastStream(
-                        id = match.id,
-                        title = match.title,
-                        subtitle = "${match.tournament} • ${match.channelName}",
-                        category = match.tournament,
-                        streamUrl = match.streamUrl.ifBlank { "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" },
-                        isLive = true
-                      )
-                      val fallbackList = allChannels.ifEmpty { sportsBackendRepo.sportsChannels.value }.map { ch ->
-                        BroadcastStream(
-                          id = ch.streamId,
-                          title = ch.name,
-                          subtitle = "قناة رياضية",
-                          category = "بث مباشر",
-                          streamUrl = ch.playUrl,
-                          isLive = true
-                        )
-                      }
-                      onPlayStream(stream, listOf(stream) + fallbackList)
+                      val (stream, streams) = buildMatchPlaybackList(match)
+                      onPlayStream(stream, streams)
                     },
                     onOpenProfile = {
                       activeNavTab = TodNavTab.MORE
@@ -959,25 +973,8 @@ fun TodModernHubScreen(
                       activeSportsMatch = match
                     },
                     onPlayMatchDirectly = { match ->
-                      val stream = BroadcastStream(
-                        id = match.id,
-                        title = match.title,
-                        subtitle = "${match.tournament} • ${match.channelName}",
-                        category = match.tournament,
-                        streamUrl = match.streamUrl.ifBlank { "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" },
-                        isLive = true
-                      )
-                      val fallbackList = allChannels.ifEmpty { sportsBackendRepo.sportsChannels.value }.map { ch ->
-                        BroadcastStream(
-                          id = ch.streamId,
-                          title = ch.name,
-                          subtitle = "قناة رياضية",
-                          category = "بث مباشر",
-                          streamUrl = ch.playUrl,
-                          isLive = true
-                        )
-                      }
-                      onPlayStream(stream, listOf(stream) + fallbackList)
+                      val (stream, streams) = buildMatchPlaybackList(match)
+                      onPlayStream(stream, streams)
                     },
                     onOpenProfile = {
                       activeNavTab = TodNavTab.MORE

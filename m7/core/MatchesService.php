@@ -1,141 +1,259 @@
 <?php
 /**
  * M7 Matches & Streaming Service
- * Strictly fetches real-time match data without inserting hardcoded mock fallbacks.
+ * Strictly manages matches created manually by the administrator (No external scraping API).
  */
 
 class MatchesService {
 
-    public static function fetchLiveMatches($targetDate, $forceRefresh = false) {
-        $cacheFile = M7_CACHE_DIR . "/matches_" . preg_replace('/[^0-9\-]/', '', $targetDate) . ".json";
-        $isToday = ($targetDate === date('Y-m-d'));
-        $cacheTTL = $isToday ? 20 : 600;
-
-        if (!$forceRefresh && file_exists($cacheFile) && (time() - filemtime($cacheFile) < $cacheTTL)) {
-            $cached = @file_get_contents($cacheFile);
-            $decoded = json_decode($cached, true);
-            if ($decoded && isset($decoded['data']) && is_array($decoded['data'])) {
-                return $decoded['data'];
-            }
-        }
-
-        // 1. Primary Arabic Source: YSScores API
-        $apiUrl = "https://api-ar.ysscores.com/api/matches/matches_date_get/" . urlencode($targetDate) . "/%5B%5D/%5B%5D/%5B%5D/D/180";
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $apiUrl);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 8);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-            'Accept: application/json, text/plain, */*',
-            'Referer: https://ysscores.com/',
-            'Origin: https://ysscores.com'
-        ]);
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode === 200 && !empty($response)) {
-            $decoded = json_decode($response, true);
-            if ($decoded !== null && isset($decoded['data']) && is_array($decoded['data'])) {
-                @file_put_contents($cacheFile, $response);
-                return $decoded['data'];
-            }
-        }
-
-        // Fallback to cache if exists
-        if (file_exists($cacheFile)) {
-            $cached = @file_get_contents($cacheFile);
-            $decoded = json_decode($cached, true);
-            if ($decoded && isset($decoded['data'])) {
-                return $decoded['data'];
-            }
-        }
-
-        return [];
+    public static function getMatchesFile() {
+        return 'custom_matches.json';
     }
 
-    public static function getEnrichedMatches($targetDate, $forceRefresh = false, $encryptForApi = false) {
-        $rawMatches = self::fetchLiveMatches($targetDate, $forceRefresh);
-        $overrides = Storage::get('match_overrides.json', []);
-        $customMatches = Storage::get('custom_matches.json', []);
+    /**
+     * Retrieve all manually added matches, optionally filtered by date
+     */
+    public static function getEnrichedMatches($targetDate = null, $forceRefresh = false, $encryptForApi = false) {
+        $customMatches = Storage::get(self::getMatchesFile(), []);
         $masterKey = Security::getMasterKey();
         $isEncEnabled = Security::isEncryptionEnabled();
 
-        $enriched = [];
-
-        // 1. Custom user matches for this date
+        $filtered = [];
         foreach ($customMatches as $cm) {
-            if (($cm['match_date'] ?? date('Y-m-d')) === $targetDate) {
-                $cmId = strval($cm['match_id']);
-                if (isset($overrides[$cmId]) && !empty($overrides[$cmId]['hidden'])) continue;
-
-                if (isset($overrides[$cmId])) {
-                    $ov = $overrides[$cmId];
-                    if (!empty($ov['servers'])) $cm['servers'] = $ov['servers'];
-                    if (isset($ov['stream_active'])) $cm['stream_active'] = $ov['stream_active'] ? 1 : 0;
-                    if (isset($ov['home_scores'])) $cm['home_scores'] = $ov['home_scores'];
-                    if (isset($ov['away_scores'])) $cm['away_scores'] = $ov['away_scores'];
-                    if (isset($ov['status'])) $cm['status'] = $ov['status'];
-                    if (isset($ov['live'])) $cm['live'] = $ov['live'];
-                    if (!empty($ov['score_time'])) $cm['score_time'] = $ov['score_time'];
-                    if (!empty($ov['channel_name'])) $cm['channel_name'] = $ov['channel_name'];
-                    if (!empty($ov['commentator'])) $cm['commentator'] = $ov['commentator'];
-                    if (!empty($ov['stadium'])) $cm['stadium'] = $ov['stadium'];
+            // If targetDate specified, filter by date, otherwise return all
+            // If date is 'all' or matches date, include it. If no matches exist on selected date in custom matches, fallback allows showing available scheduled matches
+            if (!empty($targetDate) && $targetDate !== 'all') {
+                $mDate = $cm['match_date'] ?? date('Y-m-d');
+                if ($mDate !== $targetDate && $mDate !== 'اليوم' && $targetDate !== 'today') {
+                    // Check if match is explicitly for another date
+                    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $targetDate) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $mDate) && $mDate !== $targetDate) {
+                        continue;
+                    }
                 }
-
-                $cm['is_stream_active'] = !empty($cm['servers']) || !empty($cm['stream_active']);
-                if (!empty($cm['servers'])) $cm['streamUrl'] = $cm['servers'][0]['url'];
-
-                if ($encryptForApi && $isEncEnabled) {
-                    self::encryptMatchStreams($cm, $masterKey);
-                }
-                $enriched[] = $cm;
             }
-        }
 
-        // 2. Live API Matches
-        foreach ($rawMatches as $m) {
-            $mId = strval($m['match_id'] ?? '');
-            if (empty($mId) || (isset($overrides[$mId]) && !empty($overrides[$mId]['hidden']))) continue;
+            // Normalization
+            $cm['match_id'] = strval($cm['match_id'] ?? ('m_' . time()));
+            if (!isset($cm['servers']) || !is_array($cm['servers'])) {
+                $cm['servers'] = [];
+            }
 
-            $m['servers'] = [];
-            $m['is_stream_active'] = false;
-            $m['streamUrl'] = '';
+            // Ensure stream active flag
+            $hasServers = !empty($cm['servers']);
+            $isStreamActive = !empty($cm['stream_active']) || !empty($cm['is_stream_active']);
+            $cm['stream_active'] = $isStreamActive ? 1 : 0;
+            $cm['is_stream_active'] = $isStreamActive;
 
-            if (isset($overrides[$mId])) {
-                $ov = $overrides[$mId];
-                $isStreamActive = !empty($ov['stream_active']);
-                $m['is_stream_active'] = $isStreamActive;
-                if ($isStreamActive && !empty($ov['servers'])) {
-                    $m['servers'] = $ov['servers'];
-                    $m['streamUrl'] = $ov['servers'][0]['url'];
-                }
-                if (isset($ov['home_scores'])) $m['home_scores'] = $ov['home_scores'];
-                if (isset($ov['away_scores'])) $m['away_scores'] = $ov['away_scores'];
-                if (isset($ov['status'])) {
-                    $m['status'] = $ov['status'];
-                    $m['live'] = in_array(intval($ov['status']), [2, 3]) ? 1 : 0;
-                }
-                if (!empty($ov['score_time'])) $m['score_time'] = $ov['score_time'];
-                if (!empty($ov['channel_name'])) $m['channel_name'] = $ov['channel_name'];
-                if (!empty($ov['commentator'])) $m['commentator'] = $ov['commentator'];
-                if (!empty($ov['stadium'])) $m['stadium'] = $ov['stadium'];
+            // In user app API mode, only active/enabled matches are served
+            if ($encryptForApi && !$isStreamActive) {
+                continue;
+            }
+
+            // Stream URL fallback
+            if (empty($cm['streamUrl']) && $hasServers) {
+                $cm['streamUrl'] = $cm['servers'][0]['url'] ?? '';
             }
 
             if ($encryptForApi && $isEncEnabled) {
-                self::encryptMatchStreams($m, $masterKey);
+                self::encryptMatchStreams($cm, $masterKey);
             }
-            $enriched[] = $m;
+
+            $filtered[] = $cm;
         }
 
-        return $enriched;
+        // Sort: Live first, then by match_time ascending
+        usort($filtered, function($a, $b) {
+            $aLive = in_array(intval($a['status'] ?? 0), [2, 3]) ? 1 : 0;
+            $bLive = in_array(intval($b['status'] ?? 0), [2, 3]) ? 1 : 0;
+            if ($aLive !== $bLive) return $bLive - $aLive;
+            return strcmp($a['match_time'] ?? '', $b['match_time'] ?? '');
+        });
+
+        return $filtered;
     }
 
+    /**
+     * Add or update a match with complete attributes
+     */
+    public static function saveMatch($input) {
+        $matches = Storage::get(self::getMatchesFile(), []);
+        $mId = trim($input['match_id'] ?? '');
+        if (empty($mId)) {
+            $mId = 'm_' . time() . '_' . rand(100, 999);
+        }
+
+        $status = intval($input['status'] ?? 1);
+        $isLive = in_array($status, [2, 3]) ? 1 : intval($input['live'] ?? 0);
+
+        // Prepare servers list
+        $servers = [];
+        if (isset($input['servers']) && is_array($input['servers'])) {
+            $servers = $input['servers'];
+        } elseif (!empty($input['stream_url'])) {
+            $servers[] = [
+                'id' => 'srv_1',
+                'name' => trim($input['server_name'] ?? 'سيرفر رئيسي FHD'),
+                'url' => trim($input['stream_url']),
+                'quality' => trim($input['quality'] ?? '1080p FHD')
+            ];
+        }
+
+        $streamUrl = !empty($input['stream_url']) ? trim($input['stream_url']) : (!empty($servers[0]['url']) ? $servers[0]['url'] : '');
+        $isStreamActive = isset($input['stream_active']) ? (bool)$input['stream_active'] : (!empty($servers) || !empty($streamUrl));
+
+        $newMatch = [
+            'match_id' => $mId,
+            'championship' => [
+                'title' => trim($input['championship_title'] ?? $input['championship'] ?? 'بطولة خاصة'),
+                'image' => trim($input['championship_image'] ?? '')
+            ],
+            'home_team' => [
+                'title' => trim($input['home_team_title'] ?? $input['home_team'] ?? 'الفريق الأول'),
+                'image' => trim($input['home_team_image'] ?? '')
+            ],
+            'away_team' => [
+                'title' => trim($input['away_team_title'] ?? $input['away_team'] ?? 'الفريق الثاني'),
+                'image' => trim($input['away_team_image'] ?? '')
+            ],
+            'home_scores' => (isset($input['home_scores']) && $input['home_scores'] !== '') ? intval($input['home_scores']) : null,
+            'away_scores' => (isset($input['away_scores']) && $input['away_scores'] !== '') ? intval($input['away_scores']) : null,
+            'match_date' => trim($input['match_date'] ?? date('Y-m-d')),
+            'match_time' => trim($input['match_time'] ?? '21:00:00'),
+            'status' => $status,
+            'live' => $isLive,
+            'score_time' => trim($input['score_time'] ?? ''),
+            'channel_name' => trim($input['channel_name'] ?? 'beIN SPORTS 1 HD'),
+            'commentator' => trim($input['commentator'] ?? 'تعليق عربي'),
+            'stadium' => trim($input['stadium'] ?? 'الملعب الرئيسي'),
+            'referee' => trim($input['referee'] ?? ''),
+            'stream_active' => $isStreamActive ? 1 : 0,
+            'is_stream_active' => $isStreamActive,
+            'streamUrl' => $streamUrl,
+            'servers' => $servers,
+            'events' => isset($input['events']) && is_array($input['events']) ? $input['events'] : [],
+            'lineup' => isset($input['lineup']) && is_array($input['lineup']) ? $input['lineup'] : null
+        ];
+
+        $exists = false;
+        foreach ($matches as &$m) {
+            if (strval($m['match_id'] ?? '') === $mId) {
+                // If preserve existing servers when not passed in simple edit
+                if (empty($servers) && !empty($m['servers'])) {
+                    $newMatch['servers'] = $m['servers'];
+                    if (empty($newMatch['streamUrl'])) $newMatch['streamUrl'] = $m['servers'][0]['url'] ?? '';
+                    $newMatch['stream_active'] = 1;
+                    $newMatch['is_stream_active'] = true;
+                }
+                $m = $newMatch;
+                $exists = true;
+                break;
+            }
+        }
+
+        if (!$exists) {
+            $matches[] = $newMatch;
+        }
+
+        Storage::save(self::getMatchesFile(), $matches);
+        return [
+            "status" => true,
+            "message" => "تم حفظ وتحديث بيانات المباراة بنجاح ⚽",
+            "match" => $newMatch
+        ];
+    }
+
+    /**
+     * Delete a match
+     */
+    public static function deleteMatch($matchId) {
+        $matches = Storage::get(self::getMatchesFile(), []);
+        $filtered = array_values(array_filter($matches, function($m) use ($matchId) {
+            return strval($m['match_id'] ?? '') !== strval($matchId);
+        }));
+        Storage::save(self::getMatchesFile(), $filtered);
+        return ["status" => true, "message" => "تم حذف المباراة بنجاح 🗑️"];
+    }
+
+    /**
+     * Quick Score and Status update
+     */
+    public static function quickUpdateScore($matchId, $homeScores, $awayScores, $status, $scoreTime = '') {
+        $matches = Storage::get(self::getMatchesFile(), []);
+        $found = false;
+        foreach ($matches as &$m) {
+            if (strval($m['match_id'] ?? '') === strval($matchId)) {
+                if ($homeScores !== null && $homeScores !== '') $m['home_scores'] = intval($homeScores);
+                if ($awayScores !== null && $awayScores !== '') $m['away_scores'] = intval($awayScores);
+                if ($status !== null && $status !== '') {
+                    $st = intval($status);
+                    $m['status'] = $st;
+                    $m['live'] = in_array($st, [2, 3]) ? 1 : 0;
+                }
+                if ($scoreTime !== null) $m['score_time'] = trim($scoreTime);
+                $found = true;
+                break;
+            }
+        }
+        if ($found) {
+            Storage::save(self::getMatchesFile(), $matches);
+            return ["status" => true, "message" => "تم تحديث النتيجة والدقيقة فورياً! ⚡"];
+        }
+        return ["status" => false, "message" => "المباراة غير موجودة"];
+    }
+
+    /**
+     * Toggle stream active
+     */
+    public static function toggleStream($matchId, $active = null) {
+        $matches = Storage::get(self::getMatchesFile(), []);
+        $newState = false;
+        $found = false;
+        foreach ($matches as &$m) {
+            if (strval($m['match_id'] ?? '') === strval($matchId)) {
+                $newState = ($active !== null) ? (bool)$active : empty($m['is_stream_active']);
+                $m['stream_active'] = $newState ? 1 : 0;
+                $m['is_stream_active'] = $newState;
+                $found = true;
+                break;
+            }
+        }
+
+        if ($found) {
+            Storage::save(self::getMatchesFile(), $matches);
+            return [
+                "status" => true,
+                "stream_active" => $newState,
+                "message" => $newState ? "تم تفعيل البث المباشر للمباراة بنجاح ⚡" : "تم تعطيل البث للمباراة"
+            ];
+        }
+        return ["status" => false, "message" => "المباراة غير موجودة"];
+    }
+
+    /**
+     * Duplicate a match
+     */
+    public static function cloneMatch($matchId) {
+        $matches = Storage::get(self::getMatchesFile(), []);
+        foreach ($matches as $m) {
+            if (strval($m['match_id'] ?? '') === strval($matchId)) {
+                $cloned = $m;
+                $cloned['match_id'] = 'm_' . time() . '_' . rand(100, 999);
+                $cloned['home_scores'] = null;
+                $cloned['away_scores'] = null;
+                $cloned['status'] = 1;
+                $cloned['live'] = 0;
+                $cloned['score_time'] = '';
+                $matches[] = $cloned;
+                Storage::save(self::getMatchesFile(), $matches);
+                return ["status" => true, "message" => "تم نسخ المباراة بنجاح 📋", "new_id" => $cloned['match_id']];
+            }
+        }
+        return ["status" => false, "message" => "المباراة غير موجودة"];
+    }
+
+    /**
+     * Encrypt stream URLs for Android client
+     */
     private static function encryptMatchStreams(&$match, $key) {
         if (!empty($match['servers'])) {
             foreach ($match['servers'] as &$srv) {
@@ -145,22 +263,5 @@ class MatchesService {
         if (!empty($match['streamUrl'])) {
             $match['streamUrl'] = Security::encrypt($match['streamUrl'], $key);
         }
-    }
-
-    public static function toggleStream($matchId, $active = null) {
-        $overrides = Storage::get('match_overrides.json', []);
-        if (!isset($overrides[$matchId])) {
-            $overrides[$matchId] = ["servers" => [], "hidden" => false, "featured" => false, "stream_active" => false];
-        }
-        $newState = ($active !== null) ? (bool)$active : !($overrides[$matchId]['stream_active'] ?? false);
-        $overrides[$matchId]['stream_active'] = $newState;
-
-        Storage::save('match_overrides.json', $overrides);
-        return [
-            "status" => true,
-            "stream_active" => $newState,
-            "servers" => $overrides[$matchId]['servers'] ?? [],
-            "message" => $newState ? "تم تفعيل البث المباشر للمباراة بنجاح ⚡" : "تم تعطيل البث"
-        ];
     }
 }

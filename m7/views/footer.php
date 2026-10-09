@@ -37,10 +37,55 @@
 
 <!-- 2. Edit Match Modal -->
 <div class="modal" id="editMatchModal">
-    <div class="modal-content">
-        <h3 style="color: var(--gold); margin-bottom: 12px;">تعديل بيانات ونتيجة المباراة</h3>
+    <div class="modal-content" style="max-width: 650px;">
+        <h3 style="color: var(--gold); margin-bottom: 12px;">تعديل بيانات ونتيجة وشعارات المباراة</h3>
         <form onsubmit="saveEditMatchForm(event)">
             <input type="hidden" id="edit_match_id">
+
+            <div class="form-group">
+                <label>اسم البطولة / الدوري</label>
+                <input type="text" id="edit_championship" class="form-control">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-group">
+                    <label>الفريق الأول (المضيف)</label>
+                    <input type="text" id="edit_home_team" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>شعار الفريق الأول (رابط أو اختر من المكتبة)</label>
+                    <div style="display: flex; gap: 6px;">
+                        <input type="url" id="edit_home_image" class="form-control" placeholder="https://...">
+                        <button type="button" class="btn btn-outline" style="padding: 6px 10px; white-space: nowrap;" title="اختر من مكتبة الشعارات" onclick="openLogoPickerFor('edit_home_image', 'edit_home_team')">🛡️ اختر</button>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-group">
+                    <label>الفريق الثاني (الضيف)</label>
+                    <input type="text" id="edit_away_team" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>شعار الفريق الثاني (رابط أو اختر من المكتبة)</label>
+                    <div style="display: flex; gap: 6px;">
+                        <input type="url" id="edit_away_image" class="form-control" placeholder="https://...">
+                        <button type="button" class="btn btn-outline" style="padding: 6px 10px; white-space: nowrap;" title="اختر من مكتبة الشعارات" onclick="openLogoPickerFor('edit_away_image', 'edit_away_team')">🛡️ اختر</button>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-group">
+                    <label>تاريخ المباراة</label>
+                    <input type="date" id="edit_match_date" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>وقت المباراة</label>
+                    <input type="time" id="edit_match_time" class="form-control">
+                </div>
+            </div>
+
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <div class="form-group">
                     <label>أهداف الفريق المضيف</label>
@@ -102,9 +147,10 @@
                     <input type="text" id="cm_home_team" class="form-control" required>
                 </div>
                 <div class="form-group">
-                    <label>شعار الفريق الأول (رابط أو ارفع)</label>
+                    <label>شعار الفريق الأول (رابط أو ارفع أو اختر من المكتبة)</label>
                     <div style="display: flex; gap: 6px;">
                         <input type="url" id="cm_home_image" class="form-control" placeholder="https://...">
+                        <button type="button" class="btn btn-outline" style="padding: 6px 10px; white-space: nowrap;" title="اختر من مكتبة الشعارات" onclick="openLogoPickerFor('cm_home_image', 'cm_home_team')">🛡️ اختر</button>
                         <label class="btn btn-outline" style="padding: 6px 10px; cursor: pointer; white-space: nowrap;">
                             📁
                             <input type="file" accept="image/*" style="display:none;" onchange="uploadImageFile(this, 'cm_home_image')">
@@ -118,9 +164,10 @@
                     <input type="text" id="cm_away_team" class="form-control" required>
                 </div>
                 <div class="form-group">
-                    <label>شعار الفريق الثاني (رابط أو ارفع)</label>
+                    <label>شعار الفريق الثاني (رابط أو ارفع أو اختر من المكتبة)</label>
                     <div style="display: flex; gap: 6px;">
                         <input type="url" id="cm_away_image" class="form-control" placeholder="https://...">
+                        <button type="button" class="btn btn-outline" style="padding: 6px 10px; white-space: nowrap;" title="اختر من مكتبة الشعارات" onclick="openLogoPickerFor('cm_away_image', 'cm_away_team')">🛡️ اختر</button>
                         <label class="btn btn-outline" style="padding: 6px 10px; cursor: pointer; white-space: nowrap;">
                             📁
                             <input type="file" accept="image/*" style="display:none;" onchange="uploadImageFile(this, 'cm_away_image')">
@@ -165,11 +212,12 @@
                 <input type="text" id="ch_play_url" class="form-control" placeholder="https://.../index.m3u8" style="direction: ltr;" required>
             </div>
             <div class="form-group">
-                <label>شعار القناة (أدخل رابط أو ارفع من جهازك مباشرة)</label>
+                <label>شعار القناة (أدخل رابط أو ارفع من جهازك أو اختر من المكتبة)</label>
                 <div style="display: flex; gap: 8px;">
-                    <input type="text" id="ch_icon_url" class="form-control" placeholder="https://... أو اختر ملف من جهازك">
+                    <input type="text" id="ch_icon_url" class="form-control" placeholder="https://... أو اختر من المكتبة">
+                    <button type="button" class="btn btn-outline" style="white-space: nowrap;" onclick="openLogoPickerFor('ch_icon_url', 'ch_name')">🛡️ اختر شعار</button>
                     <label class="btn btn-blue" style="margin: 0; white-space: nowrap; cursor: pointer;">
-                        📁 ارفع من جهازك
+                        📁 ارفع
                         <input type="file" accept="image/*" style="display: none;" onchange="uploadImageFile(this, 'ch_icon_url')">
                     </label>
                 </div>
@@ -188,8 +236,8 @@
 
 <!-- 5. Add Hero Banner Modal -->
 <div class="modal" id="heroModal">
-    <div class="modal-content">
-        <h3 style="color: var(--gold); margin-bottom: 12px;">إضافة / تعديل بوستر الهيرو والقمة</h3>
+    <div class="modal-content" style="max-width: 680px;">
+        <h3 style="color: var(--gold); margin-bottom: 12px;">إضافة / تعديل بوستر الهيرو والقمة مع الشعارات</h3>
         <form onsubmit="saveHeroForm(event)">
             <input type="hidden" id="hero_id">
             <div class="form-group">
@@ -197,9 +245,38 @@
                 <input type="text" id="hero_title" class="form-control" placeholder="ريال مدريد ضد مانشستر سيتي" required>
             </div>
             <div class="form-group">
-                <label>اسم البطولة</label>
+                <label>اسم البطولة / الدوري</label>
                 <input type="text" id="hero_tournament" class="form-control" value="دوري أبطال أوروبا">
             </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-group">
+                    <label>الفريق الأول (المضيف)</label>
+                    <input type="text" id="hero_home_team" class="form-control" placeholder="ريال مدريد">
+                </div>
+                <div class="form-group">
+                    <label>شعار الفريق الأول (رابط أو من المكتبة)</label>
+                    <div style="display: flex; gap: 6px;">
+                        <input type="url" id="hero_home_logo" class="form-control" placeholder="https://...">
+                        <button type="button" class="btn btn-outline" style="padding: 6px 10px; white-space: nowrap;" title="اختر من مكتبة الشعارات" onclick="openLogoPickerFor('hero_home_logo', 'hero_home_team')">🛡️ اختر</button>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-group">
+                    <label>الفريق الثاني (الضيف)</label>
+                    <input type="text" id="hero_away_team" class="form-control" placeholder="مانشستر سيتي">
+                </div>
+                <div class="form-group">
+                    <label>شعار الفريق الثاني (رابط أو من المكتبة)</label>
+                    <div style="display: flex; gap: 6px;">
+                        <input type="url" id="hero_away_logo" class="form-control" placeholder="https://...">
+                        <button type="button" class="btn btn-outline" style="padding: 6px 10px; white-space: nowrap;" title="اختر من مكتبة الشعارات" onclick="openLogoPickerFor('hero_away_logo', 'hero_away_team')">🛡️ اختر</button>
+                    </div>
+                </div>
+            </div>
+
             <div class="form-group">
                 <label>رابط صورة البوستر العريضة (أو ارفع من جهازك)</label>
                 <div style="display: flex; gap: 8px;">
@@ -485,6 +562,13 @@ async function deleteServer(matchId, srvId) {
 
 function openEditMatchModal(matchId, matchData) {
     document.getElementById('edit_match_id').value = matchId;
+    document.getElementById('edit_championship').value = (matchData.championship && matchData.championship.title) ? matchData.championship.title : (matchData.championship || '');
+    document.getElementById('edit_home_team').value = (matchData.home_team && matchData.home_team.title) ? matchData.home_team.title : (matchData.home_team || '');
+    document.getElementById('edit_home_image').value = (matchData.home_team && matchData.home_team.image) ? matchData.home_team.image : '';
+    document.getElementById('edit_away_team').value = (matchData.away_team && matchData.away_team.title) ? matchData.away_team.title : (matchData.away_team || '');
+    document.getElementById('edit_away_image').value = (matchData.away_team && matchData.away_team.image) ? matchData.away_team.image : '';
+    document.getElementById('edit_match_date').value = matchData.match_date || '';
+    document.getElementById('edit_match_time').value = matchData.match_time ? matchData.match_time.substring(0, 5) : '';
     document.getElementById('edit_home_scores').value = matchData.home_scores !== undefined ? matchData.home_scores : '';
     document.getElementById('edit_away_scores').value = matchData.away_scores !== undefined ? matchData.away_scores : '';
     document.getElementById('edit_status').value = matchData.status !== undefined ? matchData.status : '1';
@@ -500,6 +584,13 @@ async function saveEditMatchForm(e) {
     const payload = {
         action: 'edit_match',
         match_id: document.getElementById('edit_match_id').value,
+        championship: document.getElementById('edit_championship').value,
+        home_team: document.getElementById('edit_home_team').value,
+        home_team_image: document.getElementById('edit_home_image').value,
+        away_team: document.getElementById('edit_away_team').value,
+        away_team_image: document.getElementById('edit_away_image').value,
+        match_date: document.getElementById('edit_match_date').value,
+        match_time: document.getElementById('edit_match_time').value,
         home_scores: document.getElementById('edit_home_scores').value,
         away_scores: document.getElementById('edit_away_scores').value,
         status: document.getElementById('edit_status').value,
@@ -509,6 +600,55 @@ async function saveEditMatchForm(e) {
         stadium: document.getElementById('edit_stadium').value
     };
     const res = await fetch(API_URL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+    const data = await res.json();
+    alert(data.message);
+    if (data.status) location.reload();
+}
+
+async function quickScorePrompt(matchId, currentH, currentA) {
+    const h = prompt('أهداف الفريق المضيف:', currentH === '-' ? '0' : currentH);
+    if (h === null) return;
+    const a = prompt('أهداف الفريق الضيف:', currentA === '-' ? '0' : currentA);
+    if (a === null) return;
+    const min = prompt('دقيقة المباراة الحالية (مثال: 55 أو الشوط الأول):', 'مباشر');
+    if (min === null) return;
+
+    const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            action: 'quick_score',
+            match_id: matchId,
+            home_scores: parseInt(h) || 0,
+            away_scores: parseInt(a) || 0,
+            status: 2,
+            score_time: min
+        })
+    });
+    const data = await res.json();
+    alert(data.message);
+    if (data.status) location.reload();
+}
+
+async function cloneMatch(matchId) {
+    if (!confirm('هل تريد نسخ هذه المباراة لإنشاء مباراة جديدة مشابهة؟')) return;
+    const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ action: 'clone_match', match_id: matchId })
+    });
+    const data = await res.json();
+    alert(data.message);
+    if (data.status) location.reload();
+}
+
+async function deleteMatch(matchId) {
+    if (!confirm('هل أنت متأكد من حذف هذه المباراة نهائياً من السيرفر؟')) return;
+    const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ action: 'delete_match', match_id: matchId })
+    });
     const data = await res.json();
     alert(data.message);
     if (data.status) location.reload();
@@ -539,6 +679,16 @@ function openAddChannelModal() {
     document.getElementById('ch_name').value = '';
     document.getElementById('ch_play_url').value = '';
     document.getElementById('ch_icon_url').value = '';
+    document.getElementById('ch_category_id').value = 'قنوات beIN SPORTS';
+    openModal('channelModal');
+}
+
+function openEditChannelModal(ch) {
+    document.getElementById('ch_stream_id').value = ch.streamId || '';
+    document.getElementById('ch_name').value = ch.name || '';
+    document.getElementById('ch_play_url').value = ch.playUrl || '';
+    document.getElementById('ch_icon_url').value = ch.iconUrl || '';
+    document.getElementById('ch_category_id').value = ch.categoryId || 'قنوات beIN SPORTS';
     openModal('channelModal');
 }
 
@@ -569,12 +719,20 @@ function openHeroModal(data = null) {
         document.getElementById('hero_id').value = data.id || '';
         document.getElementById('hero_title').value = data.title || '';
         document.getElementById('hero_tournament').value = data.tournament || '';
+        document.getElementById('hero_home_team').value = (data.homeTeam && typeof data.homeTeam === 'object') ? (data.homeTeam.name || '') : (data.homeTeam || '');
+        document.getElementById('hero_home_logo').value = (data.homeTeam && typeof data.homeTeam === 'object') ? (data.homeTeam.logoUrl || '') : (data.homeLogo || '');
+        document.getElementById('hero_away_team').value = (data.awayTeam && typeof data.awayTeam === 'object') ? (data.awayTeam.name || '') : (data.awayTeam || '');
+        document.getElementById('hero_away_logo').value = (data.awayTeam && typeof data.awayTeam === 'object') ? (data.awayTeam.logoUrl || '') : (data.awayLogo || '');
         document.getElementById('hero_banner_url').value = data.bannerUrl || '';
         document.getElementById('hero_stream_url').value = (data.servers && data.servers[0]) ? data.servers[0].url : (data.streamUrl || '');
     } else {
         document.getElementById('hero_id').value = 'hero_' + Date.now();
         document.getElementById('hero_title').value = '';
         document.getElementById('hero_tournament').value = 'دوري أبطال أوروبا';
+        document.getElementById('hero_home_team').value = '';
+        document.getElementById('hero_home_logo').value = '';
+        document.getElementById('hero_away_team').value = '';
+        document.getElementById('hero_away_logo').value = '';
         document.getElementById('hero_banner_url').value = '';
         document.getElementById('hero_stream_url').value = '';
     }
@@ -588,6 +746,10 @@ async function saveHeroForm(e) {
         id: document.getElementById('hero_id').value,
         title: document.getElementById('hero_title').value,
         tournament: document.getElementById('hero_tournament').value,
+        homeTeam: document.getElementById('hero_home_team').value,
+        homeLogo: document.getElementById('hero_home_logo').value,
+        awayTeam: document.getElementById('hero_away_team').value,
+        awayLogo: document.getElementById('hero_away_logo').value,
         bannerUrl: document.getElementById('hero_banner_url').value,
         streamUrl: document.getElementById('hero_stream_url').value
     };
@@ -723,28 +885,418 @@ async function testDecryptCipher() {
     }
 }
 
-function playInTestPlayer(url, title) {
+async function playInTestPlayer(url, title) {
     switchMainTab('player');
-    document.getElementById('manual_stream_url').value = url;
-    document.getElementById('player_info').innerText = 'تشغيل: ' + (title || url);
+    const badge = document.getElementById('player_status_badge');
+    if (badge) {
+        badge.innerText = 'جاري التحميل...';
+        badge.style.color = 'var(--gold)';
+    }
+
+    // Auto decrypt if encrypted
+    let playUrl = url;
+    if (url.startsWith('enc:') || url.startsWith('aes:') || url.startsWith('m7:')) {
+        try {
+            const masterKey = document.getElementById('cfg_master_key') ? document.getElementById('cfg_master_key').value.trim() : 'DEFAULT_MASTER_KEY';
+            const res = await fetch(API_URL, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action: 'test_decrypt', cipher: url, secret_key: masterKey })
+            });
+            const d = await res.json();
+            if (d.status && d.decrypted) {
+                playUrl = d.decrypted;
+            }
+        } catch (e) {
+            console.error('Decryption error:', e);
+        }
+    }
+
+    document.getElementById('manual_stream_url').value = playUrl;
+    document.getElementById('player_info').innerText = 'تشغيل: ' + (title || playUrl);
     const video = document.getElementById('liveVideo');
-    if (Hls.isSupported() && url.includes('.m3u8')) {
+    if (Hls.isSupported() && playUrl.includes('.m3u8')) {
         if (hlsInstance) hlsInstance.destroy();
         hlsInstance = new Hls();
-        hlsInstance.loadSource(url);
+        hlsInstance.loadSource(playUrl);
         hlsInstance.attachMedia(video);
-        hlsInstance.on(Hls.Events.MANIFEST_PARSED, function () { video.play(); });
+        hlsInstance.on(Hls.Events.MANIFEST_PARSED, function () {
+            video.play();
+            if (badge) { badge.innerText = '🟢 البث يعمل بنجاح'; badge.style.color = 'var(--green)'; }
+        });
+        hlsInstance.on(Hls.Events.ERROR, function(e, data) {
+            if (badge) { badge.innerText = '⚠️ تعذر تحميل البث'; badge.style.color = 'var(--red)'; }
+        });
     } else {
-        video.src = url;
-        video.play();
+        video.src = playUrl;
+        video.play().then(() => {
+            if (badge) { badge.innerText = '🟢 البث يعمل بنجاح'; badge.style.color = 'var(--green)'; }
+        }).catch(() => {
+            if (badge) { badge.innerText = '⚠️ انقر لتشغيل الفيديو'; badge.style.color = 'var(--gold)'; }
+        });
     }
 }
 
-function playManualUrl() {
-    const url = document.getElementById('manual_stream_url').value.trim();
-    if (url) playInTestPlayer(url, 'بث يدوي');
+function playManualUrl(customUrl, label) {
+    const inputUrl = customUrl || document.getElementById('manual_stream_url').value.trim();
+    if (inputUrl) {
+        if (!customUrl) document.getElementById('manual_stream_url').value = inputUrl;
+        playInTestPlayer(inputUrl, label || 'بث يدوي');
+    }
 }
+
+// -------------------------------------------------------------
+// FOOTBALL API EXPLORER JAVASCRIPT FUNCTIONS
+// -------------------------------------------------------------
+async function loadTodayApiMatches() {
+    const container = document.getElementById('apiMatchesList');
+    container.innerHTML = '<div style="padding:20px;"><div style="display:inline-block; width:24px; height:24px; border:3px solid var(--gold); border-radius:50%; border-top-color:transparent; animation:spin 1s linear infinite;"></div><p style="margin-top:10px;">جاري جلب جدول مباريات اليوم من الـ API العالمي...</p></div>';
+    try {
+        const res = await fetch(API_URL + '?action=api_matches');
+        const data = await res.json();
+        renderApiMatches(data.events || []);
+    } catch (e) {
+        container.innerHTML = '<p style="color:var(--red);">حدث خطأ أثناء الاتصال بالـ API: ' + e.message + '</p>';
+    }
+}
+
+async function searchApiMatches() {
+    const q = document.getElementById('apiSearchQuery').value.trim();
+    const container = document.getElementById('apiMatchesList');
+    container.innerHTML = '<div style="padding:20px;"><div style="display:inline-block; width:24px; height:24px; border:3px solid var(--blue); border-radius:50%; border-top-color:transparent; animation:spin 1s linear infinite;"></div><p style="margin-top:10px;">جاري البحث عن: ' + (q || 'جميع المباريات') + '...</p></div>';
+    try {
+        const res = await fetch(API_URL + '?action=api_matches&q=' + encodeURIComponent(q));
+        const data = await res.json();
+        renderApiMatches(data.events || []);
+    } catch (e) {
+        container.innerHTML = '<p style="color:var(--red);">فشل البحث: ' + e.message + '</p>';
+    }
+}
+
+function renderApiMatches(events) {
+    const container = document.getElementById('apiMatchesList');
+    document.getElementById('apiResultsCount').innerText = 'المباريات المتاحة في الـ API: ' + events.length;
+    if (!events || events.length === 0) {
+        container.innerHTML = '<div style="padding:30px;"><p>لم يتم العثور على أي مباريات مطابقة للبحث في الـ API.</p></div>';
+        return;
+    }
+
+    let html = '';
+    events.forEach(ev => {
+        const hTeam = ev.home_team.name || 'فريق مضيف';
+        const aTeam = ev.away_team.name || 'فريق ضيف';
+        const hLogo = ev.home_team.logo || '';
+        const aLogo = ev.away_team.logo || '';
+        const league = ev.league || 'دوري';
+        const time = ev.time || '20:00';
+        const hScore = ev.home_score !== null ? ev.home_score : '-';
+        const aScore = ev.away_score !== null ? ev.away_score : '-';
+        const isLive = ev.is_live;
+
+        html += `<div class="match-row" style="background: rgba(255,255,255,0.015); border-radius: 8px; margin: 4px 8px;">
+            <div>
+                <span style="font-size: 11px; color: var(--text-muted); display: block;">${league}</span>
+                <span style="font-weight: 700; font-size: 13px; color: var(--gold);">${time}</span>
+                ${isLive ? '<span class="badge" style="background:rgba(255,69,58,0.2); color:var(--red); border-color:var(--red); font-size:10px; display:inline-block; margin-top:2px;">مباشر ' + (ev.clock || '') + '</span>' : ''}
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+                <span style="font-weight: 700; font-size: 13.5px;">${hTeam}</span>
+                ${hLogo ? `<img src="${hLogo}" style="width: 24px; height: 24px; object-fit: contain;">` : ''}
+            </div>
+
+            <div style="text-align: center;">
+                <span style="background: rgba(255,255,255,0.08); padding: 4px 10px; border-radius: 6px; font-weight: 900; font-size: 14px;">${hScore} - ${aScore}</span>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: flex-start; gap: 8px;">
+                ${aLogo ? `<img src="${aLogo}" style="width: 24px; height: 24px; object-fit: contain;">` : ''}
+                <span style="font-weight: 700; font-size: 13.5px;">${aTeam}</span>
+            </div>
+
+            <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center;">
+                <button class="btn btn-blue" style="padding: 5px 10px; font-size: 11px;" onclick="viewApiMatchDetails('${ev.api_id}', '${encodeURIComponent(JSON.stringify(ev))}')">
+                    📊 التشكيلة والإحصائيات
+                </button>
+                <button class="btn btn-green" style="padding: 5px 8px; font-size: 11px;" onclick="importApiMatchDirectly('${encodeURIComponent(JSON.stringify(ev))}')">
+                    ➕ إضافة
+                </button>
+            </div>
+        </div>`;
+    });
+
+    container.innerHTML = html;
+}
+
+async function viewApiMatchDetails(eventId, rawEvJson) {
+    const card = document.getElementById('apiDetailsCard');
+    const content = document.getElementById('apiDetailsContent');
+    card.style.display = 'block';
+    content.innerHTML = '<div style="padding:30px; text-align:center;"><div style="display:inline-block; width:24px; height:24px; border:3px solid var(--gold); border-radius:50%; border-top-color:transparent; animation:spin 1s linear infinite;"></div><p style="margin-top:10px;">جاري جلب التشكيلة الرسمية والإحصائيات من الـ API العالمي...</p></div>';
+
+    const evData = JSON.parse(decodeURIComponent(rawEvJson));
+    document.getElementById('apiDetailsTitle').innerText = '📊 تفاصيل ' + evData.home_team.name + ' ضد ' + evData.away_team.name;
+    document.getElementById('apiAddAsCustomMatchBtn').onclick = () => importApiMatchDirectly(rawEvJson);
+
+    try {
+        const res = await fetch(API_URL + '?action=match_details&event_id=' + eventId);
+        const data = await res.json();
+        renderApiMatchFullDetails(data, evData);
+    } catch (e) {
+        content.innerHTML = '<p style="color:var(--red);">فشل جلب تفاصيل المباراة: ' + e.message + '</p>';
+    }
+}
+
+function renderApiMatchFullDetails(data, ev) {
+    const content = document.getElementById('apiDetailsContent');
+    const stats = data.statistics || [];
+    const lineups = data.lineups || { home: { starters: [] }, away: { starters: [] } };
+
+    let html = `
+    <!-- Top Scoreboard -->
+    <div style="background: rgba(0,0,0,0.4); border-radius: 12px; padding: 16px; margin-bottom: 20px; text-align: center;">
+        <div style="display: flex; justify-content: space-around; align-items: center;">
+            <div style="text-align: center;">
+                <img src="${ev.home_team.logo}" style="width: 48px; height: 48px; object-fit: contain; margin-bottom: 6px;">
+                <h4 style="font-size: 15px; font-weight: 700;">${ev.home_team.name}</h4>
+                <span style="font-size: 11px; color: var(--gold);">خطة: ${lineups.home.formation || '4-3-3'}</span>
+            </div>
+            <div>
+                <span style="font-size: 28px; font-weight: 900; color: var(--gold);">${ev.home_score !== null ? ev.home_score : '-'} : ${ev.away_score !== null ? ev.away_score : '-'}</span>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">${ev.date} • ${ev.time}</div>
+            </div>
+            <div style="text-align: center;">
+                <img src="${ev.away_team.logo}" style="width: 48px; height: 48px; object-fit: contain; margin-bottom: 6px;">
+                <h4 style="font-size: 15px; font-weight: 700;">${ev.away_team.name}</h4>
+                <span style="font-size: 11px; color: var(--gold);">خطة: ${lineups.away.formation || '4-3-3'}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs inside Details: Stats & Lineups -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <!-- Column 1: Match Statistics -->
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 16px;">
+            <h4 style="color: var(--gold); font-size: 14px; margin-bottom: 14px; display: flex; align-items: center; gap: 6px;">
+                📈 إحصائيات المباراة المباشرة
+            </h4>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+    `;
+
+    if (stats.length === 0) {
+        html += '<p style="color:var(--text-muted); font-size:12px;">الإحصائيات غير متوفرة بعد لهذه المباراة أو لم تبدأ بعد.</p>';
+    } else {
+        stats.forEach(st => {
+            html += `
+            <div>
+                <div style="display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 4px;">
+                    <span style="font-weight: 700;">${st.home}</span>
+                    <span style="color: var(--text-muted); font-size: 11.5px;">${st.label}</span>
+                    <span style="font-weight: 700;">${st.away}</span>
+                </div>
+                <div style="height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; display: flex; overflow: hidden;">
+                    <div style="width: 50%; background: var(--blue);"></div>
+                    <div style="width: 50%; background: var(--gold);"></div>
+                </div>
+            </div>`;
+        });
+    }
+
+    html += `
+            </div>
+        </div>
+
+        <!-- Column 2: Official Lineups & Starters -->
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 16px;">
+            <h4 style="color: var(--gold); font-size: 14px; margin-bottom: 14px; display: flex; align-items: center; gap: 6px;">
+                👕 التشكيلة الأساسية (Lineups)
+            </h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                    <h5 style="font-size: 12px; color: var(--blue); margin-bottom: 8px;">${ev.home_team.name}</h5>
+                    <ul style="list-style: none; padding: 0; font-size: 11.5px;">
+    `;
+
+    (lineups.home.starters || []).forEach(p => {
+        html += `<li style="padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between;">
+            <span>${p.jersey ? '<b>' + p.jersey + '.</b> ' : ''}${p.name}</span>
+            <span style="color: var(--text-muted);">${p.position}</span>
+        </li>`;
+    });
+
+    html += `
+                    </ul>
+                </div>
+                <div>
+                    <h5 style="font-size: 12px; color: var(--gold); margin-bottom: 8px;">${ev.away_team.name}</h5>
+                    <ul style="list-style: none; padding: 0; font-size: 11.5px;">
+    `;
+
+    (lineups.away.starters || []).forEach(p => {
+        html += `<li style="padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between;">
+            <span>${p.jersey ? '<b>' + p.jersey + '.</b> ' : ''}${p.name}</span>
+            <span style="color: var(--text-muted);">${p.position}</span>
+        </li>`;
+    });
+
+    html += `
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    `;
+
+    content.innerHTML = html;
+}
+
+function importApiMatchDirectly(rawEvJson) {
+    const ev = JSON.parse(decodeURIComponent(rawEvJson));
+    document.getElementById('cm_championship').value = ev.league || 'دوري';
+    document.getElementById('cm_home_team').value = ev.home_team.name;
+    document.getElementById('cm_home_image').value = ev.home_team.logo || '';
+    document.getElementById('cm_away_team').value = ev.away_team.name;
+    document.getElementById('cm_away_image').value = ev.away_team.logo || '';
+    document.getElementById('cm_date').value = ev.date || '<?= $targetDate ?>';
+    document.getElementById('cm_time').value = ev.time || '21:00';
+    document.getElementById('cm_stream_url').value = '';
+    openModal('customMatchModal');
+}
+
+// -------------------------------------------------------------
+// LOGOS LIBRARY JAVASCRIPT CONTROLLER
+// -------------------------------------------------------------
+let allLoadedLogos = [];
+let currentLogosCategory = 'all';
+let activeLogoTargetInputId = null;
+let activeNameTargetInputId = null;
+
+async function fetchLogos(category = 'all', query = '') {
+    try {
+        const url = `${API_URL}?action=logos&cat=${encodeURIComponent(category)}&q=${encodeURIComponent(query)}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        return data.logos || [];
+    } catch (e) {
+        return [];
+    }
+}
+
+async function renderLogosLibrary() {
+    const grid = document.getElementById('logosGrid');
+    if (!grid) return;
+    grid.innerHTML = '<div style="padding:20px; text-align:center;"><div style="display:inline-block; width:24px; height:24px; border:3px solid var(--gold); border-radius:50%; border-top-color:transparent; animation:spin 1s linear infinite;"></div><p style="margin-top:8px;">جاري تحميل الشعارات عالية الدقة...</p></div>';
+    
+    const query = document.getElementById('logoSearchInput') ? document.getElementById('logoSearchInput').value.trim() : '';
+    allLoadedLogos = await fetchLogos(currentLogosCategory, query);
+
+    if (allLoadedLogos.length === 0) {
+        grid.innerHTML = '<p style="padding:20px; text-align:center; color:var(--text-muted); grid-column:1/-1;">لم يتم العثور على أي شعارات مطابقة.</p>';
+        return;
+    }
+
+    let html = '';
+    allLoadedLogos.forEach(item => {
+        html += `
+        <div class="card" style="margin-bottom:0; padding:12px; display:flex; flex-direction:column; align-items:center; justify-content:space-between; text-align:center; background:rgba(255,255,255,0.02); transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='none'">
+            <div style="width:60px; height:60px; display:flex; align-items:center; justify-content:center; margin-bottom:10px;">
+                <img src="${item.logo}" alt="${item.name}" style="max-width:100%; max-height:100%; object-fit:contain;">
+            </div>
+            <div style="font-size:13px; font-weight:700; margin-bottom:4px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${item.name}</div>
+            <div style="font-size:11px; color:var(--text-muted); margin-bottom:10px;">${item.en_name || ''}</div>
+            <div style="display:flex; gap:6px; width:100%;">
+                <button type="button" class="btn btn-outline" style="flex:1; padding:4px 6px; font-size:11px;" onclick="copyLogoUrl('${item.logo}')">📋 نسخ الرابط</button>
+                <button type="button" class="btn btn-blue" style="padding:4px 8px; font-size:11px;" onclick="quickUseLogoInMatch('${item.name}', '${item.logo}')">➕ استخدم</button>
+            </div>
+        </div>
+        `;
+    });
+    grid.innerHTML = html;
+}
+
+function selectLogoCategory(cat) {
+    currentLogosCategory = cat;
+    renderLogosLibrary();
+}
+
+function filterLogosLibrary() {
+    renderLogosLibrary();
+}
+
+function copyLogoUrl(url) {
+    navigator.clipboard.writeText(url);
+    alert('تم نسخ رابط الشعار بدقة عالية: ' + url);
+}
+
+function quickUseLogoInMatch(name, url) {
+    openCustomMatchModal();
+    const h = document.getElementById('cm_home_team');
+    const hImg = document.getElementById('cm_home_image');
+    if (!h.value) {
+        h.value = name;
+        hImg.value = url;
+    } else {
+        document.getElementById('cm_away_team').value = name;
+        document.getElementById('cm_away_image').value = url;
+    }
+}
+
+async function openLogoPickerFor(targetImageInputId, targetNameInputId = null) {
+    activeLogoTargetInputId = targetImageInputId;
+    activeNameTargetInputId = targetNameInputId;
+    openModal('logoPickerModal');
+    renderPickerLogos();
+}
+
+async function renderPickerLogos() {
+    const grid = document.getElementById('pickerGrid');
+    const query = document.getElementById('pickerSearchInput') ? document.getElementById('pickerSearchInput').value.trim() : '';
+    const logos = await fetchLogos('all', query);
+
+    if (logos.length === 0) {
+        grid.innerHTML = '<p style="padding:20px; text-align:center; color:var(--text-muted); grid-column:1/-1;">لا توجد نتائج مطابقة.</p>';
+        return;
+    }
+
+    let html = '';
+    logos.forEach(item => {
+        html += `
+        <div style="cursor:pointer; padding:10px; background:rgba(255,255,255,0.03); border:1px solid var(--card-border); border-radius:10px; text-align:center; transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--card-border)'" onclick="selectPickerLogo('${item.name}', '${item.logo}')">
+            <img src="${item.logo}" alt="${item.name}" style="width:40px; height:40px; object-fit:contain; margin-bottom:6px;">
+            <div style="font-size:11px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name}</div>
+        </div>
+        `;
+    });
+    grid.innerHTML = html;
+}
+
+function filterPickerLogos() {
+    renderPickerLogos();
+}
+
+function selectPickerLogo(name, logoUrl) {
+    if (activeLogoTargetInputId) {
+        const imgInput = document.getElementById(activeLogoTargetInputId);
+        if (imgInput) imgInput.value = logoUrl;
+    }
+    if (activeNameTargetInputId) {
+        const nameInput = document.getElementById(activeNameTargetInputId);
+        if (nameInput && (!nameInput.value || nameInput.value.trim() === '')) {
+            nameInput.value = name;
+        }
+    }
+    closeModal('logoPickerModal');
+}
+
+// Initial load of logos when page is ready
+document.addEventListener('DOMContentLoaded', () => {
+    renderLogosLibrary();
+});
 </script>
+
+<style>
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>
 
 </body>
 </html>

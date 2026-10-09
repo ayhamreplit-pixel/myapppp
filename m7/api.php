@@ -108,74 +108,69 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // 4. Edit Match Details
-    if ($postAction === 'edit_match') {
-        $matchId = trim($input['match_id'] ?? '');
-        if (empty($matchId)) {
-            echo json_encode(["status" => false, "message" => "معرف المباراة مفقود"]);
+    // 4. Save / Edit Match (Manual Match Manager)
+    if ($postAction === 'save_match' || $postAction === 'add_custom_match' || $postAction === 'edit_match') {
+        echo json_encode(MatchesService::saveMatch($input));
+        exit;
+    }
+
+    // 4.1 Delete Match
+    if ($postAction === 'delete_match') {
+        $mId = trim($input['match_id'] ?? '');
+        echo json_encode(MatchesService::deleteMatch($mId));
+        exit;
+    }
+
+    // 4.2 Quick Update Score & Minute
+    if ($postAction === 'quick_score') {
+        $mId = trim($input['match_id'] ?? '');
+        $hScore = $input['home_scores'] ?? null;
+        $aScore = $input['away_scores'] ?? null;
+        $status = $input['status'] ?? null;
+        $time = $input['score_time'] ?? null;
+        echo json_encode(MatchesService::quickUpdateScore($mId, $hScore, $aScore, $status, $time));
+        exit;
+    }
+
+    // 4.3 Clone Match
+    if ($postAction === 'clone_match') {
+        $mId = trim($input['match_id'] ?? '');
+        echo json_encode(MatchesService::cloneMatch($mId));
+        exit;
+    }
+
+    // 4.4 Backup Export & Restore
+    if ($postAction === 'backup_export') {
+        $backup = [
+            'version' => M7_VERSION,
+            'timestamp' => time(),
+            'custom_matches' => Storage::get('custom_matches.json', []),
+            'channels' => Storage::get('channels.json', []),
+            'hero_banners' => Storage::get('hero_banners.json', []),
+            'featured_weekly' => Storage::get('featured_weekly.json', []),
+            'slider' => Storage::get('slider.json', []),
+            'announcement' => Storage::get('announcement.json', []),
+            'settings' => Storage::get('settings.json', [])
+        ];
+        echo json_encode(["status" => true, "backup" => $backup]);
+        exit;
+    }
+
+    if ($postAction === 'backup_restore') {
+        $data = $input['backup_data'] ?? [];
+        if (is_string($data)) $data = json_decode($data, true);
+        if (!empty($data) && is_array($data)) {
+            if (isset($data['custom_matches'])) Storage::save('custom_matches.json', $data['custom_matches']);
+            if (isset($data['channels'])) Storage::save('channels.json', $data['channels']);
+            if (isset($data['hero_banners'])) Storage::save('hero_banners.json', $data['hero_banners']);
+            if (isset($data['featured_weekly'])) Storage::save('featured_weekly.json', $data['featured_weekly']);
+            if (isset($data['slider'])) Storage::save('slider.json', $data['slider']);
+            if (isset($data['announcement'])) Storage::save('announcement.json', $data['announcement']);
+            if (isset($data['settings'])) Storage::save('settings.json', $data['settings']);
+            echo json_encode(["status" => true, "message" => "تمت استعادة كافة البيانات والنسخة الاحتياطية بنجاح 🔄"]);
             exit;
         }
-        $overrides = Storage::get('match_overrides.json', []);
-        if (!isset($overrides[$matchId])) {
-            $overrides[$matchId] = ["servers" => [], "hidden" => false, "featured" => false];
-        }
-        if (isset($input['home_scores']) && $input['home_scores'] !== '') $overrides[$matchId]['home_scores'] = intval($input['home_scores']);
-        if (isset($input['away_scores']) && $input['away_scores'] !== '') $overrides[$matchId]['away_scores'] = intval($input['away_scores']);
-        if (isset($input['status']) && $input['status'] !== '') {
-            $overrides[$matchId]['status'] = intval($input['status']);
-            $overrides[$matchId]['live'] = in_array(intval($input['status']), [2, 3]) ? 1 : 0;
-        }
-        if (isset($input['score_time'])) $overrides[$matchId]['score_time'] = trim($input['score_time']);
-        if (isset($input['channel_name'])) $overrides[$matchId]['channel_name'] = trim($input['channel_name']);
-        if (isset($input['commentator'])) $overrides[$matchId]['commentator'] = trim($input['commentator']);
-        if (isset($input['stadium'])) $overrides[$matchId]['stadium'] = trim($input['stadium']);
-
-        Storage::save('match_overrides.json', $overrides);
-        echo json_encode(["status" => true, "message" => "تم حفظ التعديلات بنجاح"]);
-        exit;
-    }
-
-    // 5. Toggle Hidden
-    if ($postAction === 'toggle_hidden') {
-        $matchId = trim($input['match_id'] ?? '');
-        $overrides = Storage::get('match_overrides.json', []);
-        if (!isset($overrides[$matchId])) {
-            $overrides[$matchId] = ["servers" => [], "hidden" => false, "featured" => false];
-        }
-        $overrides[$matchId]['hidden'] = !($overrides[$matchId]['hidden'] ?? false);
-        Storage::save('match_overrides.json', $overrides);
-        echo json_encode(["status" => true, "hidden" => $overrides[$matchId]['hidden']]);
-        exit;
-    }
-
-    // 6. Custom Matches
-    if ($postAction === 'add_custom_match') {
-        $customMatches = Storage::get('custom_matches.json', []);
-        $newMatch = [
-            'match_id' => 'custom_' . time(),
-            'championship' => ['title' => trim($input['championship'] ?? 'مباراة خاصة'), 'image' => trim($input['championship_image'] ?? '')],
-            'home_team' => ['title' => trim($input['home_team'] ?? 'الفريق الأول'), 'image' => trim($input['home_team_image'] ?? '')],
-            'away_team' => ['title' => trim($input['away_team'] ?? 'الفريق الثاني'), 'image' => trim($input['away_team_image'] ?? '')],
-            'match_time' => trim($input['match_time'] ?? '21:00:00'),
-            'match_date' => trim($input['match_date'] ?? $todayDate),
-            'status' => intval($input['status'] ?? 1),
-            'live' => intval($input['live'] ?? 0),
-            'channel_name' => trim($input['channel_name'] ?? 'beIN SPORTS 1 HD'),
-            'commentator' => trim($input['commentator'] ?? 'تعليق عربي'),
-            'stadium' => trim($input['stadium'] ?? 'الملعب الرئيسي'),
-            'servers' => []
-        ];
-        if (!empty($input['stream_url'])) {
-            $newMatch['servers'][] = [
-                'id' => 'srv_1',
-                'name' => trim($input['server_name'] ?? 'سيرفر البث الرئيسي'),
-                'url' => trim($input['stream_url']),
-                'quality' => trim($input['quality'] ?? '1080p FHD')
-            ];
-        }
-        $customMatches[] = $newMatch;
-        Storage::save('custom_matches.json', $customMatches);
-        echo json_encode(["status" => true, "message" => "تمت إضافة المباراة بنجاح"]);
+        echo json_encode(["status" => false, "message" => "ملف النسخة الاحتياطية غير صالح"]);
         exit;
     }
 
@@ -380,6 +375,29 @@ if ($action === 'slider') {
 if ($action === 'announcement') {
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode(["status" => true, "announcement" => AnnouncementService::get()], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if ($action === 'logos' || $action === 'get_logos') {
+    header('Content-Type: application/json; charset=utf-8');
+    $q = trim($_GET['q'] ?? $_GET['query'] ?? '');
+    $cat = trim($_GET['category'] ?? $_GET['cat'] ?? 'all');
+    echo json_encode(["status" => true, "logos" => LogosLibrary::search($q, $cat)], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if ($action === 'match_details' || $action === 'details') {
+    header('Content-Type: application/json; charset=utf-8');
+    $eventId = trim($_GET['event_id'] ?? $_GET['id'] ?? '');
+    echo json_encode(FootballApiService::getMatchDetails($eventId), JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if ($action === 'search_api_matches' || $action === 'api_matches') {
+    header('Content-Type: application/json; charset=utf-8');
+    $query = trim($_GET['q'] ?? $_GET['query'] ?? '');
+    $date = trim($_GET['date'] ?? $targetDate);
+    echo json_encode(FootballApiService::searchMatches($query, $date), JSON_UNESCAPED_UNICODE);
     exit;
 }
 

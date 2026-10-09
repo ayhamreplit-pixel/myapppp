@@ -260,9 +260,6 @@ class SportsBackendRepository(private val context: Context) {
     val baseUrl = config.serverUrl.trim().removeSuffix("/")
     val cleanBase = baseUrl.removeSuffix("/m7")
 
-    // Run parallel fetch for FotMob matches & AlwaysData / YSScores
-    val fotmobDeferred = async { fetchFotMobMatches(effectiveDateParam) }
-
     val dateQuery = "&date=$effectiveDateParam${if (forceRefresh) "&refresh=1" else ""}"
     val candidateEndpoints = listOf(
       "$baseUrl/api.php?action=matches$dateQuery",
@@ -331,107 +328,11 @@ class SportsBackendRepository(private val context: Context) {
       }
     }
 
-    // If AlwaysData had few matches, also query direct YSScores
-    if (arabicMatches.size < 10) {
-      try {
-        val targetDateStr = when (effectiveDateParam) {
-          "yesterday" -> {
-            val cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Riyadh"))
-            cal.add(java.util.Calendar.DAY_OF_YEAR, -1)
-            java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).apply {
-              timeZone = java.util.TimeZone.getTimeZone("Asia/Riyadh")
-            }.format(cal.time)
-          }
-          "tomorrow" -> {
-            val cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Riyadh"))
-            cal.add(java.util.Calendar.DAY_OF_YEAR, 1)
-            java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).apply {
-              timeZone = java.util.TimeZone.getTimeZone("Asia/Riyadh")
-            }.format(cal.time)
-          }
-          "today", "" -> {
-            java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).apply {
-              timeZone = java.util.TimeZone.getTimeZone("Asia/Riyadh")
-            }.format(java.util.Date())
-          }
-          else -> if (effectiveDateParam.matches(Regex("^\\d{4}-\\d{2}-\\d{2}$"))) effectiveDateParam else {
-            java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).apply {
-              timeZone = java.util.TimeZone.getTimeZone("Asia/Riyadh")
-            }.format(java.util.Date())
-          }
-        }
-        val directYsscoresUrl = "https://api-ar.ysscores.com/api/matches/matches_date_get/$targetDateStr/%5B%5D/%5B%5D/%5B%5D/D/180"
+    // Pure Server Engine: Load matches strictly from user's AlwaysData server (no external third-party APIs in app)
+    val serverMatches = arabicMatches.filter { it.isStreamActive || it.servers.isNotEmpty() || it.streamUrl.isNotBlank() }
+      .ifEmpty { arabicMatches }
 
-        val directRequest = Request.Builder()
-          .url(directYsscoresUrl)
-          .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
-          .header("Accept", "application/json, text/plain, */*")
-          .header("Referer", "https://ysscores.com/")
-          .header("Origin", "https://ysscores.com")
-          .build()
-
-        SmartStreamResolver.okHttpClient.newCall(directRequest).execute().use { resp ->
-          if (resp.isSuccessful) {
-            val body = resp.body?.string() ?: ""
-            if (body.isNotBlank() && body.contains("\"data\"")) {
-              val parsedDirect = parseMatchesJson(body, config.secretKey)
-              if (parsedDirect.isNotEmpty()) {
-                arabicMatches.addAll(parsedDirect)
-                Log.d("SportsBackendRepo", "Loaded ${parsedDirect.size} Arabic matches from YSScores API")
-              }
-            }
-          }
-        }
-      } catch (e: Exception) {
-        Log.d("SportsBackendRepo", "Direct YSScores API fallback error: ${e.message}")
-      }
-    }
-
-    // Await FotMob global matches
-    val fotmobMatches = fotmobDeferred.await()
-
-    // Smart Hybrid Merge: Merge Arabic matches & FotMob global matches
-    val currentServersMap = _matches.value.filter { it.servers.isNotEmpty() }.associateBy { it.id }
-    val mergedList = mutableListOf<SportsMatch>()
-
-    // Index FotMob matches for lookup
-    val fotmobByName = fotmobMatches.associateBy { "${it.homeTeam.name.lowercase().trim()}_${it.awayTeam.name.lowercase().trim()}" }
-
-    // 1. Process Arabic matches (enrich with FotMob logos / high-precision data if matched)
-    arabicMatches.forEach { arMatch ->
-      val existing = currentServersMap[arMatch.id] ?: currentServersMap["ys_${arMatch.id.removePrefix("ys_")}"]
-      val withServers = if (existing != null && existing.servers.isNotEmpty()) {
-        arMatch.copy(
-          servers = existing.servers,
-          streamUrl = existing.streamUrl.ifBlank { existing.servers.firstOrNull()?.streamUrl ?: "" },
-          isStreamActive = true
-        )
-      } else arMatch
-
-      mergedList.add(withServers)
-    }
-
-    // 2. Add all FotMob matches (270+ matches worldwide) that aren't duplicates
-    val arabicTitlesSet = arabicMatches.map { it.title.lowercase().trim() }.toSet()
-    val arabicIdsSet = arabicMatches.map { it.id }.toSet()
-
-    fotmobMatches.forEach { fmMatch ->
-      if (!arabicIdsSet.contains(fmMatch.id) && !arabicTitlesSet.contains(fmMatch.title.lowercase().trim())) {
-        val existing = currentServersMap[fmMatch.id]
-        val enrichedFm = if (existing != null && existing.servers.isNotEmpty()) {
-          fmMatch.copy(
-            servers = existing.servers,
-            streamUrl = existing.streamUrl.ifBlank { existing.servers.firstOrNull()?.streamUrl ?: "" },
-            isStreamActive = true
-          )
-        } else fmMatch
-        mergedList.add(enrichedFm)
-      }
-    }
-
-    val finalMatches = if (mergedList.isNotEmpty()) mergedList else fotmobMatches.ifEmpty { arabicMatches }
-
-    val sorted = finalMatches.sortedWith(
+    val sorted = serverMatches.sortedWith(
       compareByDescending<SportsMatch> { it.isLive }
         .thenByDescending { it.servers.isNotEmpty() || it.streamUrl.isNotBlank() }
         .thenBy { it.isEnded }
@@ -440,7 +341,7 @@ class SportsBackendRepository(private val context: Context) {
     if (sorted.isNotEmpty()) {
       _matches.value = sorted
       _lastSyncTime.value = System.currentTimeMillis()
-      Log.d("SportsBackendRepo", "Hybrid Engine loaded total ${sorted.size} matches (Arabic: ${arabicMatches.size}, FotMob: ${fotmobMatches.size})")
+      Log.d("SportsBackendRepo", "Loaded ${sorted.size} matches strictly from user server")
     }
 
     _isSyncing.value = false

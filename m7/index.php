@@ -45,6 +45,8 @@ require_once __DIR__ . '/views/tab_hero.php';
 require_once __DIR__ . '/views/tab_channels.php';
 require_once __DIR__ . '/views/tab_slider.php';
 require_once __DIR__ . '/views/tab_devices.php';
+require_once __DIR__ . '/views/tab_football_api.php';
+require_once __DIR__ . '/views/tab_logos.php';
 require_once __DIR__ . '/views/tab_notifications.php';
 require_once __DIR__ . '/views/tab_security.php';
 require_once __DIR__ . '/views/tab_player.php';

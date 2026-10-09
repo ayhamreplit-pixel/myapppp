@@ -159,9 +159,25 @@ fun TodHomeScreen(
     (builtInChannels + allChannels).distinctBy { it.streamId.ifBlank { it.name } }
   }
 
-  // Direct match opening action: Opens details directly without popup alerts
+  var toastMessage by remember { mutableStateOf<String?>(null) }
+  LaunchedEffect(toastMessage) {
+    if (toastMessage != null) {
+      kotlinx.coroutines.delay(2500)
+      toastMessage = null
+    }
+  }
+
+  // Direct match opening action: checks stream active or servers, otherwise shows short toast message
   val onUnifiedPlayMatch: (SportsMatch) -> Unit = { match ->
-    onOpenMatchDetail(match)
+    val isActive = match.isStreamActive || match.servers.isNotEmpty() || match.streamUrl.isNotBlank()
+    if (isActive) {
+      val effectiveUrl = match.servers.firstOrNull()?.streamUrl
+        ?: match.streamUrl.takeIf { it.isNotBlank() }
+        ?: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+      onPlayMatchDirectly(match.copy(streamUrl = effectiveUrl))
+    } else {
+      toastMessage = "⏳ ${match.title} • لم تبدأ المباراة أو لم يتم تفعيل البث بعد"
+    }
   }
 
   // Filter live and upcoming matches
@@ -322,7 +338,7 @@ fun TodHomeScreen(
                     TodHeroBannerCarousel(
                       matches = heroMatches,
                       onPlayMatch = onUnifiedPlayMatch,
-                      onOpenDetails = onOpenMatchDetail
+                      onOpenDetails = onUnifiedPlayMatch
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                   }
@@ -335,7 +351,7 @@ fun TodHomeScreen(
                       matches = liveMatches,
                       title = "البث المباشر - رياضات متعددة",
                       onPlayMatch = onUnifiedPlayMatch,
-                      onOpenDetails = onOpenMatchDetail
+                      onOpenDetails = onUnifiedPlayMatch
                     )
                     Spacer(modifier = Modifier.height(14.dp))
                   }
@@ -347,7 +363,7 @@ fun TodHomeScreen(
                       matches = upcomingMatches,
                       title = "الرياضة القادمة",
                       onPlayMatch = onUnifiedPlayMatch,
-                      onOpenDetails = onOpenMatchDetail
+                      onOpenDetails = onUnifiedPlayMatch
                     )
                     Spacer(modifier = Modifier.height(14.dp))
                   }
@@ -359,7 +375,7 @@ fun TodHomeScreen(
                       matches = featuredMatches,
                       title = "أفضل مباريات كرة القدم مباشرةً هذا الأسبوع",
                       onPlayMatch = onUnifiedPlayMatch,
-                      onOpenDetails = onOpenMatchDetail
+                      onOpenDetails = onUnifiedPlayMatch
                     )
                     Spacer(modifier = Modifier.height(14.dp))
                   }
@@ -372,7 +388,7 @@ fun TodHomeScreen(
                       matches = sportsMatches,
                       title = "جدول مباريات اليوم (${sportsMatches.size} مباراة)",
                       onPlayMatch = onUnifiedPlayMatch,
-                      onOpenDetails = onOpenMatchDetail
+                      onOpenDetails = onUnifiedPlayMatch
                     )
                     Spacer(modifier = Modifier.height(14.dp))
                   }
@@ -400,7 +416,7 @@ fun TodHomeScreen(
                     onSelectCompetition = { comp ->
                       val matchInComp = sportsMatches.firstOrNull { it.tournament.contains(comp.name.take(6), ignoreCase = true) }
                       if (matchInComp != null) {
-                        onOpenMatchDetail(matchInComp)
+                        onUnifiedPlayMatch(matchInComp)
                       } else {
                         activeTopSection = TodTopSection.MATCHES
                         selectedTournamentFilter = comp.name
@@ -775,7 +791,7 @@ fun TodHomeScreen(
                     TodMatchScheduleCard(
                       match = match,
                       onPlayMatch = onUnifiedPlayMatch,
-                      onOpenDetails = onOpenMatchDetail
+                      onOpenDetails = onUnifiedPlayMatch
                     )
                   }
                 }
@@ -784,7 +800,7 @@ fun TodHomeScreen(
                   TodMatchScheduleCard(
                     match = match,
                     onPlayMatch = onUnifiedPlayMatch,
-                    onOpenDetails = onOpenMatchDetail
+                    onOpenDetails = onUnifiedPlayMatch
                   )
                 }
               }
@@ -1374,7 +1390,64 @@ fun TodServerSelectionDialog(
           modifier = Modifier.fillMaxWidth(),
           verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-          match.servers.forEachIndexed { idx, srv ->
+          if (match.servers.isEmpty()) {
+            Box(
+              modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(Brush.horizontalGradient(listOf(TodGold, Color(0xFFFF9500))))
+                .clickable {
+                  onSelectServer(
+                    com.example.model.MatchStreamServer(
+                      id = "srv_default",
+                      name = "سيرفر البث المباشر FHD",
+                      streamUrl = match.streamUrl.ifBlank { "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" },
+                      quality = "1080p FHD"
+                    )
+                  )
+                }
+                .padding(horizontal = 14.dp, vertical = 12.dp)
+            ) {
+              Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                  Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    tint = Color.Black,
+                    modifier = Modifier.size(20.dp)
+                  )
+                  Text(
+                    text = "سيرفر البث المباشر الرئيسي",
+                    color = Color.Black,
+                    fontSize = 13.5.sp,
+                    fontFamily = ThmanyahFontFamily,
+                    fontWeight = FontWeight.Bold
+                  )
+                }
+                Box(
+                  modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0x30000000))
+                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                  Text(
+                    text = "1080p",
+                    color = Color.Black,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Black
+                  )
+                }
+              }
+            }
+          } else {
+            match.servers.forEachIndexed { idx, srv ->
             val isFirst = idx == 0
             Box(
               modifier = Modifier
@@ -1434,6 +1507,7 @@ fun TodServerSelectionDialog(
                 }
               }
             }
+          }
           }
         }
       }

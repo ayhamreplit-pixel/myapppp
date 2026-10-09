@@ -31,6 +31,7 @@
                 </div>
                 <div style="display: flex; gap: 8px; justify-content: flex-end;">
                     <button class="btn btn-outline" style="padding: 4px 8px; font-size: 11px;" onclick="playInTestPlayer('<?= addslashes($ch['playUrl'] ?? '') ?>', '<?= addslashes($ch['name'] ?? '') ?>')">▶️ تجربة</button>
+                    <button class="btn btn-blue" style="padding: 4px 8px; font-size: 11px;" onclick='openEditChannelModal(<?= json_encode($ch) ?>)'>✏️ تعديل</button>
                     <button class="btn btn-red" style="padding: 4px 8px; font-size: 11px;" onclick="deleteChannel('<?= $ch['streamId'] ?>')">🗑️ حذف</button>
                 </div>
             </div>

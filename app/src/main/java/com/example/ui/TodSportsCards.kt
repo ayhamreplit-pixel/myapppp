@@ -701,12 +701,12 @@ fun TodMatchCountdownHero(
         .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
       horizontalAlignment = Alignment.Start
     ) {
-      // 4.1 Team Flags / Crests in Softened Semi-Transparent Rectangles with LARGER Logos
+      // 4.1 Team Flags / Crests: Centered if no live stream active, left/right otherwise
       Box(
         modifier = Modifier
           .fillMaxWidth()
           .padding(bottom = 10.dp),
-        contentAlignment = Alignment.CenterStart
+        contentAlignment = Alignment.Center
       ) {
         Row(
           verticalAlignment = Alignment.CenterVertically,
@@ -747,27 +747,27 @@ fun TodMatchCountdownHero(
         }
       }
 
-      // 4.2 Match Title (RTL Right-aligned, sized moderately)
+      // 4.2 Match Title (Centered)
       Text(
         text = match.title.ifBlank { "${match.homeTeam.name} ضد ${match.awayTeam.name}" },
         color = Color.White,
         fontSize = 21.sp,
         fontWeight = FontWeight.Bold,
         fontFamily = ThmanyahFontFamily,
-        textAlign = TextAlign.Right,
+        textAlign = TextAlign.Center,
         modifier = Modifier.fillMaxWidth()
       )
 
       Spacer(modifier = Modifier.height(4.dp))
 
-      // 4.3 Match Subtitle Metadata (Date • Time • Stadium • Tournament)
+      // 4.3 Match Subtitle Metadata (Centered)
       Text(
         text = "${match.kickoffDate} • ${match.kickoffTime} • ${match.stadium.ifBlank { "الملعب الرئيسي" }} • ${match.tournament}",
         color = Color(0xFFD1D5DB),
         fontSize = 13.5.sp,
         fontFamily = ThmanyahFontFamily,
         fontWeight = FontWeight.Normal,
-        textAlign = TextAlign.Right,
+        textAlign = TextAlign.Center,
         maxLines = 2,
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier.fillMaxWidth()
@@ -2108,36 +2108,36 @@ fun TodTournamentMatchCard(
   // Sleek Obsidian Glass background with subtle theme & tournament aura
   val cardBackground = Brush.verticalGradient(
     listOf(
-      Color(0xFF141926),
-      Color(0xFF0F131D),
-      Color(0xFF0A0C14)
+      Color(0xFF161C2C),
+      Color(0xFF101422),
+      Color(0xFF090B12)
     )
   )
 
   val borderBrush = Brush.linearGradient(
     listOf(
-      appTheme.primaryColor.copy(alpha = 0.55f),
-      tournamentStyle.accentColor.copy(alpha = 0.35f),
-      Color(0x18FFFFFF)
+      tournamentStyle.accentColor.copy(alpha = 0.65f),
+      appTheme.primaryColor.copy(alpha = 0.50f),
+      Color(0x22FFFFFF)
     )
   )
 
   CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
     Box(
       modifier = modifier
-        .then(if (isCompactWidth) Modifier.width(282.dp).height(188.dp) else Modifier.fillMaxWidth().height(188.dp))
+        .then(if (isCompactWidth) Modifier.width(284.dp).height(190.dp) else Modifier.fillMaxWidth().height(190.dp))
         .iosBounceClick(scaleDown = 0.97f, onClick = { onPlayClick() })
-        .clip(RoundedCornerShape(16.dp))
+        .clip(RoundedCornerShape(18.dp))
         .background(cardBackground)
-        .border(0.8.dp, borderBrush, RoundedCornerShape(16.dp))
+        .border(1.dp, borderBrush, RoundedCornerShape(18.dp))
     ) {
       // 1. Subtle ambient glow
       Canvas(modifier = Modifier.fillMaxSize()) {
         drawCircle(
           brush = Brush.radialGradient(
-            listOf(appTheme.glowColor.copy(alpha = 0.12f), Color.Transparent),
-            center = Offset(size.width * 0.85f, size.height * 0.15f),
-            radius = size.width * 0.65f
+            listOf(tournamentStyle.accentColor.copy(alpha = 0.16f), Color.Transparent),
+            center = Offset(size.width * 0.90f, size.height * 0.10f),
+            radius = size.width * 0.70f
           )
         )
       }
